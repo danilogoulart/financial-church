@@ -52,9 +52,13 @@ function showMemberForm() {
 
 function showTransactionForm() {
 
-  SpreadsheetApp
-    .getUi()
-    .alert("Cadastro de movimentações será implementado no próximo commit.");
+  const html = HtmlService
+    .createHtmlOutputFromFile("Transaction")
+    .setWidth(650)
+    .setHeight(650);
+
+  SpreadsheetApp.getUi()
+    .showModalDialog(html, "Nova Movimentação");
 
 }
 

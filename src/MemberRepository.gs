@@ -29,4 +29,17 @@ class MemberRepository {
 
   }
 
+  static listForSelect() {
+
+    const values = Database.values(SHEETS.MEMBERS);
+
+    values.shift();
+
+    return values.map(v => ({
+        id: v[0],
+        name: v[1]
+    }));
+
+ }
+
 }
