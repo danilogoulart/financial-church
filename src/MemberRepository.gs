@@ -2,20 +2,17 @@ class MemberRepository {
 
   static save(member) {
 
-    Database.append(
-      SHEETS.MEMBERS,
-      [
-        member.id,
-        member.name,
-        member.phone,
-        member.family,
-        member.ministry,
-        member.tither,
-        member.active,
-        member.createdAt,
-        member.updatedAt
-      ]
-    );
+    Database.append(SHEETS.MEMBERS, [
+      member.id,
+      member.name,
+      member.phone,
+      member.family,
+      member.ministry,
+      member.tither ? "Sim" : "Não",
+      member.active ? "Sim" : "Não",
+      member.createdAt,
+      member.updatedAt
+    ]);
 
   }
 
@@ -31,15 +28,11 @@ class MemberRepository {
 
   static listForSelect() {
 
-    const values = Database.values(SHEETS.MEMBERS);
-
-    values.shift();
-
-    return values.map(v => ({
-        id: v[0],
-        name: v[1]
+    return this.findAll().map(row => ({
+      id: row[0],
+      name: row[1]
     }));
 
- }
+  }
 
 }

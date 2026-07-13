@@ -1,12 +1,8 @@
-/**
- * Controller do módulo de membros
- */
-
 function showMemberForm() {
 
   const html = HtmlService
     .createHtmlOutputFromFile("Member")
-    .setWidth(500)
+    .setWidth(450)
     .setHeight(520);
 
   SpreadsheetApp.getUi().showModalDialog(

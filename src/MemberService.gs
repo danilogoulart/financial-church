@@ -3,8 +3,10 @@ class MemberService {
   static create(data) {
 
     if (!data.name || data.name.trim() === "") {
-      throw new Error("Informe o nome.");
+      throw new Error("Nome é obrigatório.");
     }
+
+    const now = new Date();
 
     const member = {
 
@@ -18,13 +20,13 @@ class MemberService {
 
       ministry: data.ministry || "",
 
-      tither: data.tither,
+      tither: data.tither === true,
 
       active: true,
 
-      createdAt: new Date(),
+      createdAt: now,
 
-      updatedAt: new Date()
+      updatedAt: now
 
     };
 

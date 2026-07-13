@@ -3,63 +3,30 @@
 
 <head>
 
-<meta charset="UTF-8">
+  <base target="_top">
 
-<style>
+  <style>
 
-body{
+    body{
+      font-family:Arial;
+      padding:20px;
+    }
 
-font-family:Arial;
+    input{
+      width:100%;
+      margin-bottom:12px;
+      padding:8px;
+      box-sizing:border-box;
+    }
 
-padding:20px;
+    button{
+      width:100%;
+      padding:10px;
+      cursor:pointer;
+      font-size:15px;
+    }
 
-}
-
-label{
-
-display:block;
-
-margin-top:12px;
-
-font-weight:bold;
-
-}
-
-input{
-
-width:100%;
-
-padding:8px;
-
-box-sizing:border-box;
-
-}
-
-.checkbox{
-
-margin-top:15px;
-
-}
-
-button{
-
-margin-top:20px;
-
-padding:10px 18px;
-
-cursor:pointer;
-
-}
-
-#status{
-
-margin-top:15px;
-
-color:green;
-
-}
-
-</style>
+  </style>
 
 </head>
 
@@ -67,86 +34,60 @@ color:green;
 
 <h2>Novo Membro</h2>
 
-<label>Nome *</label>
+<input id="name" placeholder="Nome">
 
-<input id="name">
+<input id="phone" placeholder="Telefone">
 
-<label>Telefone</label>
+<input id="family" placeholder="Família">
 
-<input id="phone">
-
-<label>Família</label>
-
-<input id="family">
-
-<label>Ministério</label>
-
-<input id="ministry">
-
-<div class="checkbox">
+<input id="ministry" placeholder="Ministério">
 
 <label>
-
-<input
-type="checkbox"
-id="tither"
-checked>
-
+<input id="tither" type="checkbox" checked>
 É dizimista
-
 </label>
 
-</div>
+<br><br>
 
 <button onclick="save()">
-
 Salvar
-
 </button>
-
-<div id="status"></div>
 
 <script>
 
 function save(){
 
-const data={
+  const member={
 
-name:document.getElementById("name").value,
+    name:document.getElementById("name").value,
 
-phone:document.getElementById("phone").value,
+    phone:document.getElementById("phone").value,
 
-family:document.getElementById("family").value,
+    family:document.getElementById("family").value,
 
-ministry:document.getElementById("ministry").value,
+    ministry:document.getElementById("ministry").value,
 
-tither:document.getElementById("tither").checked
+    tither:document.getElementById("tither").checked
 
-};
+  };
 
-google.script.run
+  google.script.run
 
-.withSuccessHandler(function(member){
+    .withSuccessHandler(function(result){
 
-document.getElementById("status").innerHTML=
+      alert("Membro "+result.id+" cadastrado.");
 
-"Membro "+member.id+" salvo com sucesso.";
+      google.script.host.close();
 
-setTimeout(function(){
+    })
 
-google.script.host.close();
+    .withFailureHandler(function(err){
 
-},1000);
+      alert(err.message);
 
-})
+    })
 
-.withFailureHandler(function(err){
-
-alert(err.message);
-
-})
-
-.saveMember(data);
+    .saveMember(member);
 
 }
 
