@@ -13,13 +13,7 @@ class Menu {
 
       .addItem("🚀 Instalar Sistema", "install")
 
-      .addSeparator()
-
-      .addItem("👤 Novo Membro", "showMemberForm")
-
-      .addItem("💰 Nova Movimentação", "showTransactionForm")
-
-      .addItem("📄 Nova Conta a Pagar", "showPayableForm")
+      .addItem("🌐 Link do Web App", "showWebAppUrl")
 
       .addSeparator()
 

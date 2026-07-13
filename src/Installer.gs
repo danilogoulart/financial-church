@@ -2,6 +2,9 @@ class Installer {
 
   static run() {
 
+    PropertiesService.getScriptProperties()
+      .setProperty(PROPS.SPREADSHEET_ID, SpreadsheetApp.getActiveSpreadsheet().getId());
+
     this.createDashboard();
     this.createMembers();
     this.createTransactions();

@@ -27,6 +27,10 @@ const FORMATS = Object.freeze({
   CURRENCY: 'R$ #,##0.00'
 });
 
+const PROPS = Object.freeze({
+  SPREADSHEET_ID: 'SPREADSHEET_ID'
+});
+
 const HEADERS = Object.freeze({
 
   MEMBERS: [

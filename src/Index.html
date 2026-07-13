@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <base target="_top">
+
+  <style>
+
+    :root{
+      --primary:#1E88E5;
+      --border:#d5d5d5;
+      --ok-bg:#E8F5E9; --ok-fg:#1B5E20;
+      --err-bg:#FFEBEE; --err-fg:#B71C1C;
+    }
+
+    *{box-sizing:border-box;}
+
+    body{
+      font-family:Arial,Helvetica,sans-serif;
+      margin:0;
+      background:#f4f6f8;
+      color:#222;
+    }
+
+    header{
+      background:var(--primary);
+      color:#fff;
+      padding:16px 20px;
+    }
+
+    header h1{
+      margin:0;
+      font-size:18px;
+    }
+
+    nav{
+      display:flex;
+      flex-wrap:wrap;
+      gap:4px;
+      background:#fff;
+      padding:8px;
+      border-bottom:1px solid var(--border);
+      position:sticky;
+      top:0;
+      z-index:1;
+    }
+
+    nav button{
+      flex:1;
+      min-width:120px;
+      padding:10px;
+      border:none;
+      background:#eceff1;
+      color:#333;
+      border-radius:6px;
+      cursor:pointer;
+      font-size:14px;
+    }
+
+    nav button.active{
+      background:var(--primary);
+      color:#fff;
+      font-weight:bold;
+    }
+
+    main{
+      max-width:560px;
+      margin:0 auto;
+      padding:20px;
+    }
+
+    section{display:none;}
+    section.active{display:block;}
+
+    .card{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:8px;
+      padding:20px;
+    }
+
+    h2{margin:0 0 16px;font-size:16px;color:var(--primary);}
+
+    label{
+      display:block;
+      font-size:13px;
+      font-weight:bold;
+      margin-bottom:4px;
+    }
+
+    input,select,textarea{
+      width:100%;
+      margin-bottom:14px;
+      padding:9px;
+      border:1px solid var(--border);
+      border-radius:4px;
+      font-size:14px;
+    }
+
+    .row{display:flex;gap:12px;}
+    .row > div{flex:1;}
+
+    .check{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-bottom:14px;
+    }
+    .check input{width:auto;margin:0;}
+
+    button.primary{
+      width:100%;
+      padding:11px;
+      background:var(--primary);
+      color:#fff;
+      border:none;
+      border-radius:6px;
+      font-size:15px;
+      cursor:pointer;
+    }
+    button.primary:disabled{opacity:.6;cursor:default;}
+
+    .banner{
+      display:none;
+      padding:10px 12px;
+      border-radius:6px;
+      margin-bottom:14px;
+      font-size:14px;
+    }
+    .banner.ok{display:block;background:var(--ok-bg);color:var(--ok-fg);}
+    .banner.err{display:block;background:var(--err-bg);color:var(--err-fg);}
+
+    small{color:#666;}
+
+    .tool-row{display:flex;flex-direction:column;gap:12px;}
+    .kpi{font-size:14px;margin:4px 0;}
+
+    a.link{color:var(--primary);}
+
+  </style>
+
+</head>
+
+<body>
+
+<header>
+  <h1>🏛 Financial Church</h1>
+</header>
+
+<nav>
+  <button data-tab="member" class="active" onclick="showTab('member')">👤 Membro</button>
+  <button data-tab="transaction" onclick="showTab('transaction')">💰 Movimentação</button>
+  <button data-tab="payable" onclick="showTab('payable')">📄 Conta a Pagar</button>
+  <button data-tab="tools" onclick="showTab('tools')">🛠 Ferramentas</button>
+</nav>
+
+<main>
+
+  <!-- MEMBRO -->
+  <section id="member" class="active">
+    <div class="card">
+      <h2>Novo Membro</h2>
+      <div id="member-banner" class="banner"></div>
+
+      <label>Nome</label>
+      <input id="m-name" placeholder="Nome completo">
+
+      <label>Telefone</label>
+      <input id="m-phone" placeholder="(00) 00000-0000">
+
+      <div class="row">
+        <div>
+          <label>Família</label>
+          <input id="m-family">
+        </div>
+        <div>
+          <label>Ministério</label>
+          <input id="m-ministry">
+        </div>
+      </div>
+
+      <div class="check">
+        <input id="m-tither" type="checkbox" checked>
+        <label style="margin:0">É dizimista</label>
+      </div>
+
+      <button class="primary" id="m-save" onclick="saveMember()">Salvar</button>
+    </div>
+  </section>
+
+  <!-- MOVIMENTACAO -->
+  <section id="transaction">
+    <div class="card">
+      <h2>Nova Movimentação</h2>
+      <div id="transaction-banner" class="banner"></div>
+
+      <div class="row">
+        <div>
+          <label>Data</label>
+          <input id="t-date" type="date">
+        </div>
+        <div>
+          <label>Competência</label>
+          <input id="t-competency" type="month">
+        </div>
+      </div>
+
+      <label>Tipo</label>
+      <select id="t-type" onchange="fillTransactionCategories()">
+        <option value="Receita">Receita</option>
+        <option value="Despesa">Despesa</option>
+      </select>
+
+      <label>Membro</label>
+      <select id="t-member"><option value="">Carregando...</option></select>
+
+      <label>Categoria</label>
+      <select id="t-category"></select>
+
+      <div class="row">
+        <div>
+          <label>Culto</label>
+          <input id="t-cult" placeholder="Ex.: Domingo Manhã">
+        </div>
+        <div>
+          <label>Forma de pagamento</label>
+          <select id="t-payment">
+            <option>Dinheiro</option>
+            <option>PIX</option>
+            <option>Cartão de Débito</option>
+            <option>Cartão de Crédito</option>
+            <option>Transferência</option>
+            <option>Cheque</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Valor (R$)</label>
+      <input id="t-amount" type="number" step="0.01" min="0" placeholder="0,00">
+
+      <label>Observação</label>
+      <textarea id="t-observation" rows="2"></textarea>
+
+      <button class="primary" id="t-save" onclick="saveTransaction()">Salvar</button>
+    </div>
+  </section>
+
+  <!-- CONTA A PAGAR -->
+  <section id="payable">
+    <div class="card">
+      <h2>Nova Conta a Pagar</h2>
+      <div id="payable-banner" class="banner"></div>
+
+      <label>Descrição</label>
+      <input id="p-description" placeholder="Ex.: Conta de luz - Julho">
+
+      <label>Categoria</label>
+      <select id="p-category"></select>
+
+      <div class="row">
+        <div>
+          <label>Valor (R$)</label>
+          <input id="p-amount" type="number" step="0.01" min="0" placeholder="0,00">
+        </div>
+        <div>
+          <label>Vencimento</label>
+          <input id="p-due" type="date">
+        </div>
+      </div>
+
+      <label>Pagamento <small>(opcional)</small></label>
+      <input id="p-payment" type="date">
+      <small>Se preenchido, a conta é registrada como <b>Paga</b>.</small>
+
+      <br><br>
+      <button class="primary" id="p-save" onclick="savePayable()">Salvar</button>
+    </div>
+  </section>
+
+  <!-- FERRAMENTAS -->
+  <section id="tools">
+    <div class="card">
+      <h2>Ferramentas</h2>
+      <div id="tools-banner" class="banner"></div>
+
+      <div class="tool-row">
+        <button class="primary" id="tool-dashboard" onclick="refreshDashboard()">📊 Atualizar Dashboard</button>
+        <button class="primary" id="tool-reports" onclick="generateReports()">📑 Gerar Relatórios</button>
+        <a class="link" id="sheet-link" href="#" target="_blank" rel="noopener">Abrir planilha em nova aba</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+
+  var CATEGORIES = { income: [], expense: [] };
+
+  function showTab(name){
+    var sections = document.querySelectorAll("section");
+    for (var i = 0; i < sections.length; i++){
+      sections[i].classList.toggle("active", sections[i].id === name);
+    }
+    var buttons = document.querySelectorAll("nav button");
+    for (var j = 0; j < buttons.length; j++){
+      buttons[j].classList.toggle("active", buttons[j].getAttribute("data-tab") === name);
+    }
+  }
+
+  function banner(id, type, message){
+    var el = document.getElementById(id);
+    el.className = "banner " + type;
+    el.textContent = message;
+  }
+
+  function clearBanner(id){
+    document.getElementById(id).className = "banner";
+  }
+
+  function val(id){ return document.getElementById(id).value; }
+
+  function busy(buttonId, on, labelWhenIdle){
+    var b = document.getElementById(buttonId);
+    b.disabled = on;
+    b.textContent = on ? "Salvando..." : labelWhenIdle;
+  }
+
+  // ---------- init ----------
+
+  function init(){
+
+    var today = new Date();
+    var iso = today.toISOString().slice(0, 10);
+    document.getElementById("t-date").value = iso;
+    document.getElementById("t-competency").value = iso.slice(0, 7);
+
+    google.script.run.withSuccessHandler(fillMembers).listMembers();
+
+    google.script.run.withSuccessHandler(function(categories){
+      CATEGORIES = categories;
+      fillTransactionCategories();
+    }).listCategories();
+
+    google.script.run.withSuccessHandler(fillPayableCategories).listPayableCategories();
+
+    google.script.run.withSuccessHandler(function(url){
+      document.getElementById("sheet-link").href = url;
+    }).webSpreadsheetUrl();
+
+  }
+
+  function fillMembers(members){
+    var select = document.getElementById("t-member");
+    select.innerHTML = '<option value="">Selecione...</option>';
+    (members || []).forEach(function(m){
+      var o = document.createElement("option");
+      o.value = m.id; o.text = m.name;
+      select.appendChild(o);
+    });
+  }
+
+  function fillOptions(select, list){
+    select.innerHTML = "";
+    (list || []).forEach(function(c){
+      var o = document.createElement("option");
+      o.value = c; o.text = c;
+      select.appendChild(o);
+    });
+  }
+
+  function fillTransactionCategories(){
+    var type = val("t-type");
+    var list = type === "Despesa" ? CATEGORIES.expense : CATEGORIES.income;
+    fillOptions(document.getElementById("t-category"), list);
+  }
+
+  function fillPayableCategories(categories){
+    fillOptions(document.getElementById("p-category"), categories);
+  }
+
+  // ---------- saves ----------
+
+  function saveMember(){
+    clearBanner("member-banner");
+    busy("m-save", true);
+
+    var member = {
+      name: val("m-name"),
+      phone: val("m-phone"),
+      family: val("m-family"),
+      ministry: val("m-ministry"),
+      tither: document.getElementById("m-tither").checked
+    };
+
+    google.script.run
+      .withSuccessHandler(function(result){
+        busy("m-save", false, "Salvar");
+        banner("member-banner", "ok", "Membro " + result.id + " cadastrado.");
+        document.getElementById("m-name").value = "";
+        document.getElementById("m-phone").value = "";
+        document.getElementById("m-family").value = "";
+        document.getElementById("m-ministry").value = "";
+        document.getElementById("m-tither").checked = true;
+        google.script.run.withSuccessHandler(fillMembers).listMembers();
+      })
+      .withFailureHandler(function(err){
+        busy("m-save", false, "Salvar");
+        banner("member-banner", "err", err.message);
+      })
+      .saveMember(member);
+  }
+
+  function saveTransaction(){
+    clearBanner("transaction-banner");
+    busy("t-save", true);
+
+    var transaction = {
+      date: val("t-date"),
+      competency: val("t-competency"),
+      memberId: val("t-member"),
+      type: val("t-type"),
+      category: val("t-category"),
+      cult: val("t-cult"),
+      paymentMethod: val("t-payment"),
+      amount: val("t-amount"),
+      observation: val("t-observation")
+    };
+
+    google.script.run
+      .withSuccessHandler(function(result){
+        busy("t-save", false, "Salvar");
+        banner("transaction-banner", "ok", "Movimentação " + result.id + " registrada.");
+        document.getElementById("t-amount").value = "";
+        document.getElementById("t-observation").value = "";
+      })
+      .withFailureHandler(function(err){
+        busy("t-save", false, "Salvar");
+        banner("transaction-banner", "err", err.message);
+      })
+      .saveTransaction(transaction);
+  }
+
+  function savePayable(){
+    clearBanner("payable-banner");
+    busy("p-save", true);
+
+    var payable = {
+      description: val("p-description"),
+      category: val("p-category"),
+      amount: val("p-amount"),
+      dueDate: val("p-due"),
+      paymentDate: val("p-payment")
+    };
+
+    google.script.run
+      .withSuccessHandler(function(result){
+        busy("p-save", false, "Salvar");
+        banner("payable-banner", "ok", "Conta " + result.id + " registrada.");
+        document.getElementById("p-description").value = "";
+        document.getElementById("p-amount").value = "";
+        document.getElementById("p-due").value = "";
+        document.getElementById("p-payment").value = "";
+      })
+      .withFailureHandler(function(err){
+        busy("p-save", false, "Salvar");
+        banner("payable-banner", "err", err.message);
+      })
+      .savePayable(payable);
+  }
+
+  // ---------- tools ----------
+
+  function refreshDashboard(){
+    clearBanner("tools-banner");
+    var b = document.getElementById("tool-dashboard");
+    b.disabled = true; b.textContent = "Atualizando...";
+
+    google.script.run
+      .withSuccessHandler(function(totals){
+        b.disabled = false; b.textContent = "📊 Atualizar Dashboard";
+        banner("tools-banner", "ok",
+          "Dashboard atualizado. Saldo: " + formatMoney(totals.balance));
+      })
+      .withFailureHandler(function(err){
+        b.disabled = false; b.textContent = "📊 Atualizar Dashboard";
+        banner("tools-banner", "err", err.message);
+      })
+      .webRefreshDashboard();
+  }
+
+  function generateReports(){
+    clearBanner("tools-banner");
+    var b = document.getElementById("tool-reports");
+    b.disabled = true; b.textContent = "Gerando...";
+
+    google.script.run
+      .withSuccessHandler(function(){
+        b.disabled = false; b.textContent = "📑 Gerar Relatórios";
+        banner("tools-banner", "ok", "Relatórios gerados na planilha.");
+      })
+      .withFailureHandler(function(err){
+        b.disabled = false; b.textContent = "📑 Gerar Relatórios";
+        banner("tools-banner", "err", err.message);
+      })
+      .webGenerateReports();
+  }
+
+  function formatMoney(value){
+    return "R$ " + Number(value || 0).toFixed(2).replace(".", ",");
+  }
+
+  init();
+
+</script>
+
+</body>
+
+</html>

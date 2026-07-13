@@ -4,8 +4,37 @@
 
 class Database {
 
+  /**
+   * Resolve a planilha tanto no contexto vinculado (menu/diálogo, onde
+   * existe planilha ativa) quanto no Web App (onde não existe — usamos
+   * o ID salvo em Script Properties). O ID é persistido sempre que há
+   * planilha ativa, então basta rodar 'Instalar Sistema' uma vez.
+   */
   static spreadsheet() {
-    return SpreadsheetApp.getActiveSpreadsheet();
+
+    const props = PropertiesService.getScriptProperties();
+    const active = SpreadsheetApp.getActiveSpreadsheet();
+
+    if (active) {
+
+      if (props.getProperty(PROPS.SPREADSHEET_ID) !== active.getId()) {
+        props.setProperty(PROPS.SPREADSHEET_ID, active.getId());
+      }
+
+      return active;
+
+    }
+
+    const id = props.getProperty(PROPS.SPREADSHEET_ID);
+
+    if (id) {
+      return SpreadsheetApp.openById(id);
+    }
+
+    throw new Error(
+      "Planilha não configurada. Abra a planilha e rode 'Instalar Sistema' uma vez."
+    );
+
   }
 
   static sheet(name) {
