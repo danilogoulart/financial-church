@@ -11,7 +11,7 @@ class Menu {
 
       .createMenu("🏛 Financial Church")
 
-      .addItem("🚀 Instalar Sistema", "install")
+      .addItem("🚀 Instalar / Atualizar Estrutura", "install")
 
       .addItem("🌐 Link do Web App", "showWebAppUrl")
 

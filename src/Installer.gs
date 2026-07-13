@@ -1,3 +1,9 @@
+/**
+ * Instalação idempotente: pode rodar quantas vezes quiser sem apagar
+ * dados. Cria abas que faltam, garante cabeçalhos (migra colunas novas
+ * como "Comprovante"), preenche Config só se vazia e garante as chaves
+ * do SYSTEM sem resetar os contadores de ID.
+ */
 class Installer {
 
   static run() {
@@ -5,62 +11,55 @@ class Installer {
     PropertiesService.getScriptProperties()
       .setProperty(PROPS.SPREADSHEET_ID, SpreadsheetApp.getActiveSpreadsheet().getId());
 
-    this.createDashboard();
-    this.createMembers();
-    this.createTransactions();
-    this.createPayables();
-    this.createReports();
-    this.createConfig();
-    this.createSystem();
+    this.ensureDashboard();
+    this.ensureDataSheet(SHEETS.MEMBERS, HEADERS.MEMBERS);
+    this.ensureDataSheet(SHEETS.TRANSACTIONS, HEADERS.TRANSACTIONS);
+    this.ensureDataSheet(SHEETS.PAYABLES, HEADERS.PAYABLES);
+    this.ensureReports();
+    this.ensureConfig();
+    this.ensureSystem();
 
     SpreadsheetApp.flush();
 
-    Logger.log("Financial Church instalado com sucesso.");
+    Logger.log("Financial Church: estrutura garantida com sucesso.");
 
   }
 
-  static createDashboard() {
+  static ensureDashboard() {
 
-    const sh = Database.recreateSheet(SHEETS.DASHBOARD);
+    const sh = Database.createSheet(SHEETS.DASHBOARD);
 
-    sh.getRange("A1").setValue("Financial Church");
-    sh.getRange("A2").setValue(APP.VERSION);
-
-  }
-
-  static createMembers() {
-
-    const sh = Database.recreateSheet(SHEETS.MEMBERS);
-
-    Database.setHeader(sh, HEADERS.MEMBERS);
+    if (sh.getRange("A1").getValue() === "") {
+      sh.getRange("A1").setValue(APP.NAME);
+      sh.getRange("A2").setValue(APP.VERSION);
+    }
 
   }
 
-  static createTransactions() {
+  static ensureDataSheet(name, headers) {
 
-    const sh = Database.recreateSheet(SHEETS.TRANSACTIONS);
+    const sh = Database.createSheet(name);
 
-    Database.setHeader(sh, HEADERS.TRANSACTIONS);
-
-  }
-
-  static createPayables() {
-
-    const sh = Database.recreateSheet(SHEETS.PAYABLES);
-
-    Database.setHeader(sh, HEADERS.PAYABLES);
+    // Reaplicar o cabeçalho é seguro (escreve só a linha 1) e migra
+    // colunas novas para abas já existentes.
+    Database.setHeader(sh, headers);
 
   }
 
-  static createReports() {
+  static ensureReports() {
 
-    Database.recreateSheet(SHEETS.REPORTS);
+    Database.createSheet(SHEETS.REPORTS);
 
   }
 
-  static createConfig() {
+  static ensureConfig() {
 
-    const sh = Database.recreateSheet(SHEETS.CONFIG);
+    const sh = Database.createSheet(SHEETS.CONFIG);
+
+    // Não sobrescreve categorias que o usuário já ajustou.
+    if (sh.getLastRow() > 0) {
+      return;
+    }
 
     sh.getRange("A1").setValue("Categorias Receita");
     sh.getRange("A2:A5").setValues([
@@ -83,18 +82,34 @@ class Installer {
 
   }
 
-  static createSystem() {
+  static ensureSystem() {
 
-    const sh = Database.recreateSheet(SHEETS.SYSTEM);
+    const sh = Database.createSheet(SHEETS.SYSTEM);
 
-    sh.appendRow(["KEY", "VALUE"]);
+    if (sh.getLastRow() === 0) {
+      sh.appendRow(["KEY", "VALUE"]);
+    }
 
-    sh.appendRow(["VERSION", APP.VERSION]);
-    sh.appendRow(["MEMBER_LAST_ID", 0]);
-    sh.appendRow(["TRANSACTION_LAST_ID", 0]);
-    sh.appendRow(["PAYABLE_LAST_ID", 0]);
+    this.ensureSystemKey(sh, "VERSION", APP.VERSION);
+    this.ensureSystemKey(sh, "MEMBER_LAST_ID", 0);
+    this.ensureSystemKey(sh, "TRANSACTION_LAST_ID", 0);
+    this.ensureSystemKey(sh, "PAYABLE_LAST_ID", 0);
 
     sh.hideSheet();
+
+  }
+
+  static ensureSystemKey(sheet, key, defaultValue) {
+
+    const values = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < values.length; i++) {
+      if (values[i][0] === key) {
+        return; // já existe: preserva o valor atual (contadores!)
+      }
+    }
+
+    sheet.appendRow([key, defaultValue]);
 
   }
 

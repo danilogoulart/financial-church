@@ -63,20 +63,6 @@ class Database {
 
   }
 
-  static recreateSheet(name) {
-
-    const ss = this.spreadsheet();
-
-    const old = ss.getSheetByName(name);
-
-    if (old) {
-      ss.deleteSheet(old);
-    }
-
-    return ss.insertSheet(name);
-
-  }
-
   static setHeader(sheet, headers) {
 
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
