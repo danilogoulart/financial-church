@@ -34,41 +34,11 @@ class Menu {
 }
 
 /**
+ * Entradas de formulário (showMemberForm, showTransactionForm e
+ * showPayableForm) ficam nos respectivos Controllers.
+ *
  * Próximas implementações
  */
-
-function showMemberForm() {
-
-  const html = HtmlService
-    .createHtmlOutputFromFile("Member")
-    .setWidth(500)
-    .setHeight(520);
-
-  SpreadsheetApp
-    .getUi()
-    .showModalDialog(html, "Novo Membro");
-
-}
-
-function showTransactionForm() {
-
-  const html = HtmlService
-    .createHtmlOutputFromFile("Transaction")
-    .setWidth(650)
-    .setHeight(650);
-
-  SpreadsheetApp.getUi()
-    .showModalDialog(html, "Nova Movimentação");
-
-}
-
-function showPayableForm() {
-
-  SpreadsheetApp
-    .getUi()
-    .alert("Contas a pagar será implementado no próximo commit.");
-
-}
 
 function refreshDashboard() {
 

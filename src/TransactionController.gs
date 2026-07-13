@@ -21,3 +21,9 @@ function listMembers() {
   return MemberRepository.listForSelect();
 
 }
+
+function listCategories() {
+
+  return ConfigRepository.categories();
+
+}
