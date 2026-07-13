@@ -35,4 +35,14 @@ class MemberRepository {
 
   }
 
+  static existsByName(name) {
+
+    const target = String(name).trim().toLowerCase();
+
+    return this.findAll().some(row =>
+      String(row[1]).trim().toLowerCase() === target
+    );
+
+  }
+
 }

@@ -6,6 +6,10 @@ class MemberService {
       throw new Error("Nome é obrigatório.");
     }
 
+    if (MemberRepository.existsByName(data.name)) {
+      throw new Error("Já existe um membro com esse nome.");
+    }
+
     const now = new Date();
 
     const member = {
