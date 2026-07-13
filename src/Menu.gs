@@ -34,24 +34,7 @@ class Menu {
 }
 
 /**
- * Entradas de formulário (showMemberForm, showTransactionForm e
- * showPayableForm) ficam nos respectivos Controllers.
- *
- * Próximas implementações
+ * As entradas do menu são funções globais que vivem nos respectivos
+ * Controllers (Member/Transaction/Payable/Dashboard/Report). O menu
+ * apenas as referencia por nome.
  */
-
-function refreshDashboard() {
-
-  SpreadsheetApp
-    .getUi()
-    .alert("Dashboard será implementado em breve.");
-
-}
-
-function openReports() {
-
-  SpreadsheetApp
-    .getUi()
-    .alert("Relatórios serão implementados em breve.");
-
-}

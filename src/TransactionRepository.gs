@@ -22,4 +22,14 @@ class TransactionRepository {
 
   }
 
+  static findAll() {
+
+    const values = Database.values(SHEETS.TRANSACTIONS);
+
+    values.shift();
+
+    return values;
+
+  }
+
 }

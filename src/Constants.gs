@@ -23,6 +23,10 @@ const COLORS = Object.freeze({
   HEADER_FONT: '#FFFFFF'
 });
 
+const FORMATS = Object.freeze({
+  CURRENCY: 'R$ #,##0.00'
+});
+
 const HEADERS = Object.freeze({
 
   MEMBERS: [
