@@ -39,9 +39,14 @@ class Menu {
 
 function showMemberForm() {
 
+  const html = HtmlService
+    .createHtmlOutputFromFile("Member")
+    .setWidth(500)
+    .setHeight(520);
+
   SpreadsheetApp
     .getUi()
-    .alert("Cadastro de membros será implementado no próximo commit.");
+    .showModalDialog(html, "Novo Membro");
 
 }
 
