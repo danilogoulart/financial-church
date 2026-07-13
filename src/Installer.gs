@@ -1,131 +1,74 @@
-/**
- * Financial Church
- * Installer
- */
-
 class Installer {
 
   static run() {
 
-    const ui = SpreadsheetApp.getUi();
+    this.createDashboard();
+    this.createMembers();
+    this.createTransactions();
+    this.createPayables();
+    this.createReports();
+    this.createConfig();
+    this.createSystem();
 
-    try {
+    SpreadsheetApp.flush();
 
-      SpreadsheetApp.getActiveSpreadsheet().toast(
-        "Instalando Financial Church...",
-        APP.NAME,
-        3
-      );
-
-      this.createDashboard();
-      this.createMembers();
-      this.createTransactions();
-      this.createPayables();
-      this.createReports();
-      this.createConfig();
-      this.createSystem();
-
-      ui.alert(
-        APP.NAME,
-        "Sistema instalado com sucesso!",
-        ui.ButtonSet.OK
-      );
-
-    } catch (e) {
-
-      ui.alert(
-        "Erro",
-        e.message,
-        ui.ButtonSet.OK
-      );
-
-      throw e;
-
-    }
+    Logger.log("Financial Church instalado com sucesso.");
 
   }
 
   static createDashboard() {
 
-    const sheet = Database.recreateSheet(SHEETS.DASHBOARD);
+    const sh = Database.recreateSheet(SHEETS.DASHBOARD);
 
-    sheet.getRange("A1").setValue("FINANCIAL CHURCH");
-
-    sheet.getRange("A2").setValue(APP.VERSION);
-
-    sheet.getRange("A4").setValue("Saldo Atual");
-
-    sheet.getRange("A7").setValue("Entradas");
-
-    sheet.getRange("A10").setValue("Saídas");
-
-    sheet.setColumnWidth(1, 220);
+    sh.getRange("A1").setValue("Financial Church");
+    sh.getRange("A2").setValue(APP.VERSION);
 
   }
 
   static createMembers() {
 
-    const sheet = Database.recreateSheet(SHEETS.MEMBERS);
+    const sh = Database.recreateSheet(SHEETS.MEMBERS);
 
-    Database.setHeader(
-      sheet,
-      HEADERS.MEMBERS
-    );
+    Database.setHeader(sh, HEADERS.MEMBERS);
 
   }
 
   static createTransactions() {
 
-    const sheet = Database.recreateSheet(
-      SHEETS.TRANSACTIONS
-    );
+    const sh = Database.recreateSheet(SHEETS.TRANSACTIONS);
 
-    Database.setHeader(
-      sheet,
-      HEADERS.TRANSACTIONS
-    );
+    Database.setHeader(sh, HEADERS.TRANSACTIONS);
 
   }
 
   static createPayables() {
 
-    const sheet = Database.recreateSheet(
-      SHEETS.PAYABLES
-    );
+    const sh = Database.recreateSheet(SHEETS.PAYABLES);
 
-    Database.setHeader(
-      sheet,
-      HEADERS.PAYABLES
-    );
+    Database.setHeader(sh, HEADERS.PAYABLES);
 
   }
 
   static createReports() {
 
-    Database.recreateSheet(
-      SHEETS.REPORTS
-    );
+    Database.recreateSheet(SHEETS.REPORTS);
 
   }
 
   static createConfig() {
 
-    const sheet = Database.recreateSheet(
-      SHEETS.CONFIG
-    );
+    const sh = Database.recreateSheet(SHEETS.CONFIG);
 
-    sheet.getRange("A1").setValue("Receitas");
-
-    sheet.getRange("A2:A5").setValues([
+    sh.getRange("A1").setValue("Categorias Receita");
+    sh.getRange("A2:A5").setValues([
       ["Dízimos"],
       ["Ofertas"],
       ["Cantina"],
       ["Eventos"]
     ]);
 
-    sheet.getRange("C1").setValue("Despesas");
-
-    sheet.getRange("C2:C8").setValues([
+    sh.getRange("C1").setValue("Categorias Despesa");
+    sh.getRange("C2:C8").setValues([
       ["Conta de água"],
       ["Conta de luz"],
       ["Conta de internet"],
@@ -135,61 +78,20 @@ class Installer {
       ["Parcela terreno"]
     ]);
 
-    sheet.getRange("E1").setValue("Formas");
-
-    sheet.getRange("E2:E3").setValues([
-      ["Dinheiro"],
-      ["PIX"]
-    ]);
-
-    sheet.getRange("G1").setValue("Cultos");
-
-    sheet.getRange("G2:G5").setValues([
-      ["Domingo Manhã"],
-      ["Domingo Noite"],
-      ["Quarta-feira"],
-      ["Outro"]
-    ]);
-
   }
 
   static createSystem() {
 
-    const sheet = Database.recreateSheet(
-      SHEETS.SYSTEM
-    );
+    const sh = Database.recreateSheet(SHEETS.SYSTEM);
 
-    sheet.appendRow([
-      "CHAVE",
-      "VALOR"
-    ]);
+    sh.appendRow(["KEY", "VALUE"]);
 
-    sheet.appendRow([
-      SYSTEM.VERSION,
-      APP.VERSION
-    ]);
+    sh.appendRow(["VERSION", APP.VERSION]);
+    sh.appendRow(["MEMBER_LAST_ID", 0]);
+    sh.appendRow(["TRANSACTION_LAST_ID", 0]);
+    sh.appendRow(["PAYABLE_LAST_ID", 0]);
 
-    sheet.appendRow([
-      SYSTEM.INSTALLED_AT,
-      new Date()
-    ]);
-
-    sheet.appendRow([
-      SYSTEM.MEMBER_LAST_ID,
-      0
-    ]);
-
-    sheet.appendRow([
-      SYSTEM.TRANSACTION_LAST_ID,
-      0
-    ]);
-
-    sheet.appendRow([
-      SYSTEM.PAYABLE_LAST_ID,
-      0
-    ]);
-
-    sheet.hideSheet();
+    sh.hideSheet();
 
   }
 
