@@ -1,10 +1,11 @@
-/**
- * Financial Church
- * Ponto de entrada
- */
+function onOpen(e) {
 
-function onOpen() {
-  Menu.build();
+  try {
+    Menu.build();
+  } catch(err) {
+    Logger.log(err);
+  }
+
 }
 
 function install() {
