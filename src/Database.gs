@@ -1,43 +1,96 @@
-const Database = {
+/**
+ * Camada única de acesso à planilha
+ */
 
-  spreadsheet() {
+class Database {
+
+  static spreadsheet() {
     return SpreadsheetApp.getActiveSpreadsheet();
-  },
+  }
 
-  sheet(name) {
-    return this.spreadsheet().getSheetByName(name);
-  },
+  static sheet(name) {
 
-  createSheet(name) {
+    const sheet = this.spreadsheet().getSheetByName(name);
 
-    let sheet = this.sheet(name);
-
-    if (sheet) return sheet;
-
-    return this.spreadsheet().insertSheet(name);
-
-  },
-
-  clear(sheet) {
-
-    sheet.clear();
+    if (!sheet) {
+      throw new Error(`A aba '${name}' não existe.`);
+    }
 
     return sheet;
 
-  },
+  }
 
-  append(sheetName, values) {
+  static createSheet(name) {
 
-    const sheet = this.sheet(sheetName);
+    const ss = this.spreadsheet();
 
-    sheet.appendRow(values);
+    let sheet = ss.getSheetByName(name);
 
-  },
+    if (!sheet) {
+      sheet = ss.insertSheet(name);
+    }
 
-  lastRow(sheetName) {
+    return sheet;
+
+  }
+
+  static recreateSheet(name) {
+
+    const ss = this.spreadsheet();
+
+    const old = ss.getSheetByName(name);
+
+    if (old) {
+      ss.deleteSheet(old);
+    }
+
+    return ss.insertSheet(name);
+
+  }
+
+  static setHeader(sheet, headers) {
+
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+
+    sheet.getRange(1, 1, 1, headers.length)
+      .setBackground(COLORS.HEADER)
+      .setFontColor(COLORS.HEADER_FONT)
+      .setFontWeight("bold");
+
+    sheet.setFrozenRows(1);
+
+    if (sheet.getFilter()) {
+      sheet.getFilter().remove();
+    }
+
+    sheet.getRange(1, 1, 1, headers.length).createFilter();
+
+  }
+
+  static append(sheetName, values) {
+
+    this.sheet(sheetName).appendRow(values);
+
+  }
+
+  static write(sheetName, row, column, values) {
+
+    this.sheet(sheetName)
+      .getRange(row, column, values.length, values[0].length)
+      .setValues(values);
+
+  }
+
+  static lastRow(sheetName) {
 
     return this.sheet(sheetName).getLastRow();
 
   }
 
-};
+  static values(sheetName) {
+
+    return this.sheet(sheetName).getDataRange().getValues();
+
+  }
+
+}

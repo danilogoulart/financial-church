@@ -1,5 +1,10 @@
+/**
+ * Financial Church
+ * Ponto de entrada
+ */
+
 function onOpen() {
-  Menu.create();
+  Menu.build();
 }
 
 function install() {

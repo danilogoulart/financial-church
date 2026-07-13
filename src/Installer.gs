@@ -1,121 +1,196 @@
-const Installer = {
+/**
+ * Financial Church
+ * Installer
+ */
 
-  run() {
+class Installer {
 
-    this.createSheets();
+  static run() {
 
-    SpreadsheetApp
-      .getUi()
-      .alert("Sistema instalado com sucesso.");
+    const ui = SpreadsheetApp.getUi();
 
-  },
+    try {
 
-  createSheets() {
+      SpreadsheetApp.getActiveSpreadsheet().toast(
+        "Instalando Financial Church...",
+        APP.NAME,
+        3
+      );
 
-    this.createDashboard();
+      this.createDashboard();
+      this.createMembers();
+      this.createTransactions();
+      this.createPayables();
+      this.createReports();
+      this.createConfig();
+      this.createSystem();
 
-    this.createMembers();
+      ui.alert(
+        APP.NAME,
+        "Sistema instalado com sucesso!",
+        ui.ButtonSet.OK
+      );
 
-    this.createTransactions();
+    } catch (e) {
 
-    this.createPayables();
+      ui.alert(
+        "Erro",
+        e.message,
+        ui.ButtonSet.OK
+      );
 
-    this.createReports();
+      throw e;
 
-    this.createConfig();
-
-    this.createSystem();
-
-  },
-
-  createDashboard() {
-
-    const sh = Database.createSheet(SHEETS.DASHBOARD);
-
-    sh.clear();
-
-    sh.getRange("A1").setValue("TESOURARIA");
-
-  },
-
-  createMembers() {
-
-    this.createTable(
-      SHEETS.MEMBERS,
-      HEADERS.MEMBERS
-    );
-
-  },
-
-  createTransactions() {
-
-    this.createTable(
-      SHEETS.TRANSACTIONS,
-      HEADERS.TRANSACTIONS
-    );
-
-  },
-
-  createPayables() {
-
-    this.createTable(
-      SHEETS.PAYABLES,
-      HEADERS.PAYABLES
-    );
-
-  },
-
-  createReports() {
-
-    Database.createSheet(SHEETS.REPORTS);
-
-  },
-
-  createConfig() {
-
-    Database.createSheet(SHEETS.CONFIG);
-
-  },
-
-  createSystem() {
-
-    const sh = Database.createSheet(SHEETS.SYSTEM);
-
-    sh.hideSheet();
-
-    sh.clear();
-
-    sh.appendRow(["KEY","VALUE"]);
-
-    sh.appendRow([SYSTEM_KEYS.VERSION, APP.VERSION]);
-
-    sh.appendRow([SYSTEM_KEYS.CREATED_AT, new Date()]);
-
-    sh.appendRow([SYSTEM_KEYS.MEMBER_LAST_ID,0]);
-
-    sh.appendRow([SYSTEM_KEYS.TRANSACTION_LAST_ID,0]);
-
-    sh.appendRow([SYSTEM_KEYS.PAYABLE_LAST_ID,0]);
-
-  },
-
-  createTable(name, headers){
-
-    const sh = Database.createSheet(name);
-
-    sh.clear();
-
-    sh.appendRow(headers);
-
-    sh.setFrozenRows(1);
-
-    sh.getRange(1,1,1,headers.length)
-      .setFontWeight("bold")
-      .setBackground("#1E88E5")
-      .setFontColor("white");
-
-    sh.getDataRange().createFilter();
+    }
 
   }
 
-};
+  static createDashboard() {
+
+    const sheet = Database.recreateSheet(SHEETS.DASHBOARD);
+
+    sheet.getRange("A1").setValue("FINANCIAL CHURCH");
+
+    sheet.getRange("A2").setValue(APP.VERSION);
+
+    sheet.getRange("A4").setValue("Saldo Atual");
+
+    sheet.getRange("A7").setValue("Entradas");
+
+    sheet.getRange("A10").setValue("Saídas");
+
+    sheet.setColumnWidth(1, 220);
+
+  }
+
+  static createMembers() {
+
+    const sheet = Database.recreateSheet(SHEETS.MEMBERS);
+
+    Database.setHeader(
+      sheet,
+      HEADERS.MEMBERS
+    );
+
+  }
+
+  static createTransactions() {
+
+    const sheet = Database.recreateSheet(
+      SHEETS.TRANSACTIONS
+    );
+
+    Database.setHeader(
+      sheet,
+      HEADERS.TRANSACTIONS
+    );
+
+  }
+
+  static createPayables() {
+
+    const sheet = Database.recreateSheet(
+      SHEETS.PAYABLES
+    );
+
+    Database.setHeader(
+      sheet,
+      HEADERS.PAYABLES
+    );
+
+  }
+
+  static createReports() {
+
+    Database.recreateSheet(
+      SHEETS.REPORTS
+    );
+
+  }
+
+  static createConfig() {
+
+    const sheet = Database.recreateSheet(
+      SHEETS.CONFIG
+    );
+
+    sheet.getRange("A1").setValue("Receitas");
+
+    sheet.getRange("A2:A5").setValues([
+      ["Dízimos"],
+      ["Ofertas"],
+      ["Cantina"],
+      ["Eventos"]
+    ]);
+
+    sheet.getRange("C1").setValue("Despesas");
+
+    sheet.getRange("C2:C8").setValues([
+      ["Conta de água"],
+      ["Conta de luz"],
+      ["Conta de internet"],
+      ["Passagem de pregador"],
+      ["Limpeza"],
+      ["Descartáveis"],
+      ["Parcela terreno"]
+    ]);
+
+    sheet.getRange("E1").setValue("Formas");
+
+    sheet.getRange("E2:E3").setValues([
+      ["Dinheiro"],
+      ["PIX"]
+    ]);
+
+    sheet.getRange("G1").setValue("Cultos");
+
+    sheet.getRange("G2:G5").setValues([
+      ["Domingo Manhã"],
+      ["Domingo Noite"],
+      ["Quarta-feira"],
+      ["Outro"]
+    ]);
+
+  }
+
+  static createSystem() {
+
+    const sheet = Database.recreateSheet(
+      SHEETS.SYSTEM
+    );
+
+    sheet.appendRow([
+      "CHAVE",
+      "VALOR"
+    ]);
+
+    sheet.appendRow([
+      SYSTEM.VERSION,
+      APP.VERSION
+    ]);
+
+    sheet.appendRow([
+      SYSTEM.INSTALLED_AT,
+      new Date()
+    ]);
+
+    sheet.appendRow([
+      SYSTEM.MEMBER_LAST_ID,
+      0
+    ]);
+
+    sheet.appendRow([
+      SYSTEM.TRANSACTION_LAST_ID,
+      0
+    ]);
+
+    sheet.appendRow([
+      SYSTEM.PAYABLE_LAST_ID,
+      0
+    ]);
+
+    sheet.hideSheet();
+
+  }
+
+}

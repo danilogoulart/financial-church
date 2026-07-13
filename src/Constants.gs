@@ -1,6 +1,11 @@
+/**
+ * Financial Church
+ * Constants
+ */
+
 const APP = Object.freeze({
   NAME: 'Financial Church',
-  VERSION: '0.1.0'
+  VERSION: '1.0.0'
 });
 
 const SHEETS = Object.freeze({
@@ -13,12 +18,9 @@ const SHEETS = Object.freeze({
   SYSTEM: '_SYSTEM'
 });
 
-const SYSTEM_KEYS = Object.freeze({
-  VERSION: 'VERSION',
-  CREATED_AT: 'CREATED_AT',
-  MEMBER_LAST_ID: 'MEMBER_LAST_ID',
-  TRANSACTION_LAST_ID: 'TRANSACTION_LAST_ID',
-  PAYABLE_LAST_ID: 'PAYABLE_LAST_ID'
+const COLORS = Object.freeze({
+  HEADER: '#1E88E5',
+  HEADER_FONT: '#FFFFFF'
 });
 
 const HEADERS = Object.freeze({
@@ -29,23 +31,25 @@ const HEADERS = Object.freeze({
     'Telefone',
     'Família',
     'Ministério',
-    'É Dizimista',
+    'Dizimista',
     'Ativo',
-    'Criado Em'
+    'Criado em',
+    'Atualizado em'
   ],
 
   TRANSACTIONS: [
     'ID',
     'Data',
     'Competência',
-    'MemberID',
+    'Membro',
     'Tipo',
     'Categoria',
     'Culto',
     'Forma',
     'Valor',
     'Observação',
-    'Criado Em'
+    'Criado em',
+    'Atualizado em'
   ],
 
   PAYABLES: [
@@ -56,7 +60,16 @@ const HEADERS = Object.freeze({
     'Vencimento',
     'Pagamento',
     'Situação',
-    'Criado Em'
+    'Criado em',
+    'Atualizado em'
   ]
 
+});
+
+const SYSTEM = Object.freeze({
+  VERSION: 'VERSION',
+  MEMBER_LAST_ID: 'MEMBER_LAST_ID',
+  TRANSACTION_LAST_ID: 'TRANSACTION_LAST_ID',
+  PAYABLE_LAST_ID: 'PAYABLE_LAST_ID',
+  INSTALLED_AT: 'INSTALLED_AT'
 });
