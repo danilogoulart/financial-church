@@ -16,7 +16,8 @@ class TransactionRepository {
         transaction.amount,
         transaction.observation,
         transaction.createdAt,
-        transaction.updatedAt
+        transaction.updatedAt,
+        transaction.receiptUrl
       ]
     );
 

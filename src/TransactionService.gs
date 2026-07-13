@@ -10,6 +10,8 @@ class TransactionService {
       throw new Error("Valor inválido.");
     }
 
+    const receiptUrl = DriveService.saveReceipt(data.attachment);
+
     const trx = {
 
       id: IdService.nextTransactionId(),
@@ -31,6 +33,8 @@ class TransactionService {
       amount: Number(data.amount),
 
       observation: data.observation,
+
+      receiptUrl: receiptUrl,
 
       createdAt: new Date(),
 

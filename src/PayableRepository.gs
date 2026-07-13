@@ -11,7 +11,8 @@ class PayableRepository {
       payable.paymentDate,
       payable.status,
       payable.createdAt,
-      payable.updatedAt
+      payable.updatedAt,
+      payable.receiptUrl
     ]);
 
   }

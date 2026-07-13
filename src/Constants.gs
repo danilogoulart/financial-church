@@ -28,7 +28,8 @@ const FORMATS = Object.freeze({
 });
 
 const PROPS = Object.freeze({
-  SPREADSHEET_ID: 'SPREADSHEET_ID'
+  SPREADSHEET_ID: 'SPREADSHEET_ID',
+  RECEIPTS_FOLDER_ID: 'RECEIPTS_FOLDER_ID'
 });
 
 const HEADERS = Object.freeze({
@@ -57,7 +58,8 @@ const HEADERS = Object.freeze({
     'Valor',
     'Observação',
     'Criado em',
-    'Atualizado em'
+    'Atualizado em',
+    'Comprovante'
   ],
 
   PAYABLES: [
@@ -69,7 +71,8 @@ const HEADERS = Object.freeze({
     'Pagamento',
     'Situação',
     'Criado em',
-    'Atualizado em'
+    'Atualizado em',
+    'Comprovante'
   ]
 
 });

@@ -242,6 +242,9 @@
       <label>Observação</label>
       <textarea id="t-observation" rows="2"></textarea>
 
+      <label>Comprovante <small>(opcional — imagem ou PDF)</small></label>
+      <input id="t-file" type="file" accept="image/*,application/pdf">
+
       <button class="primary" id="t-save" onclick="saveTransaction()">Salvar</button>
     </div>
   </section>
@@ -274,6 +277,10 @@
       <small>Se preenchido, a conta é registrada como <b>Paga</b>.</small>
 
       <br><br>
+
+      <label>Comprovante <small>(opcional — imagem ou PDF)</small></label>
+      <input id="p-file" type="file" accept="image/*,application/pdf">
+
       <button class="primary" id="p-save" onclick="savePayable()">Salvar</button>
     </div>
   </section>
@@ -325,6 +332,39 @@
     var b = document.getElementById(buttonId);
     b.disabled = on;
     b.textContent = on ? "Salvando..." : labelWhenIdle;
+  }
+
+  var MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+  // Lê o arquivo do input como base64 e chama cb(attachment|null).
+  // Em caso de erro (ex.: arquivo grande), chama cb com {error:"..."}.
+  function readAttachment(inputId, cb){
+    var input = document.getElementById(inputId);
+
+    if (!input.files || !input.files.length){
+      cb(null);
+      return;
+    }
+
+    var file = input.files[0];
+
+    if (file.size > MAX_FILE_BYTES){
+      cb({ error: "Arquivo muito grande (máx. 10 MB)." });
+      return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function(){
+      cb({
+        name: file.name,
+        mimeType: file.type,
+        bytes: reader.result.split(",")[1]
+      });
+    };
+    reader.onerror = function(){
+      cb({ error: "Não foi possível ler o arquivo." });
+    };
+    reader.readAsDataURL(file);
   }
 
   // ---------- init ----------
@@ -416,58 +456,82 @@
     clearBanner("transaction-banner");
     busy("t-save", true);
 
-    var transaction = {
-      date: val("t-date"),
-      competency: val("t-competency"),
-      memberId: val("t-member"),
-      type: val("t-type"),
-      category: val("t-category"),
-      cult: val("t-cult"),
-      paymentMethod: val("t-payment"),
-      amount: val("t-amount"),
-      observation: val("t-observation")
-    };
+    readAttachment("t-file", function(attachment){
 
-    google.script.run
-      .withSuccessHandler(function(result){
+      if (attachment && attachment.error){
         busy("t-save", false, "Salvar");
-        banner("transaction-banner", "ok", "Movimentação " + result.id + " registrada.");
-        document.getElementById("t-amount").value = "";
-        document.getElementById("t-observation").value = "";
-      })
-      .withFailureHandler(function(err){
-        busy("t-save", false, "Salvar");
-        banner("transaction-banner", "err", err.message);
-      })
-      .saveTransaction(transaction);
+        banner("transaction-banner", "err", attachment.error);
+        return;
+      }
+
+      var transaction = {
+        date: val("t-date"),
+        competency: val("t-competency"),
+        memberId: val("t-member"),
+        type: val("t-type"),
+        category: val("t-category"),
+        cult: val("t-cult"),
+        paymentMethod: val("t-payment"),
+        amount: val("t-amount"),
+        observation: val("t-observation"),
+        attachment: attachment
+      };
+
+      google.script.run
+        .withSuccessHandler(function(result){
+          busy("t-save", false, "Salvar");
+          banner("transaction-banner", "ok", "Movimentação " + result.id + " registrada.");
+          document.getElementById("t-amount").value = "";
+          document.getElementById("t-observation").value = "";
+          document.getElementById("t-file").value = "";
+        })
+        .withFailureHandler(function(err){
+          busy("t-save", false, "Salvar");
+          banner("transaction-banner", "err", err.message);
+        })
+        .saveTransaction(transaction);
+
+    });
   }
 
   function savePayable(){
     clearBanner("payable-banner");
     busy("p-save", true);
 
-    var payable = {
-      description: val("p-description"),
-      category: val("p-category"),
-      amount: val("p-amount"),
-      dueDate: val("p-due"),
-      paymentDate: val("p-payment")
-    };
+    readAttachment("p-file", function(attachment){
 
-    google.script.run
-      .withSuccessHandler(function(result){
+      if (attachment && attachment.error){
         busy("p-save", false, "Salvar");
-        banner("payable-banner", "ok", "Conta " + result.id + " registrada.");
-        document.getElementById("p-description").value = "";
-        document.getElementById("p-amount").value = "";
-        document.getElementById("p-due").value = "";
-        document.getElementById("p-payment").value = "";
-      })
-      .withFailureHandler(function(err){
-        busy("p-save", false, "Salvar");
-        banner("payable-banner", "err", err.message);
-      })
-      .savePayable(payable);
+        banner("payable-banner", "err", attachment.error);
+        return;
+      }
+
+      var payable = {
+        description: val("p-description"),
+        category: val("p-category"),
+        amount: val("p-amount"),
+        dueDate: val("p-due"),
+        paymentDate: val("p-payment"),
+        attachment: attachment
+      };
+
+      google.script.run
+        .withSuccessHandler(function(result){
+          busy("p-save", false, "Salvar");
+          banner("payable-banner", "ok", "Conta " + result.id + " registrada.");
+          document.getElementById("p-description").value = "";
+          document.getElementById("p-amount").value = "";
+          document.getElementById("p-due").value = "";
+          document.getElementById("p-payment").value = "";
+          document.getElementById("p-file").value = "";
+        })
+        .withFailureHandler(function(err){
+          busy("p-save", false, "Salvar");
+          banner("payable-banner", "err", err.message);
+        })
+        .savePayable(payable);
+
+    });
   }
 
   // ---------- tools ----------

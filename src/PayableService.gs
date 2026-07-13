@@ -18,6 +18,8 @@ class PayableService {
 
     const hasPayment = data.paymentDate && String(data.paymentDate).trim() !== "";
 
+    const receiptUrl = DriveService.saveReceipt(data.attachment);
+
     const payable = {
 
       id: IdService.nextPayableId(),
@@ -33,6 +35,8 @@ class PayableService {
       paymentDate: hasPayment ? data.paymentDate : "",
 
       status: hasPayment ? "Pago" : "Em aberto",
+
+      receiptUrl: receiptUrl,
 
       createdAt: now,
 
