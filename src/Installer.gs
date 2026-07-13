@@ -56,8 +56,13 @@ class Installer {
 
     const sh = Database.createSheet(SHEETS.CONFIG);
 
+    // Cabeçalho da lista de e-mails com acesso aos comprovantes.
+    if (sh.getRange("E1").getValue() === "") {
+      sh.getRange("E1").setValue("Acesso Comprovantes (e-mails)");
+    }
+
     // Não sobrescreve categorias que o usuário já ajustou.
-    if (sh.getLastRow() > 0) {
+    if (sh.getRange("A1").getValue() !== "") {
       return;
     }
 

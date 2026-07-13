@@ -37,4 +37,27 @@ class ConfigRepository {
     return this.categories().expense;
   }
 
+  /**
+   * E-mails autorizados a ver os comprovantes (coluna E da aba Config).
+   */
+  static receiptViewers() {
+
+    const values = Database.values(SHEETS.CONFIG);
+
+    const emails = [];
+
+    for (let i = 1; i < values.length; i++) {
+
+      const email = values[i][4];
+
+      if (email && String(email).trim() !== "") {
+        emails.push(String(email).trim());
+      }
+
+    }
+
+    return emails;
+
+  }
+
 }

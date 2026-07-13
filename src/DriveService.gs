@@ -43,7 +43,21 @@ class DriveService {
 
     const file = this.folder().createFile(blob);
 
+    this.shareWithViewers(file);
+
     return file.getUrl();
+
+  }
+
+  static shareWithViewers(file) {
+
+    ConfigRepository.receiptViewers().forEach(email => {
+      try {
+        file.addViewer(email);
+      } catch (err) {
+        // e-mail inválido/sem conta Google: ignora e segue
+      }
+    });
 
   }
 
