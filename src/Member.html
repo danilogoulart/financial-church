@@ -24,6 +24,15 @@
       padding:10px;
       cursor:pointer;
       font-size:15px;
+      background:#1E88E5;
+      color:#fff;
+      border:none;
+      border-radius:4px;
+    }
+
+    button:disabled{
+      opacity:.6;
+      cursor:default;
     }
 
   </style>
@@ -49,13 +58,17 @@
 
 <br><br>
 
-<button onclick="save()">
+<button id="saveBtn" onclick="save()">
 Salvar
 </button>
 
 <script>
 
 function save(){
+
+  const button=document.getElementById("saveBtn");
+  button.disabled=true;
+  button.textContent="Salvando...";
 
   const member={
 
@@ -84,6 +97,9 @@ function save(){
     .withFailureHandler(function(err){
 
       alert(err.message);
+
+      button.disabled=false;
+      button.textContent="Salvar";
 
     })
 

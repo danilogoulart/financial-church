@@ -172,6 +172,7 @@
 
     var button = document.getElementById("saveBtn");
     button.disabled = true;
+    button.textContent = "Salvando...";
 
     var transaction = {
       date: document.getElementById("date").value,
@@ -193,6 +194,7 @@
       .withFailureHandler(function(err){
         alert(err.message);
         button.disabled = false;
+        button.textContent = "Salvar";
       })
       .saveTransaction(transaction);
 

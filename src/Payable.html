@@ -118,6 +118,7 @@
 
     var button = document.getElementById("saveBtn");
     button.disabled = true;
+    button.textContent = "Salvando...";
 
     var payable = {
       description: document.getElementById("description").value,
@@ -135,6 +136,7 @@
       .withFailureHandler(function(err){
         alert(err.message);
         button.disabled = false;
+        button.textContent = "Salvar";
       })
       .savePayable(payable);
 
