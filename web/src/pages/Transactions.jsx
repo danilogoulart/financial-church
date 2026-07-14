@@ -18,7 +18,6 @@ const SIZE = 20
 
 const EMPTY = {
   date: today(),
-  competency: today().slice(0, 7),
   member_id: '',
   type: 'Receita',
   category: '',
@@ -76,7 +75,6 @@ export default function Transactions() {
     setExistingReceipt(t.receipt_path || null)
     setForm({
       date: t.date,
-      competency: t.competency || '',
       member_id: t.member_id || '',
       type: t.type,
       category: t.category || '',
@@ -92,7 +90,7 @@ export default function Transactions() {
   function cancelEdit() {
     setEditingId(null)
     setExistingReceipt(null)
-    setForm({ ...EMPTY, date: today(), competency: today().slice(0, 7) })
+    setForm({ ...EMPTY, date: today() })
     setBanner(null)
     if (fileRef.current) fileRef.current.value = ''
   }
@@ -115,7 +113,6 @@ export default function Transactions() {
 
       const payload = {
         date: form.date,
-        competency: form.competency,
         member_id: form.member_id || null,
         type: form.type,
         category: form.category || categoryOptions[0] || null,
@@ -136,7 +133,7 @@ export default function Transactions() {
         setBanner({ type: 'ok', msg: `Movimentação de ${formatMoney(trx.amount)} registrada.` })
         setPage(0)
       }
-      setForm({ ...EMPTY, date: today(), competency: today().slice(0, 7) })
+      setForm({ ...EMPTY, date: today() })
       if (fileRef.current) fileRef.current.value = ''
       refresh()
     } catch (err) {
@@ -163,16 +160,8 @@ export default function Transactions() {
         <h2>{editingId ? 'Editar Movimentação' : 'Nova Movimentação'}</h2>
         {banner && <div className={`banner ${banner.type}`}>{banner.msg}</div>}
 
-        <div className="row">
-          <div>
-            <label>Data</label>
-            <input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} required />
-          </div>
-          <div>
-            <label>Competência</label>
-            <input type="month" value={form.competency} onChange={(e) => set('competency', e.target.value)} />
-          </div>
-        </div>
+        <label>Data</label>
+        <input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} required />
 
         <label>Tipo</label>
         <select value={form.type} onChange={(e) => set('type', e.target.value)}>

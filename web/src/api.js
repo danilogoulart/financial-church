@@ -398,10 +398,11 @@ export async function tithersLast3Months() {
     supabase.from('members').select('id, name, ministry').eq('tither', true).order('name'),
     supabase
       .from('transactions')
-      .select('member_id, competency')
+      .select('member_id, date')
       .eq('type', 'Receita')
       .eq('category', 'Dízimos')
-      .in('competency', months)
+      .gte('date', months[0] + '-01')
+      .lte('date', months[months.length - 1] + '-31')
   ])
   if (e1) throw e1
   if (e2) throw e2
@@ -409,7 +410,7 @@ export async function tithersLast3Months() {
   const byMember = {}
   tithes.forEach((t) => {
     if (!t.member_id) return
-    ;(byMember[t.member_id] = byMember[t.member_id] || new Set()).add(t.competency)
+    ;(byMember[t.member_id] = byMember[t.member_id] || new Set()).add((t.date || '').slice(0, 7))
   })
 
   const rows = tithers.map((m) => {
@@ -447,7 +448,7 @@ export async function monthlySeries(n = 6) {
   const months = lastNMonths(n)
 
   const [{ data: txs, error: e1 }, { data: pays, error: e2 }] = await Promise.all([
-    supabase.from('transactions').select('type, amount, competency'),
+    supabase.from('transactions').select('type, amount, date'),
     supabase.from('payables').select('amount, payment_date').eq('status', 'Pago')
   ])
   if (e1) throw e1
@@ -457,7 +458,7 @@ export async function monthlySeries(n = 6) {
   months.forEach((m) => (base[m] = { month: m, income: 0, expense: 0 }))
 
   txs.forEach((t) => {
-    const row = base[t.competency]
+    const row = base[(t.date || '').slice(0, 7)]
     if (!row) return
     const amount = Number(t.amount) || 0
     if (t.type === 'Receita') row.income += amount
@@ -509,7 +510,7 @@ export async function forecast(n = 3) {
     await Promise.all([
       supabase.from('recurring_expenses').select('*'),
       supabase.from('payables').select('status, amount, due_date, recurring_id'),
-      supabase.from('transactions').select('type, amount, competency')
+      supabase.from('transactions').select('type, amount, date')
     ])
   if (e1) throw e1
   if (e2) throw e2
@@ -529,8 +530,9 @@ export async function forecast(n = 3) {
   const incomeByMonth = {}
   txs.forEach((t) => {
     if (t.type !== 'Receita') return
-    if (!avgMonths.includes(t.competency)) return
-    incomeByMonth[t.competency] = (incomeByMonth[t.competency] || 0) + Number(t.amount)
+    const m = (t.date || '').slice(0, 7)
+    if (!avgMonths.includes(m)) return
+    incomeByMonth[m] = (incomeByMonth[m] || 0) + Number(t.amount)
   })
   const avgIncome =
     avgMonths.reduce((s, m) => s + (incomeByMonth[m] || 0), 0) / avgMonths.length
