@@ -141,5 +141,8 @@ export default function CashBook() {
 
 function csvCell(v) {
   const s = String(v ?? '')
-  return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  // Também cita quando há vírgula: valores como "160,00" (decimal com
+  // vírgula) não podem ser divididos se o app abrir o CSV usando vírgula
+  // como separador.
+  return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
