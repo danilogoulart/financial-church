@@ -1,26 +1,25 @@
 :root {
-  /* Tema — preto/prata (Alpha). Ponto único de customização do visual. */
-  --bg: #0b0c0d;
-  --surface: #161719;
-  --surface-2: #202225;
+  /* Tema claro, cor primária preta (Alpha). Ponto único de customização. */
+  --bg: #f4f6f8;
+  --surface: #ffffff;
   --header-bg: #000000;
-  --ink: #e9eaec;
-  --muted: #9aa0a6;
-  --border: #2c2f33;
+  --ink: #222222;
+  --muted: #666666;
+  --border: #d5d5d5;
 
-  /* Prata "chrome" para botões/realces */
-  --accent: #c8ccd2;
-  --accent-strong: #eef0f3;
+  /* Cor primária (era azul, agora preto) — botões, menu ativo, realces */
+  --primary: #111111;
+  --primary-hover: #333333;
 
   --income: #1B9E5A;
   --expense: #D64545;
 
-  --ok-bg: rgba(27, 158, 90, 0.16); --ok-fg: #7ee0ab;
-  --err-bg: rgba(214, 69, 69, 0.16); --err-fg: #f0a6a6;
+  --ok-bg: #E8F5E9; --ok-fg: #1B5E20;
+  --err-bg: #FFEBEE; --err-fg: #B71C1C;
 
-  --chart-grid: rgba(255, 255, 255, 0.08);
-  --chart-axis: rgba(255, 255, 255, 0.22);
-  --chart-ink: #9aa0a6;
+  --chart-grid: #eeeeee;
+  --chart-axis: #cccccc;
+  --chart-ink: #888888;
 }
 
 * { box-sizing: border-box; }
@@ -39,20 +38,19 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--border);
 }
 .brand { display: flex; align-items: center; gap: 12px; }
 .brand .logo { height: 30px; width: auto; display: block; }
 .brand-name { font-size: 17px; font-weight: bold; letter-spacing: .5px; }
 header .logout {
   background: transparent;
-  color: var(--ink);
-  border: 1px solid var(--border);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, .5);
   border-radius: 6px;
   padding: 6px 12px;
   cursor: pointer;
 }
-header .logout:hover { background: var(--surface-2); }
+header .logout:hover { background: rgba(255, 255, 255, .12); }
 
 nav {
   display: flex;
@@ -69,19 +67,14 @@ nav button {
   flex: 1;
   min-width: 130px;
   padding: 10px;
-  border: 1px solid transparent;
-  background: var(--surface-2);
-  color: var(--muted);
+  border: none;
+  background: #eceff1;
+  color: #333;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
 }
-nav button.active {
-  background: #2b2e33;
-  color: #fff;
-  font-weight: bold;
-  border-color: var(--accent);
-}
+nav button.active { background: var(--primary); color: #fff; font-weight: bold; }
 
 main { max-width: 720px; margin: 0 auto; padding: 20px; }
 
@@ -104,10 +97,9 @@ input, select, textarea {
   border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 14px;
-  background: var(--surface-2);
+  background: #fff;
   color: var(--ink);
 }
-input::placeholder, textarea::placeholder { color: var(--muted); }
 
 .row { display: flex; gap: 12px; flex-wrap: wrap; }
 .row > div { flex: 1; min-width: 140px; }
@@ -118,15 +110,14 @@ input::placeholder, textarea::placeholder { color: var(--muted); }
 button.primary {
   width: 100%;
   padding: 11px;
-  background: linear-gradient(180deg, var(--accent-strong), var(--accent));
-  color: #16181b;
+  background: var(--primary);
+  color: #fff;
   border: none;
   border-radius: 6px;
   font-size: 15px;
-  font-weight: bold;
   cursor: pointer;
 }
-button.primary:hover { filter: brightness(1.05); }
+button.primary:hover { background: var(--primary-hover); }
 button.primary:disabled { opacity: .5; cursor: default; }
 
 .banner { padding: 10px 12px; border-radius: 6px; margin-bottom: 14px; font-size: 14px; }
@@ -136,12 +127,12 @@ button.primary:disabled { opacity: .5; cursor: default; }
 small { color: var(--muted); }
 
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); }
+th, td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; }
 th { color: var(--muted); }
 .table-wrap { overflow-x: auto; }
 
 a.link, .link-btn {
-  color: var(--accent);
+  color: var(--primary);
   cursor: pointer;
   text-decoration: underline;
 }
@@ -167,9 +158,9 @@ a.link, .link-btn {
   color: var(--ink);
 }
 .kpi .value { font-size: 20px; font-weight: bold; margin-top: 4px; }
-.kpi.income { background: var(--ok-bg); border-color: rgba(27, 158, 90, 0.45); }
-.kpi.expense { background: var(--err-bg); border-color: rgba(214, 69, 69, 0.45); }
-.kpi.balance { background: rgba(150, 160, 175, 0.16); border-color: rgba(150, 160, 175, 0.4); }
+.kpi.income { background: var(--ok-bg); }
+.kpi.expense { background: var(--err-bg); }
+.kpi.balance { background: #eef0f2; }
 
 /* Gráfico (temável via variáveis) */
 .chart-grid { stroke: var(--chart-grid); }
