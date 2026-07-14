@@ -4,12 +4,16 @@ import Login from './Login.jsx'
 import Members from './pages/Members.jsx'
 import Transactions from './pages/Transactions.jsx'
 import Payables from './pages/Payables.jsx'
+import Recurring from './pages/Recurring.jsx'
+import Reports from './pages/Reports.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 
 const TABS = [
   { id: 'members', label: '👤 Membros', Component: Members },
   { id: 'transactions', label: '💰 Movimentações', Component: Transactions },
   { id: 'payables', label: '📄 Contas a Pagar', Component: Payables },
+  { id: 'recurring', label: '🔁 Recorrentes', Component: Recurring },
+  { id: 'reports', label: '📑 Relatórios', Component: Reports },
   { id: 'dashboard', label: '📊 Dashboard', Component: Dashboard }
 ]
 

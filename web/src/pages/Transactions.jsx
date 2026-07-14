@@ -8,6 +8,7 @@ import {
   uploadReceipt
 } from '../api'
 import ReceiptLink from '../components/ReceiptLink.jsx'
+import { CULTS, PAYMENT_METHODS } from '../constants'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -22,10 +23,6 @@ const EMPTY = {
   amount: '',
   observation: ''
 }
-
-const PAYMENT_METHODS = [
-  'Dinheiro', 'PIX', 'Cartão de Débito', 'Cartão de Crédito', 'Transferência', 'Cheque'
-]
 
 export default function Transactions() {
   const [form, setForm] = useState(EMPTY)
@@ -133,7 +130,12 @@ export default function Transactions() {
         <div className="row">
           <div>
             <label>Culto</label>
-            <input value={form.cult} onChange={(e) => set('cult', e.target.value)} placeholder="Ex.: Domingo Manhã" />
+            <select value={form.cult} onChange={(e) => set('cult', e.target.value)}>
+              <option value="">—</option>
+              {CULTS.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label>Forma de pagamento</label>

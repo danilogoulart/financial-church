@@ -1,9 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   createPayable,
+  currentCompetency,
   formatMoney,
+  generateMonthPayables,
   listCategories,
   listRecentPayables,
+  markPayablePaid,
+  monthGenerated,
+  monthLabel,
   uploadReceipt
 } from '../api'
 import ReceiptLink from '../components/ReceiptLink.jsx'
@@ -22,6 +27,9 @@ export default function Payables() {
   const [banner, setBanner] = useState(null)
   const [saving, setSaving] = useState(false)
   const [rows, setRows] = useState([])
+  const [month, setMonth] = useState(currentCompetency())
+  const [generating, setGenerating] = useState(false)
+  const [needsGenerate, setNeedsGenerate] = useState(false)
   const fileRef = useRef(null)
 
   function set(key, value) {
@@ -30,9 +38,14 @@ export default function Payables() {
 
   async function load() {
     try {
-      const [cats, pays] = await Promise.all([listCategories(), listRecentPayables()])
+      const [cats, pays, generated] = await Promise.all([
+        listCategories(),
+        listRecentPayables(),
+        monthGenerated(currentCompetency())
+      ])
       setCategories(cats.expense)
       setRows(pays)
+      setNeedsGenerate(!generated)
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     }
@@ -41,6 +54,35 @@ export default function Payables() {
   useEffect(() => {
     load()
   }, [])
+
+  async function generate(competency) {
+    setGenerating(true)
+    setBanner(null)
+    try {
+      const { created, skipped } = await generateMonthPayables(competency)
+      setBanner({
+        type: 'ok',
+        msg: `${monthLabel(competency)}: ${created} conta(s) gerada(s)` +
+          (skipped ? `, ${skipped} já existia(m).` : '.')
+      })
+      load()
+    } catch (err) {
+      setBanner({ type: 'err', msg: err.message })
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  async function pay(id) {
+    setBanner(null)
+    try {
+      await markPayablePaid(id)
+      setBanner({ type: 'ok', msg: 'Conta marcada como paga (entra como despesa).' })
+      load()
+    } catch (err) {
+      setBanner({ type: 'err', msg: err.message })
+    }
+  }
 
   async function save(e) {
     e.preventDefault()
@@ -73,9 +115,40 @@ export default function Payables() {
 
   return (
     <>
-      <form className="card" onSubmit={save}>
-        <h2>Nova Conta a Pagar</h2>
+      {needsGenerate && (
+        <div className="card" style={{ borderColor: 'var(--primary)' }}>
+          <div className="banner ok" style={{ marginBottom: 12 }}>
+            Você ainda não gerou as contas fixas/parceladas de <b>{monthLabel(currentCompetency())}</b>.
+          </div>
+          <button
+            className="primary"
+            disabled={generating}
+            onClick={() => generate(currentCompetency())}
+          >
+            {generating ? 'Gerando...' : `Gerar contas de ${monthLabel(currentCompetency())}`}
+          </button>
+        </div>
+      )}
+
+      <div className="card">
+        <h2>Gerar contas do mês</h2>
         {banner && <div className={`banner ${banner.type}`}>{banner.msg}</div>}
+        <div className="row" style={{ alignItems: 'flex-end' }}>
+          <div>
+            <label>Mês</label>
+            <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+          </div>
+          <div>
+            <button className="primary" disabled={generating} onClick={() => generate(month)}>
+              {generating ? 'Gerando...' : 'Gerar'}
+            </button>
+          </div>
+        </div>
+        <small>Cria as contas das despesas recorrentes vigentes. Pode clicar mais de uma vez sem duplicar.</small>
+      </div>
+
+      <form className="card" onSubmit={save}>
+        <h2>Nova Conta Avulsa</h2>
 
         <label>Descrição</label>
         <input value={form.description} onChange={(e) => set('description', e.target.value)} required />
@@ -100,7 +173,6 @@ export default function Payables() {
 
         <label>Pagamento <small>(opcional)</small></label>
         <input type="date" value={form.payment_date} onChange={(e) => set('payment_date', e.target.value)} />
-        <small>Se preenchido, a conta é registrada como <b>Paga</b>.</small>
 
         <label style={{ marginTop: 14 }}>Comprovante <small>(opcional — imagem ou PDF)</small></label>
         <input ref={fileRef} type="file" accept="image/*,application/pdf" />
@@ -117,22 +189,26 @@ export default function Payables() {
             <thead>
               <tr>
                 <th>Descrição</th>
-                <th>Categoria</th>
                 <th>Valor</th>
                 <th>Vencimento</th>
                 <th>Situação</th>
                 <th>Comprovante</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {rows.map((p) => (
                 <tr key={p.id}>
                   <td>{p.description}</td>
-                  <td>{p.category || '—'}</td>
                   <td>{formatMoney(p.amount)}</td>
                   <td>{p.due_date}</td>
                   <td>{p.status}</td>
                   <td><ReceiptLink path={p.receipt_path} /></td>
+                  <td>
+                    {p.status !== 'Pago' && (
+                      <button className="link-btn" onClick={() => pay(p.id)}>Pagar</button>
+                    )}
+                  </td>
                 </tr>
               ))}
               {rows.length === 0 && (

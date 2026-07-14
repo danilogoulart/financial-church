@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { WORKER_MINISTRIES } from './constants'
 
 // ---------- Membros ----------
 
@@ -116,7 +117,7 @@ export async function receiptUrl(path) {
 export async function dashboardTotals() {
   const [{ data: txs, error: e1 }, { data: pays, error: e2 }] = await Promise.all([
     supabase.from('transactions').select('type, category, amount'),
-    supabase.from('payables').select('status, amount')
+    supabase.from('payables').select('status, amount, category')
   ])
   if (e1) throw e1
   if (e2) throw e2
@@ -126,15 +127,20 @@ export async function dashboardTotals() {
   const incomeByCategory = {}
   const expenseByCategory = {}
 
+  const addExpense = (category, amount) => {
+    totalExpense += amount
+    const key = category || '(sem categoria)'
+    expenseByCategory[key] = (expenseByCategory[key] || 0) + amount
+  }
+
   txs.forEach((t) => {
     const amount = Number(t.amount) || 0
-    const category = t.category || '(sem categoria)'
     if (t.type === 'Receita') {
       totalIncome += amount
-      incomeByCategory[category] = (incomeByCategory[category] || 0) + amount
+      const key = t.category || '(sem categoria)'
+      incomeByCategory[key] = (incomeByCategory[key] || 0) + amount
     } else {
-      totalExpense += amount
-      expenseByCategory[category] = (expenseByCategory[category] || 0) + amount
+      addExpense(t.category, amount)
     }
   })
 
@@ -144,8 +150,11 @@ export async function dashboardTotals() {
 
   pays.forEach((p) => {
     const amount = Number(p.amount) || 0
-    if (p.status === 'Pago') payablePaid += amount
-    else {
+    if (p.status === 'Pago') {
+      payablePaid += amount
+      // Conta paga entra como despesa nos gráficos/relatórios.
+      addExpense(p.category, amount)
+    } else {
       payableOpen += amount
       payableOpenCount++
     }
@@ -181,4 +190,234 @@ export function formatMoney(value) {
     style: 'currency',
     currency: 'BRL'
   })
+}
+
+// ---------- Marcar conta como paga ----------
+
+export async function markPayablePaid(id) {
+  const today = new Date().toISOString().slice(0, 10)
+  const { data, error } = await supabase
+    .from('payables')
+    .update({ status: 'Pago', payment_date: today })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// ---------- Despesas recorrentes (fixas / parceladas) ----------
+
+export async function listRecurring() {
+  const { data, error } = await supabase
+    .from('recurring_expenses')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createRecurring(rec) {
+  const { data, error } = await supabase
+    .from('recurring_expenses')
+    .insert(rec)
+    .select()
+    .single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function setRecurringActive(id, active) {
+  const { error } = await supabase
+    .from('recurring_expenses')
+    .update({ active })
+    .eq('id', id)
+  if (error) throw error
+}
+
+// ---------- Geração das contas do mês ----------
+
+export async function monthGenerated(competency) {
+  const { count, error } = await supabase
+    .from('payables')
+    .select('id', { count: 'exact', head: true })
+    .eq('competency', competency)
+    .not('recurring_id', 'is', null)
+  if (error) throw error
+  return (count || 0) > 0
+}
+
+// Cria as Contas a Pagar do mês a partir das recorrentes vigentes.
+// Idempotente: não duplica o que já foi gerado para o mês.
+export async function generateMonthPayables(competency) {
+  const { data: recs, error } = await supabase.from('recurring_expenses').select('*')
+  if (error) throw error
+
+  const target = compIndex(competency)
+  const applicable = []
+
+  recs.forEach((r) => {
+    const start = compIndex(r.start_competency)
+    if (target < start) return
+    if (r.kind === 'fixa') {
+      if (r.active) applicable.push({ r, parcela: null })
+    } else {
+      const parcela = target - start + 1
+      if (parcela >= 1 && parcela <= (r.installments_total || 0)) {
+        applicable.push({ r, parcela })
+      }
+    }
+  })
+
+  if (applicable.length === 0) return { created: 0, skipped: 0 }
+
+  const { data: existing, error: e2 } = await supabase
+    .from('payables')
+    .select('recurring_id')
+    .eq('competency', competency)
+    .not('recurring_id', 'is', null)
+  if (e2) throw e2
+  const done = new Set((existing || []).map((p) => p.recurring_id))
+
+  const rows = applicable
+    .filter(({ r }) => !done.has(r.id))
+    .map(({ r, parcela }) => ({
+      description: parcela
+        ? `${r.description} (Parcela ${parcela}/${r.installments_total})`
+        : r.description,
+      category: r.category,
+      amount: r.amount,
+      due_date: `${competency}-${String(Math.min(r.due_day, 28)).padStart(2, '0')}`,
+      status: 'Em aberto',
+      recurring_id: r.id,
+      competency
+    }))
+
+  if (rows.length === 0) return { created: 0, skipped: applicable.length }
+
+  const { error: e3 } = await supabase.from('payables').insert(rows)
+  if (e3) throw e3
+
+  return { created: rows.length, skipped: applicable.length - rows.length }
+}
+
+// ---------- Relatórios ----------
+
+// Dizimistas: em quantos dos 3 meses anteriores ao mês atual houve dízimo.
+export async function tithersLast3Months() {
+  const months = previousMonths(3)
+
+  const [{ data: tithers, error: e1 }, { data: tithes, error: e2 }] = await Promise.all([
+    supabase.from('members').select('id, name, ministry').eq('tither', true).order('name'),
+    supabase
+      .from('transactions')
+      .select('member_id, competency')
+      .eq('type', 'Receita')
+      .eq('category', 'Dízimos')
+      .in('competency', months)
+  ])
+  if (e1) throw e1
+  if (e2) throw e2
+
+  const byMember = {}
+  tithes.forEach((t) => {
+    if (!t.member_id) return
+    ;(byMember[t.member_id] = byMember[t.member_id] || new Set()).add(t.competency)
+  })
+
+  const rows = tithers.map((m) => {
+    const set = byMember[m.id] || new Set()
+    return {
+      id: m.id,
+      name: m.name,
+      ministry: m.ministry,
+      perMonth: months.map((mm) => set.has(mm)),
+      monthsTithed: months.filter((mm) => set.has(mm)).length
+    }
+  })
+
+  // Quem tithou em menos meses primeiro (destaca quem está faltando).
+  rows.sort((a, b) => a.monthsTithed - b.monthsTithed || a.name.localeCompare(b.name))
+
+  return { months, rows }
+}
+
+// Obreiros (altar/obreiros) que não são dizimistas.
+export async function nonTitherWorkers() {
+  const { data, error } = await supabase
+    .from('members')
+    .select('id, name, ministry, phone')
+    .eq('tither', false)
+    .in('ministry', WORKER_MINISTRIES)
+    .order('name')
+  if (error) throw error
+  return data
+}
+
+// ---------- Série mensal (gráfico receitas x despesas) ----------
+
+export async function monthlySeries(n = 6) {
+  const months = lastNMonths(n)
+
+  const [{ data: txs, error: e1 }, { data: pays, error: e2 }] = await Promise.all([
+    supabase.from('transactions').select('type, amount, competency'),
+    supabase.from('payables').select('amount, payment_date').eq('status', 'Pago')
+  ])
+  if (e1) throw e1
+  if (e2) throw e2
+
+  const base = {}
+  months.forEach((m) => (base[m] = { month: m, income: 0, expense: 0 }))
+
+  txs.forEach((t) => {
+    const row = base[t.competency]
+    if (!row) return
+    const amount = Number(t.amount) || 0
+    if (t.type === 'Receita') row.income += amount
+    else row.expense += amount
+  })
+
+  pays.forEach((p) => {
+    const row = base[(p.payment_date || '').slice(0, 7)]
+    if (row) row.expense += Number(p.amount) || 0
+  })
+
+  return months.map((m) => base[m])
+}
+
+// ---------- Competência (YYYY-MM) ----------
+
+function compIndex(competency) {
+  const [y, m] = String(competency).split('-').map(Number)
+  return y * 12 + (m - 1)
+}
+
+function indexToComp(index) {
+  const y = Math.floor(index / 12)
+  const m = (index % 12) + 1
+  return `${y}-${String(m).padStart(2, '0')}`
+}
+
+export function currentCompetency() {
+  return new Date().toISOString().slice(0, 7)
+}
+
+export function lastNMonths(n) {
+  const end = compIndex(currentCompetency())
+  const out = []
+  for (let i = n - 1; i >= 0; i--) out.push(indexToComp(end - i))
+  return out
+}
+
+export function previousMonths(n) {
+  const end = compIndex(currentCompetency()) - 1
+  const out = []
+  for (let i = n - 1; i >= 0; i--) out.push(indexToComp(end - i))
+  return out
+}
+
+export function monthLabel(competency) {
+  const names = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+  const [y, m] = String(competency).split('-')
+  return `${names[Number(m) - 1]}/${y.slice(2)}`
 }

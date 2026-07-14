@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
-import { dashboardTotals, formatMoney } from '../api'
+import { dashboardTotals, formatMoney, monthlySeries } from '../api'
+import MonthlyChart from '../components/MonthlyChart.jsx'
 
 export default function Dashboard() {
   const [totals, setTotals] = useState(null)
+  const [series, setSeries] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     dashboardTotals().then(setTotals).catch((e) => setError(e.message))
+    monthlySeries(6).then(setSeries).catch((e) => setError(e.message))
   }, [])
 
   if (error) return <div className="card"><div className="banner err">{error}</div></div>
@@ -30,6 +33,11 @@ export default function Dashboard() {
             <div className="value">{formatMoney(totals.balance)}</div>
           </div>
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Receitas x Despesas (últimos 6 meses)</h2>
+        {series ? <MonthlyChart data={series} /> : <span style={{ color: '#999' }}>Carregando...</span>}
       </div>
 
       <div className="card">

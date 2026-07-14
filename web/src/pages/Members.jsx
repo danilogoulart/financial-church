@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { createMember, listRecentMembers } from '../api'
+import { MINISTRIES } from '../constants'
 
-const EMPTY = { name: '', phone: '', family: '', ministry: '', tither: true }
+const EMPTY = { name: '', phone: '', family: '', ministry: 'Membros', tither: true }
 
 export default function Members() {
   const [form, setForm] = useState(EMPTY)
@@ -67,7 +68,11 @@ export default function Members() {
           </div>
           <div>
             <label>Ministério</label>
-            <input value={form.ministry} onChange={(e) => set('ministry', e.target.value)} />
+            <select value={form.ministry} onChange={(e) => set('ministry', e.target.value)}>
+              {MINISTRIES.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
           </div>
         </div>
 

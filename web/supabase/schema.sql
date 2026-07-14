@@ -59,6 +59,30 @@ create table if not exists public.payables (
   updated_at   timestamptz default now()
 );
 
+-- Despesas recorrentes (fixas e parceladas) — fonte para gerar as contas do mês.
+create table if not exists public.recurring_expenses (
+  id                 uuid primary key default gen_random_uuid(),
+  description        text not null,
+  category           text,
+  amount             numeric(12,2) not null check (amount > 0),
+  due_day            int not null default 5 check (due_day between 1 and 28),
+  kind               text not null check (kind in ('fixa','parcelada')),
+  installments_total int check (installments_total is null or installments_total > 0),
+  start_competency   text not null,           -- 'YYYY-MM'
+  active             boolean default true,
+  created_at         timestamptz default now(),
+  updated_at         timestamptz default now()
+);
+
+-- Liga a conta gerada à recorrente + mês, para não duplicar na geração.
+alter table public.payables
+  add column if not exists recurring_id uuid references public.recurring_expenses(id) on delete set null;
+alter table public.payables
+  add column if not exists competency text;
+
+create index if not exists payables_recurring_competency
+  on public.payables (recurring_id, competency);
+
 -- ---------- Categorias padrão ----------
 
 insert into public.categories (kind, name) values
@@ -71,10 +95,11 @@ on conflict do nothing;
 -- ---------- Row Level Security ----------
 -- App interno: qualquer usuário autenticado (criado por você) tem acesso total.
 
-alter table public.members      enable row level security;
-alter table public.categories   enable row level security;
-alter table public.transactions enable row level security;
-alter table public.payables     enable row level security;
+alter table public.members            enable row level security;
+alter table public.categories         enable row level security;
+alter table public.transactions       enable row level security;
+alter table public.payables           enable row level security;
+alter table public.recurring_expenses enable row level security;
 
 drop policy if exists members_all on public.members;
 create policy members_all on public.members
@@ -90,6 +115,10 @@ create policy transactions_all on public.transactions
 
 drop policy if exists payables_all on public.payables;
 create policy payables_all on public.payables
+  for all to authenticated using (true) with check (true);
+
+drop policy if exists recurring_all on public.recurring_expenses;
+create policy recurring_all on public.recurring_expenses
   for all to authenticated using (true) with check (true);
 
 -- ---------- Storage (comprovantes) ----------
