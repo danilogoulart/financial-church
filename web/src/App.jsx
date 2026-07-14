@@ -31,6 +31,7 @@ export default function App() {
   const [ready, setReady] = useState(false)
   const [tab, setTab] = useState('home')
   const [role, setRole] = useState('consulta')
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -58,14 +59,19 @@ export default function App() {
   return (
     <RoleContext.Provider value={ctx}>
       <header>
-        <div className="brand">
-          <img
-            className="logo"
-            src={LOGO_URL}
-            alt={APP_NAME}
-            onError={(e) => { e.currentTarget.style.display = 'none' }}
-          />
-          <span className="brand-name">{APP_NAME}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button className="hamburger" aria-label="Menu" onClick={() => setMenuOpen((o) => !o)}>
+            ☰
+          </button>
+          <div className="brand">
+            <img
+              className="logo"
+              src={LOGO_URL}
+              alt={APP_NAME}
+              onError={(e) => { e.currentTarget.style.display = 'none' }}
+            />
+            <span className="brand-name">{APP_NAME}</span>
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 12, opacity: 0.75 }}>{roleLabel}</span>
@@ -75,12 +81,15 @@ export default function App() {
         </div>
       </header>
 
-      <nav>
+      <nav className={menuOpen ? 'open' : ''}>
         {TABS.map((t) => (
           <button
             key={t.id}
             className={t.id === tab ? 'active' : ''}
-            onClick={() => setTab(t.id)}
+            onClick={() => {
+              setTab(t.id)
+              setMenuOpen(false)
+            }}
           >
             {t.label}
           </button>
