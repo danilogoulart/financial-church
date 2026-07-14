@@ -34,72 +34,108 @@ body {
 header {
   background: var(--header-bg);
   color: #fff;
-  padding: 12px 20px;
+  height: 56px;
+  padding: 0 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.brand { display: flex; align-items: center; gap: 12px; }
-.brand .logo { height: 30px; width: auto; display: block; }
-.brand-name { font-size: 17px; font-weight: bold; letter-spacing: .5px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand .logo { height: 28px; width: auto; display: block; }
+.brand-name { font-size: 16px; font-weight: 600; letter-spacing: .3px; }
+.role-chip {
+  font-size: 12px;
+  color: #cfd3d9;
+  border: 1px solid #333;
+  border-radius: 999px;
+  padding: 3px 10px;
+}
 header .logout {
   background: transparent;
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, .5);
-  border-radius: 6px;
-  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  padding: 6px 14px;
   cursor: pointer;
+  font-size: 13px;
 }
-header .logout:hover { background: rgba(255, 255, 255, .12); }
+header .logout:hover { background: rgba(255, 255, 255, 0.12); }
 
 nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  gap: 2px;
   background: var(--surface);
-  padding: 8px;
+  padding: 0 12px;
   border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 5;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
+nav::-webkit-scrollbar { height: 0; }
 nav button {
-  flex: 1;
-  min-width: 130px;
-  padding: 10px;
+  flex: 0 0 auto;
   border: none;
-  background: #eceff1;
-  color: #333;
-  border-radius: 6px;
-  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
+  padding: 14px;
   font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
 }
-nav button.active { background: var(--primary); color: #fff; font-weight: bold; }
+nav button:hover { color: var(--ink); }
+nav button.active {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--primary);
+}
 
 .hamburger {
   display: none;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   color: #fff;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 18px;
   line-height: 1;
-  padding: 6px 10px;
+  padding: 6px 11px;
   cursor: pointer;
 }
 
 main { max-width: 720px; margin: 0 auto; padding: 20px; }
 
 @media (max-width: 640px) {
-  header { padding: 10px 14px; }
+  header { padding: 0 14px; }
   .brand-name { font-size: 15px; }
-  .brand .logo { height: 26px; }
+  .brand .logo { height: 24px; }
+  .role-chip { display: none; }
 
   .hamburger { display: inline-flex; }
 
-  nav { display: none; flex-direction: column; }
+  nav {
+    display: none;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px;
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  }
   nav.open { display: flex; }
-  nav button { min-width: 0; width: 100%; text-align: left; }
+  nav button {
+    width: 100%;
+    text-align: left;
+    padding: 13px 12px;
+    border-bottom: none;
+    border-radius: 8px;
+  }
+  nav button.active { background: var(--primary); color: #fff; }
 
   main { padding: 14px; }
   .card { padding: 16px; }

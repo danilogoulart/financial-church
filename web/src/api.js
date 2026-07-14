@@ -586,6 +586,26 @@ export async function tithersLast3Months() {
   return { months, rows }
 }
 
+// Receita agrupada por culto e por forma de pagamento.
+export async function incomeBreakdowns() {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('cult, payment_method, amount')
+    .eq('type', 'Receita')
+  if (error) throw error
+
+  const byCult = {}
+  const byPayment = {}
+  data.forEach((t) => {
+    const amt = Number(t.amount) || 0
+    const c = t.cult || '(sem culto)'
+    const p = t.payment_method || '(sem forma)'
+    byCult[c] = (byCult[c] || 0) + amt
+    byPayment[p] = (byPayment[p] || 0) + amt
+  })
+  return { byCult, byPayment }
+}
+
 // Obreiros (altar/obreiros) que não são dizimistas.
 export async function nonTitherWorkers() {
   const workers = await workerMinistryNames()

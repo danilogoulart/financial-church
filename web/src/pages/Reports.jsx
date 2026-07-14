@@ -1,16 +1,25 @@
 import { useEffect, useState } from 'react'
-import { forecast, formatMoney, monthLabel, nonTitherWorkers, tithersLast3Months } from '../api'
+import {
+  forecast,
+  formatMoney,
+  incomeBreakdowns,
+  monthLabel,
+  nonTitherWorkers,
+  tithersLast3Months
+} from '../api'
 
 export default function Reports() {
   const [tithers, setTithers] = useState(null)
   const [workers, setWorkers] = useState(null)
   const [fc, setFc] = useState(null)
+  const [income, setIncome] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     tithersLast3Months().then(setTithers).catch((e) => setError(e.message))
     nonTitherWorkers().then(setWorkers).catch((e) => setError(e.message))
     forecast(3).then(setFc).catch((e) => setError(e.message))
+    incomeBreakdowns().then(setIncome).catch((e) => setError(e.message))
   }, [])
 
   return (
@@ -139,6 +148,42 @@ export default function Reports() {
           </div>
         )}
       </div>
+
+      <BreakdownCard title="Receita por culto" map={income?.byCult} />
+      <BreakdownCard title="Receita por forma de pagamento" map={income?.byPayment} />
     </>
+  )
+}
+
+function BreakdownCard({ title, map }) {
+  const entries = map ? Object.keys(map).map((k) => [k, map[k]]).sort((a, b) => b[1] - a[1]) : null
+  const total = entries ? entries.reduce((s, [, v]) => s + v, 0) : 0
+
+  return (
+    <div className="card">
+      <h2>{title}</h2>
+      {!entries ? (
+        <span style={{ color: '#999' }}>Carregando...</span>
+      ) : entries.length === 0 ? (
+        <span style={{ color: '#999' }}>Sem receitas.</span>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <tbody>
+              {entries.map(([name, value]) => (
+                <tr key={name}>
+                  <td>{name}</td>
+                  <td style={{ textAlign: 'right' }}>{formatMoney(value)}</td>
+                </tr>
+              ))}
+              <tr className="tot">
+                <td style={{ fontWeight: 'bold' }}>Total</td>
+                <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{formatMoney(total)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   )
 }

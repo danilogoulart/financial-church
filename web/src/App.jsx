@@ -74,7 +74,7 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 12, opacity: 0.75 }}>{roleLabel}</span>
+          <span className="role-chip">{roleLabel}</span>
           <button className="logout" onClick={() => supabase.auth.signOut()}>
             Sair
           </button>

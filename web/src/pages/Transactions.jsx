@@ -131,8 +131,8 @@ export default function Transactions() {
         member_id: form.member_id || null,
         type: form.type,
         category: form.category || categoryOptions[0] || null,
-        cult: form.cult,
-        payment_method: form.payment_method,
+        cult: form.type === 'Receita' ? form.cult : null,
+        payment_method: form.type === 'Receita' ? form.payment_method : null,
         amount: Number(form.amount),
         observation: form.observation,
         receipt_path
@@ -200,25 +200,27 @@ export default function Transactions() {
           ))}
         </select>
 
-        <div className="row">
-          <div>
-            <label>Culto</label>
-            <select value={form.cult} onChange={(e) => set('cult', e.target.value)}>
-              <option value="">—</option>
-              {cults.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+        {form.type === 'Receita' && (
+          <div className="row">
+            <div>
+              <label>Culto</label>
+              <select value={form.cult} onChange={(e) => set('cult', e.target.value)}>
+                <option value="">—</option>
+                {cults.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label>Forma de pagamento</label>
+              <select value={form.payment_method} onChange={(e) => set('payment_method', e.target.value)}>
+                {PAYMENT_METHODS.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div>
-            <label>Forma de pagamento</label>
-            <select value={form.payment_method} onChange={(e) => set('payment_method', e.target.value)}>
-              {PAYMENT_METHODS.map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+        )}
 
         <label>Valor (R$)</label>
         <input type="number" step="0.01" min="0" value={form.amount} onChange={(e) => set('amount', e.target.value)} required />
