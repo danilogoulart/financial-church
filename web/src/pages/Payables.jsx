@@ -6,7 +6,7 @@ import {
   formatMoney,
   generateMonthPayables,
   listCategories,
-  listRecentPayables,
+  listPayablesPage,
   markPayablePaid,
   monthGenerated,
   monthLabel,
@@ -14,6 +14,7 @@ import {
   uploadReceipt
 } from '../api'
 import ReceiptLink from '../components/ReceiptLink.jsx'
+import Pagination from '../components/Pagination.jsx'
 
 const EMPTY = {
   description: '',
@@ -22,6 +23,7 @@ const EMPTY = {
   due_date: '',
   payment_date: ''
 }
+const SIZE = 20
 
 export default function Payables() {
   const [form, setForm] = useState(EMPTY)
@@ -31,6 +33,9 @@ export default function Payables() {
   const [banner, setBanner] = useState(null)
   const [saving, setSaving] = useState(false)
   const [rows, setRows] = useState([])
+  const [page, setPage] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [reload, setReload] = useState(0)
   const [month, setMonth] = useState(currentCompetency())
   const [generating, setGenerating] = useState(false)
   const [needsGenerate, setNeedsGenerate] = useState(false)
@@ -44,11 +49,12 @@ export default function Payables() {
     try {
       const [cats, pays, generated] = await Promise.all([
         listCategories(),
-        listRecentPayables(),
+        listPayablesPage(page, SIZE),
         monthGenerated(currentCompetency())
       ])
       setCategories(cats.expense)
-      setRows(pays)
+      setRows(pays.rows)
+      setTotal(pays.total)
       setNeedsGenerate(!generated)
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
@@ -57,7 +63,10 @@ export default function Payables() {
 
   useEffect(() => {
     load()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, reload])
+
+  const refresh = () => setReload((r) => r + 1)
 
   async function generate(competency) {
     setGenerating(true)
@@ -69,7 +78,7 @@ export default function Payables() {
         msg: `${monthLabel(competency)}: ${created} conta(s) gerada(s)` +
           (skipped ? `, ${skipped} já existia(m).` : '.')
       })
-      load()
+      refresh()
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     } finally {
@@ -82,7 +91,7 @@ export default function Payables() {
     try {
       await markPayablePaid(id)
       setBanner({ type: 'ok', msg: 'Conta marcada como paga (entra como despesa).' })
-      load()
+      refresh()
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     }
@@ -115,7 +124,7 @@ export default function Payables() {
     try {
       await deletePayable(p.id)
       if (editingId === p.id) cancelEdit()
-      load()
+      refresh()
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     }
@@ -149,10 +158,11 @@ export default function Payables() {
       } else {
         const payable = await createPayable(payload)
         setBanner({ type: 'ok', msg: `Conta "${payable.description}" registrada (${payable.status}).` })
+        setPage(0)
       }
       setForm(EMPTY)
       if (fileRef.current) fileRef.current.value = ''
-      load()
+      refresh()
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     } finally {
@@ -282,6 +292,7 @@ export default function Payables() {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} size={SIZE} total={total} onPage={setPage} />
       </div>
     </>
   )

@@ -5,14 +5,16 @@ import {
   formatMoney,
   listCategories,
   listMembers,
-  listRecentTransactions,
+  listTransactionsPage,
   updateTransaction,
   uploadReceipt
 } from '../api'
 import ReceiptLink from '../components/ReceiptLink.jsx'
+import Pagination from '../components/Pagination.jsx'
 import { CULTS, PAYMENT_METHODS } from '../constants'
 
 const today = () => new Date().toISOString().slice(0, 10)
+const SIZE = 20
 
 const EMPTY = {
   date: today(),
@@ -35,6 +37,9 @@ export default function Transactions() {
   const [banner, setBanner] = useState(null)
   const [saving, setSaving] = useState(false)
   const [rows, setRows] = useState([])
+  const [page, setPage] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [reload, setReload] = useState(0)
   const fileRef = useRef(null)
 
   function set(key, value) {
@@ -46,11 +51,12 @@ export default function Transactions() {
       const [ms, cats, txs] = await Promise.all([
         listMembers(),
         listCategories(),
-        listRecentTransactions()
+        listTransactionsPage(page, SIZE)
       ])
       setMembers(ms)
       setCategories(cats)
-      setRows(txs)
+      setRows(txs.rows)
+      setTotal(txs.total)
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     }
@@ -58,7 +64,10 @@ export default function Transactions() {
 
   useEffect(() => {
     load()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, reload])
+
+  const refresh = () => setReload((r) => r + 1)
 
   const categoryOptions = form.type === 'Despesa' ? categories.expense : categories.income
 
@@ -125,10 +134,11 @@ export default function Transactions() {
       } else {
         const trx = await createTransaction(payload)
         setBanner({ type: 'ok', msg: `Movimentação de ${formatMoney(trx.amount)} registrada.` })
+        setPage(0)
       }
       setForm({ ...EMPTY, date: today(), competency: today().slice(0, 7) })
       if (fileRef.current) fileRef.current.value = ''
-      load()
+      refresh()
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     } finally {
@@ -141,7 +151,7 @@ export default function Transactions() {
     try {
       await deleteTransaction(t.id)
       if (editingId === t.id) cancelEdit()
-      load()
+      refresh()
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     }
@@ -274,6 +284,7 @@ export default function Transactions() {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} size={SIZE} total={total} onPage={setPage} />
       </div>
     </>
   )

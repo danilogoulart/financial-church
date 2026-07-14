@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { createMember, listRecentMembers, setMemberActive, updateMember } from '../api'
+import { createMember, listMembersPage, setMemberActive, updateMember } from '../api'
 import { MINISTRIES } from '../constants'
+import Pagination from '../components/Pagination.jsx'
 
 const EMPTY = { name: '', phone: '', family: '', ministry: 'Membros', tither: true, active: true }
+const SIZE = 20
 
 export default function Members() {
   const [form, setForm] = useState(EMPTY)
@@ -10,6 +12,9 @@ export default function Members() {
   const [banner, setBanner] = useState(null)
   const [saving, setSaving] = useState(false)
   const [rows, setRows] = useState([])
+  const [page, setPage] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [reload, setReload] = useState(0)
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -17,7 +22,9 @@ export default function Members() {
 
   async function load() {
     try {
-      setRows(await listRecentMembers())
+      const { rows, total } = await listMembersPage(page, SIZE)
+      setRows(rows)
+      setTotal(total)
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     }
@@ -25,7 +32,10 @@ export default function Members() {
 
   useEffect(() => {
     load()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, reload])
+
+  const refresh = () => setReload((r) => r + 1)
 
   function startEdit(m) {
     setEditingId(m.id)
@@ -65,9 +75,10 @@ export default function Members() {
       } else {
         const m = await createMember({ ...payload, active: true })
         setBanner({ type: 'ok', msg: `Membro "${m.name}" cadastrado.` })
+        setPage(0)
       }
       setForm(EMPTY)
-      load()
+      refresh()
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     } finally {
@@ -78,7 +89,7 @@ export default function Members() {
   async function toggleActive(m) {
     try {
       await setMemberActive(m.id, !m.active)
-      load()
+      refresh()
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     }
@@ -170,6 +181,7 @@ export default function Members() {
             </tbody>
           </table>
         </div>
+        <Pagination page={page} size={SIZE} total={total} onPage={setPage} />
       </div>
     </>
   )

@@ -12,14 +12,25 @@ export async function listMembers() {
   return data
 }
 
-export async function listRecentMembers(limit = 50) {
-  const { data, error } = await supabase
+export async function listMembersPage(page = 0, size = 20) {
+  const from = page * size
+  const { data, count, error } = await supabase
     .from('members')
-    .select('*')
+    .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .range(from, from + size - 1)
   if (error) throw error
-  return data
+  return { rows: data, total: count || 0 }
+}
+
+export async function memberCounts() {
+  const base = () => supabase.from('members').select('id', { count: 'exact', head: true })
+  const [{ count: total }, { count: active }, { count: tithers }] = await Promise.all([
+    base(),
+    base().eq('active', true),
+    base().eq('tither', true)
+  ])
+  return { total: total || 0, active: active || 0, tithers: tithers || 0 }
 }
 
 export async function createMember(member) {
@@ -65,14 +76,15 @@ export async function listCategories() {
 
 // ---------- Movimentações ----------
 
-export async function listRecentTransactions(limit = 50) {
-  const { data, error } = await supabase
+export async function listTransactionsPage(page = 0, size = 20) {
+  const from = page * size
+  const { data, count, error } = await supabase
     .from('transactions')
-    .select('*, member:members(name)')
+    .select('*, member:members(name)', { count: 'exact' })
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .range(from, from + size - 1)
   if (error) throw error
-  return data
+  return { rows: data, total: count || 0 }
 }
 
 export async function createTransaction(transaction) {
@@ -103,14 +115,15 @@ export async function deleteTransaction(id) {
 
 // ---------- Contas a pagar ----------
 
-export async function listRecentPayables(limit = 50) {
-  const { data, error } = await supabase
+export async function listPayablesPage(page = 0, size = 20) {
+  const from = page * size
+  const { data, count, error } = await supabase
     .from('payables')
-    .select('*')
+    .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .range(from, from + size - 1)
   if (error) throw error
-  return data
+  return { rows: data, total: count || 0 }
 }
 
 export async function createPayable(payable) {

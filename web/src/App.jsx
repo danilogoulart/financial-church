@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { APP_NAME, LOGO_URL } from './brand'
 import Login from './Login.jsx'
+import Home from './pages/Home.jsx'
 import Members from './pages/Members.jsx'
 import Transactions from './pages/Transactions.jsx'
 import Payables from './pages/Payables.jsx'
@@ -11,6 +12,7 @@ import Reports from './pages/Reports.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 
 const TABS = [
+  { id: 'home', label: '🏠 Início', Component: Home },
   { id: 'members', label: '👤 Membros', Component: Members },
   { id: 'transactions', label: '💰 Movimentações', Component: Transactions },
   { id: 'payables', label: '📄 Contas a Pagar', Component: Payables },
@@ -23,7 +25,7 @@ const TABS = [
 export default function App() {
   const [session, setSession] = useState(null)
   const [ready, setReady] = useState(false)
-  const [tab, setTab] = useState('members')
+  const [tab, setTab] = useState('home')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {

@@ -1,13 +1,7 @@
 import { useEffect, useState } from 'react'
-import {
-  currentCompetency,
-  dashboardTotals,
-  forecast,
-  formatMoney,
-  monthlySeries,
-  payableAlerts
-} from '../api'
+import { currentCompetency, dashboardTotals, forecast, formatMoney, monthlySeries } from '../api'
 import MonthlyChart from '../components/MonthlyChart.jsx'
+import AlertsCard from '../components/AlertsCard.jsx'
 import { printBalancete } from '../reportPrint'
 
 const firstOfMonth = () => currentCompetency() + '-01'
@@ -18,7 +12,6 @@ export default function Dashboard() {
   const [to, setTo] = useState(today())
   const [totals, setTotals] = useState(null)
   const [chart, setChart] = useState(null)
-  const [alerts, setAlerts] = useState(null)
   const [error, setError] = useState('')
 
   function loadTotals() {
@@ -35,7 +28,6 @@ export default function Dashboard() {
         ])
       })
       .catch((e) => setError(e.message))
-    payableAlerts(7).then(setAlerts).catch((e) => setError(e.message))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -44,41 +36,7 @@ export default function Dashboard() {
 
   return (
     <>
-      {alerts && (alerts.overdue.length > 0 || alerts.soon.length > 0) && (
-        <div className="card">
-          <h2>Alertas de contas</h2>
-          {alerts.overdue.length > 0 && (
-            <div className="banner err">
-              <b>Vencidas ({alerts.overdue.length}):</b> {formatMoney(alerts.overdueTotal)}
-            </div>
-          )}
-          {alerts.soon.length > 0 && (
-            <div className="banner" style={{ background: '#FFF8E1', color: '#8a6d00' }}>
-              <b>A vencer em 7 dias ({alerts.soon.length}):</b> {formatMoney(alerts.soonTotal)}
-            </div>
-          )}
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Descrição</th>
-                  <th>Vencimento</th>
-                  <th style={{ textAlign: 'right' }}>Valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...alerts.overdue, ...alerts.soon].map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.description}</td>
-                    <td>{p.due_date}</td>
-                    <td style={{ textAlign: 'right' }}>{formatMoney(p.amount)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <AlertsCard />
 
       <div className="card">
         <h2>Balancete do período</h2>
