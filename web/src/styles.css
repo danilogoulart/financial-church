@@ -39,6 +39,9 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 .brand { display: flex; align-items: center; gap: 10px; }
 .brand .logo { height: 28px; width: auto; display: block; }
@@ -68,7 +71,7 @@ nav {
   padding: 0 12px;
   border-bottom: 1px solid var(--border);
   position: sticky;
-  top: 0;
+  top: 56px;
   z-index: 5;
   overflow-x: auto;
   scrollbar-width: thin;
@@ -120,12 +123,13 @@ main { max-width: 720px; margin: 0 auto; padding: 20px; }
     top: 56px;
     left: 0;
     right: 0;
+    bottom: 0;
     flex-direction: column;
     gap: 2px;
     padding: 8px;
-    max-height: calc(100vh - 56px);
     overflow-y: auto;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+    background: var(--surface);
+    z-index: 10;
   }
   nav.open { display: flex; }
   nav button {
