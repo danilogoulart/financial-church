@@ -148,13 +148,18 @@ export async function receiptShareUrl(path) {
 
 // ---------- Dashboard ----------
 
-export async function dashboardTotals() {
+// Totais do período [from, to] (YYYY-MM-DD). Sem args = todo o histórico.
+// Receitas/despesas/categorias são filtradas pelo período; "contas em
+// aberto" é sempre o retrato atual (não depende do período).
+export async function dashboardTotals(from, to) {
   const [{ data: txs, error: e1 }, { data: pays, error: e2 }] = await Promise.all([
-    supabase.from('transactions').select('type, category, amount'),
-    supabase.from('payables').select('status, amount, category')
+    supabase.from('transactions').select('type, category, amount, date'),
+    supabase.from('payables').select('status, amount, category, payment_date')
   ])
   if (e1) throw e1
   if (e2) throw e2
+
+  const inRange = (d) => (!from || (d && d >= from)) && (!to || (d && d <= to))
 
   let totalIncome = 0
   let totalExpense = 0
@@ -168,6 +173,7 @@ export async function dashboardTotals() {
   }
 
   txs.forEach((t) => {
+    if (!inRange(t.date)) return
     const amount = Number(t.amount) || 0
     if (t.type === 'Receita') {
       totalIncome += amount
@@ -185,10 +191,12 @@ export async function dashboardTotals() {
   pays.forEach((p) => {
     const amount = Number(p.amount) || 0
     if (p.status === 'Pago') {
+      if (!inRange(p.payment_date)) return
       payablePaid += amount
       // Conta paga entra como despesa nos gráficos/relatórios.
       addExpense(p.category, amount)
     } else {
+      // Em aberto: retrato atual, independente do período.
       payableOpen += amount
       payableOpenCount++
     }
@@ -419,6 +427,75 @@ export async function monthlySeries(n = 6) {
   return months.map((m) => base[m])
 }
 
+// ---------- Projeção de caixa (forecast) ----------
+
+// Projeta os próximos n meses: despesas conhecidas (recorrentes + parcelas
+// + contas avulsas em aberto) e receita estimada pela média dos 3 meses
+// anteriores; devolve o saldo projetado acumulado a partir do caixa atual.
+export async function forecast(n = 3) {
+  const [{ data: recs, error: e1 }, { data: pays, error: e2 }, { data: txs, error: e3 }] =
+    await Promise.all([
+      supabase.from('recurring_expenses').select('*'),
+      supabase.from('payables').select('status, amount, due_date, recurring_id'),
+      supabase.from('transactions').select('type, amount, competency')
+    ])
+  if (e1) throw e1
+  if (e2) throw e2
+  if (e3) throw e3
+
+  // Saldo atual em caixa (histórico completo).
+  let currentBalance = 0
+  txs.forEach((t) => {
+    currentBalance += t.type === 'Receita' ? Number(t.amount) : -Number(t.amount)
+  })
+  pays.forEach((p) => {
+    if (p.status === 'Pago') currentBalance -= Number(p.amount)
+  })
+
+  // Receita média dos 3 meses anteriores.
+  const avgMonths = previousMonths(3)
+  const incomeByMonth = {}
+  txs.forEach((t) => {
+    if (t.type !== 'Receita') return
+    if (!avgMonths.includes(t.competency)) return
+    incomeByMonth[t.competency] = (incomeByMonth[t.competency] || 0) + Number(t.amount)
+  })
+  const avgIncome =
+    avgMonths.reduce((s, m) => s + (incomeByMonth[m] || 0), 0) / avgMonths.length
+
+  const months = nextNMonths(n)
+  let balance = currentBalance
+
+  const rows = months.map((month) => {
+    const idx = compIndex(month)
+    let expense = 0
+
+    // Recorrentes previstas (fixas vigentes + parcelas no intervalo).
+    recs.forEach((r) => {
+      const start = compIndex(r.start_competency)
+      if (idx < start) return
+      if (r.kind === 'fixa') {
+        if (r.active) expense += Number(r.amount)
+      } else {
+        const parcela = idx - start + 1
+        if (parcela >= 1 && parcela <= (r.installments_total || 0)) expense += Number(r.amount)
+      }
+    })
+
+    // Contas avulsas (não recorrentes) em aberto com vencimento no mês.
+    pays.forEach((p) => {
+      if (p.status === 'Pago' || p.recurring_id) return
+      if ((p.due_date || '').slice(0, 7) !== month) return
+      expense += Number(p.amount)
+    })
+
+    balance += avgIncome - expense
+    return { month, income: avgIncome, expense, balance }
+  })
+
+  return { currentBalance, avgIncome, rows }
+}
+
 // ---------- Livro Caixa ----------
 
 // Movimentos de caixa (receitas + despesas de Movimentações + contas pagas)
@@ -509,6 +586,13 @@ export function previousMonths(n) {
   const end = compIndex(currentCompetency()) - 1
   const out = []
   for (let i = n - 1; i >= 0; i--) out.push(indexToComp(end - i))
+  return out
+}
+
+export function nextNMonths(n) {
+  const start = compIndex(currentCompetency())
+  const out = []
+  for (let i = 1; i <= n; i++) out.push(indexToComp(start + i))
   return out
 }
 

@@ -1,15 +1,25 @@
 import { useEffect, useState } from 'react'
-import { dashboardTotals, formatMoney, monthlySeries } from '../api'
+import { currentCompetency, dashboardTotals, formatMoney, monthlySeries } from '../api'
 import MonthlyChart from '../components/MonthlyChart.jsx'
 
+const firstOfMonth = () => currentCompetency() + '-01'
+const today = () => new Date().toISOString().slice(0, 10)
+
 export default function Dashboard() {
+  const [from, setFrom] = useState(firstOfMonth())
+  const [to, setTo] = useState(today())
   const [totals, setTotals] = useState(null)
   const [series, setSeries] = useState(null)
   const [error, setError] = useState('')
 
+  function loadTotals() {
+    dashboardTotals(from, to).then(setTotals).catch((e) => setError(e.message))
+  }
+
   useEffect(() => {
-    dashboardTotals().then(setTotals).catch((e) => setError(e.message))
+    loadTotals()
     monthlySeries(6).then(setSeries).catch((e) => setError(e.message))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (error) return <div className="card"><div className="banner err">{error}</div></div>
@@ -18,8 +28,22 @@ export default function Dashboard() {
   return (
     <>
       <div className="card">
-        <h2>Resumo</h2>
-        <div className="kpis">
+        <h2>Balancete do período</h2>
+        <div className="row" style={{ alignItems: 'flex-end' }}>
+          <div>
+            <label>De</label>
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </div>
+          <div>
+            <label>Até</label>
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          </div>
+          <div>
+            <button className="primary" onClick={loadTotals}>Aplicar</button>
+          </div>
+        </div>
+
+        <div className="kpis" style={{ marginTop: 8 }}>
           <div className="kpi income">
             Receitas
             <div className="value">{formatMoney(totals.totalIncome)}</div>
@@ -29,7 +53,7 @@ export default function Dashboard() {
             <div className="value">{formatMoney(totals.totalExpense)}</div>
           </div>
           <div className="kpi balance">
-            Saldo
+            Resultado
             <div className="value">{formatMoney(totals.balance)}</div>
           </div>
         </div>
@@ -43,8 +67,8 @@ export default function Dashboard() {
       <div className="card">
         <h2>Contas a Pagar</h2>
         <p className="kpi-line">
-          Em aberto ({totals.payableOpenCount}): <b>{formatMoney(totals.payableOpen)}</b>
-          {'  •  '}Pagas: <b>{formatMoney(totals.payablePaid)}</b>
+          Em aberto agora ({totals.payableOpenCount}): <b>{formatMoney(totals.payableOpen)}</b>
+          {'  •  '}Pagas no período: <b>{formatMoney(totals.payablePaid)}</b>
         </p>
       </div>
 

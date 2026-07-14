@@ -1,19 +1,58 @@
 import { useEffect, useState } from 'react'
-import { monthLabel, nonTitherWorkers, tithersLast3Months } from '../api'
+import { forecast, formatMoney, monthLabel, nonTitherWorkers, tithersLast3Months } from '../api'
 
 export default function Reports() {
   const [tithers, setTithers] = useState(null)
   const [workers, setWorkers] = useState(null)
+  const [fc, setFc] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     tithersLast3Months().then(setTithers).catch((e) => setError(e.message))
     nonTitherWorkers().then(setWorkers).catch((e) => setError(e.message))
+    forecast(3).then(setFc).catch((e) => setError(e.message))
   }, [])
 
   return (
     <>
       {error && <div className="card"><div className="banner err">{error}</div></div>}
+
+      <div className="card">
+        <h2>Projeção de caixa — próximos 3 meses</h2>
+        {!fc ? (
+          <span style={{ color: '#999' }}>Carregando...</span>
+        ) : (
+          <>
+            <small>
+              Saldo atual: <b>{formatMoney(fc.currentBalance)}</b>. Receita estimada pela
+              média dos últimos 3 meses ({formatMoney(fc.avgIncome)}/mês). Despesas = recorrentes,
+              parcelas e contas avulsas em aberto.
+            </small>
+            <div className="table-wrap" style={{ marginTop: 12 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mês</th>
+                    <th style={{ textAlign: 'right' }}>Receita prevista</th>
+                    <th style={{ textAlign: 'right' }}>Despesa prevista</th>
+                    <th style={{ textAlign: 'right' }}>Saldo projetado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fc.rows.map((r) => (
+                    <tr key={r.month}>
+                      <td>{monthLabel(r.month)}</td>
+                      <td style={{ textAlign: 'right', color: 'var(--income)' }}>{formatMoney(r.income)}</td>
+                      <td style={{ textAlign: 'right', color: 'var(--expense)' }}>{formatMoney(r.expense)}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{formatMoney(r.balance)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="card">
         <h2>Dizimistas — últimos 3 meses</h2>
