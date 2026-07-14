@@ -402,7 +402,7 @@ export async function tithersLast3Months() {
       .eq('type', 'Receita')
       .eq('category', 'Dízimos')
       .gte('date', months[0] + '-01')
-      .lte('date', months[months.length - 1] + '-31')
+      .lt('date', currentCompetency() + '-01')
   ])
   if (e1) throw e1
   if (e2) throw e2
