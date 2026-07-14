@@ -419,6 +419,68 @@ export async function monthlySeries(n = 6) {
   return months.map((m) => base[m])
 }
 
+// ---------- Livro Caixa ----------
+
+// Movimentos de caixa (receitas + despesas de Movimentações + contas pagas)
+// em ordem cronológica, com saldo anterior e saldo acumulado no período.
+export async function cashBook(from, to) {
+  const [{ data: txs, error: e1 }, { data: pays, error: e2 }] = await Promise.all([
+    supabase.from('transactions').select('date, type, amount, category, observation, receipt_path'),
+    supabase
+      .from('payables')
+      .select('payment_date, amount, category, description, receipt_path')
+      .eq('status', 'Pago')
+  ])
+  if (e1) throw e1
+  if (e2) throw e2
+
+  const all = []
+
+  txs.forEach((t) => {
+    all.push({
+      date: t.date,
+      kind: t.type === 'Receita' ? 'Entrada' : 'Saída',
+      description: t.observation || t.category || t.type,
+      category: t.category || '',
+      amount: t.type === 'Receita' ? Number(t.amount) : -Number(t.amount),
+      receipt_path: t.receipt_path || null
+    })
+  })
+
+  pays.forEach((p) => {
+    all.push({
+      date: p.payment_date,
+      kind: 'Saída',
+      description: p.description,
+      category: p.category || '',
+      amount: -Number(p.amount),
+      receipt_path: p.receipt_path || null
+    })
+  })
+
+  all.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+
+  const opening = all
+    .filter((e) => from && e.date < from)
+    .reduce((s, e) => s + e.amount, 0)
+
+  let balance = opening
+  let totalIn = 0
+  let totalOut = 0
+  const entries = []
+
+  all.forEach((e) => {
+    if (from && e.date < from) return
+    if (to && e.date > to) return
+    balance += e.amount
+    if (e.amount >= 0) totalIn += e.amount
+    else totalOut += -e.amount
+    entries.push({ ...e, balance })
+  })
+
+  return { opening, entries, totalIn, totalOut, closing: balance }
+}
+
 // ---------- Competência (YYYY-MM) ----------
 
 function compIndex(competency) {
