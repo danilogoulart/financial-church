@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { APP_NAME, LOGO_URL } from './brand'
 import Login from './Login.jsx'
 import Members from './pages/Members.jsx'
 import Transactions from './pages/Transactions.jsx'
@@ -41,7 +42,15 @@ export default function App() {
   return (
     <div>
       <header>
-        <h1>🏛 Financial Church</h1>
+        <div className="brand">
+          <img
+            className="logo"
+            src={LOGO_URL}
+            alt={APP_NAME}
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
+          />
+          <span className="brand-name">{APP_NAME}</span>
+        </div>
         <button className="logout" onClick={() => supabase.auth.signOut()}>
           Sair
         </button>

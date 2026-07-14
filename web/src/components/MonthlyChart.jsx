@@ -37,8 +37,8 @@ export default function MonthlyChart({ data }) {
         {/* grade + rótulos do eixo Y */}
         {ticks.map((t, i) => (
           <g key={i}>
-            <line x1={padL} x2={W - padR} y1={y(t)} y2={y(t)} stroke="#eee" strokeWidth="1" />
-            <text x={padL - 8} y={y(t) + 4} textAnchor="end" fontSize="11" fill="#888">
+            <line className="chart-grid" x1={padL} x2={W - padR} y1={y(t)} y2={y(t)} strokeWidth="1" />
+            <text className="chart-tick" x={padL - 8} y={y(t) + 4} textAnchor="end" fontSize="11">
               {compact(t)}
             </text>
           </g>
@@ -57,14 +57,14 @@ export default function MonthlyChart({ data }) {
               <rect x={x2} y={y(d.expense)} width={barW} height={baseY - y(d.expense)} rx="4" fill={EXPENSE}>
                 <title>{`${monthLabel(d.month)} — Despesas: ${formatMoney(d.expense)}`}</title>
               </rect>
-              <text x={gx} y={baseY + 18} textAnchor="middle" fontSize="11" fill="#555">
+              <text className="chart-xlabel" x={gx} y={baseY + 18} textAnchor="middle" fontSize="11">
                 {monthLabel(d.month)}
               </text>
             </g>
           )
         })}
 
-        <line x1={padL} x2={W - padR} y1={baseY} y2={baseY} stroke="#ccc" strokeWidth="1" />
+        <line className="chart-axis" x1={padL} x2={W - padR} y1={baseY} y2={baseY} strokeWidth="1" />
       </svg>
     </div>
   )

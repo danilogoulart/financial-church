@@ -50,6 +50,18 @@ Qualquer host de site estático serve. Ex.: **Vercel** ou **Cloudflare Pages**:
 
 Cada `git push` publica automaticamente.
 
+## Marca / identidade visual
+
+Centralizado para facilitar customização futura:
+
+- **Nome e logo**: `src/brand.js` (`APP_NAME`, `LOGO_URL`).
+- **Cores/tema**: bloco `:root` em `src/styles.css` (tema preto/prata).
+
+**Logo**: salve o arquivo em **`web/public/logo.png`** — de preferência
+**PNG com fundo transparente**, para a logo prateada ficar bem sobre o
+fundo preto. Se o arquivo não existir, o app mostra só o nome (a `<img>`
+se esconde sozinha). Aparece no topo e na tela de login.
+
 ## Estrutura
 
 ```

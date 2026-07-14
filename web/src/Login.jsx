@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from './supabaseClient'
+import { APP_NAME, LOGO_URL } from './brand'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -19,7 +20,13 @@ export default function Login() {
   return (
     <div className="center">
       <form className="card login" onSubmit={submit}>
-        <h1>🏛 Financial Church</h1>
+        <img
+          className="logo-lg"
+          src={LOGO_URL}
+          alt={APP_NAME}
+          onError={(e) => { e.currentTarget.style.display = 'none' }}
+        />
+        <h1>{APP_NAME}</h1>
         {error && <div className="banner err">{error}</div>}
 
         <label>E-mail</label>
