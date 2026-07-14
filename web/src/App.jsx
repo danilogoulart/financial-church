@@ -10,6 +10,7 @@ import Recurring from './pages/Recurring.jsx'
 import CashBook from './pages/CashBook.jsx'
 import Reports from './pages/Reports.jsx'
 import Dashboard from './pages/Dashboard.jsx'
+import Settings from './pages/Settings.jsx'
 
 const TABS = [
   { id: 'home', label: '🏠 Início', Component: Home },
@@ -19,7 +20,8 @@ const TABS = [
   { id: 'recurring', label: '🔁 Recorrentes', Component: Recurring },
   { id: 'cashbook', label: '📗 Livro Caixa', Component: CashBook },
   { id: 'reports', label: '📑 Relatórios', Component: Reports },
-  { id: 'dashboard', label: '📊 Dashboard', Component: Dashboard }
+  { id: 'dashboard', label: '📊 Dashboard', Component: Dashboard },
+  { id: 'settings', label: '⚙️ Configurações', Component: Settings }
 ]
 
 export default function App() {

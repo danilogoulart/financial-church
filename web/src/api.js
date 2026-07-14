@@ -76,6 +76,44 @@ export async function listCategories() {
   return { income, expense }
 }
 
+export async function listAllCategories() {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id, kind, name')
+    .order('kind')
+    .order('name')
+  if (error) throw error
+  return data
+}
+
+export async function createCategory(kind, name) {
+  const { data, error } = await supabase
+    .from('categories')
+    .insert({ kind, name: name.trim() })
+    .select()
+    .single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function deleteCategory(id) {
+  const { error } = await supabase.from('categories').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ---------- Backup ----------
+
+export async function fullBackup() {
+  const tables = ['members', 'categories', 'transactions', 'payables', 'recurring_expenses']
+  const out = { exported_at: new Date().toISOString() }
+  for (const t of tables) {
+    const { data, error } = await supabase.from(t).select('*')
+    if (error) throw error
+    out[t] = data
+  }
+  return out
+}
+
 // ---------- Movimentações ----------
 
 export async function listTransactionsPage(page = 0, size = 20, filters = {}) {
@@ -273,8 +311,12 @@ export async function dashboardTotals(from, to) {
 function mapError(error) {
   if (error.code === '23505') {
     // unique_violation
-    if (String(error.message).includes('members_name_unique')) {
+    const msg = String(error.message)
+    if (msg.includes('members_name_unique')) {
       return new Error('Já existe um membro com esse nome.')
+    }
+    if (msg.includes('categories_kind_name_unique')) {
+      return new Error('Essa categoria já existe.')
     }
     return new Error('Registro duplicado.')
   }
