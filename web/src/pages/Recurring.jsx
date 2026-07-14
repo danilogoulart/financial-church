@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import {
   createRecurring,
   currentCompetency,
@@ -7,6 +7,7 @@ import {
   listRecurring,
   setRecurringActive
 } from '../api'
+import { RoleContext } from '../role'
 
 const EMPTY = {
   description: '',
@@ -19,6 +20,7 @@ const EMPTY = {
 }
 
 export default function Recurring() {
+  const { canWrite } = useContext(RoleContext)
   const [form, setForm] = useState(EMPTY)
   const [categories, setCategories] = useState([])
   const [banner, setBanner] = useState(null)
@@ -82,6 +84,7 @@ export default function Recurring() {
 
   return (
     <>
+      {canWrite && (
       <form className="card" onSubmit={save}>
         <h2>Nova Despesa Recorrente</h2>
         {banner && <div className={`banner ${banner.type}`}>{banner.msg}</div>}
@@ -130,6 +133,7 @@ export default function Recurring() {
           {saving ? 'Salvando...' : 'Salvar'}
         </button>
       </form>
+      )}
 
       <div className="card">
         <h2>Despesas recorrentes cadastradas</h2>
@@ -163,9 +167,11 @@ export default function Recurring() {
                     </span>
                   </td>
                   <td>
-                    <button className="link-btn" onClick={() => toggle(r)}>
-                      {r.active ? 'Desativar' : 'Ativar'}
-                    </button>
+                    {canWrite ? (
+                      <button className="link-btn" onClick={() => toggle(r)}>
+                        {r.active ? 'Desativar' : 'Ativar'}
+                      </button>
+                    ) : '—'}
                   </td>
                 </tr>
               ))}

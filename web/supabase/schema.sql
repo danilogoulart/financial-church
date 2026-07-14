@@ -92,34 +92,97 @@ insert into public.categories (kind, name) values
   ('expense','Parcela terreno')
 on conflict do nothing;
 
+-- ---------- Perfis e papéis ----------
+-- Papéis: admin (tudo + gerencia usuários/categorias), tesoureiro (lança
+-- e edita dados), consulta (somente leitura).
+
+create table if not exists public.profiles (
+  id    uuid primary key references auth.users(id) on delete cascade,
+  email text,
+  role  text not null default 'consulta' check (role in ('admin', 'tesoureiro', 'consulta'))
+);
+
+-- Cria o profile automaticamente quando surge um usuário (default consulta).
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, email) values (new.id, new.email)
+  on conflict (id) do nothing;
+  return new;
+end; $$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Usuários que já existem viram admin (fundadores). Novos entram como consulta.
+insert into public.profiles (id, email, role)
+  select id, email, 'admin' from auth.users
+  on conflict (id) do nothing;
+
+create or replace function public.current_user_role()
+returns text language sql stable security definer set search_path = public as $$
+  select role from public.profiles where id = auth.uid();
+$$;
+
+create or replace function public.can_write()
+returns boolean language sql stable as $$
+  select public.current_user_role() in ('admin', 'tesoureiro');
+$$;
+
 -- ---------- Row Level Security ----------
--- App interno: qualquer usuário autenticado (criado por você) tem acesso total.
+-- Todos autenticados leem; só admin/tesoureiro escrevem.
 
 alter table public.members            enable row level security;
 alter table public.categories         enable row level security;
 alter table public.transactions       enable row level security;
 alter table public.payables           enable row level security;
 alter table public.recurring_expenses enable row level security;
+alter table public.profiles           enable row level security;
 
+-- Uma tabela por vez: policy de leitura (todos) + policy de escrita (can_write).
 drop policy if exists members_all on public.members;
-create policy members_all on public.members
-  for all to authenticated using (true) with check (true);
+drop policy if exists members_select on public.members;
+drop policy if exists members_write on public.members;
+create policy members_select on public.members for select to authenticated using (true);
+create policy members_write on public.members for all to authenticated
+  using (public.can_write()) with check (public.can_write());
 
 drop policy if exists categories_read on public.categories;
-create policy categories_read on public.categories
-  for select to authenticated using (true);
+drop policy if exists categories_select on public.categories;
+drop policy if exists categories_write on public.categories;
+create policy categories_select on public.categories for select to authenticated using (true);
+create policy categories_write on public.categories for all to authenticated
+  using (public.can_write()) with check (public.can_write());
 
 drop policy if exists transactions_all on public.transactions;
-create policy transactions_all on public.transactions
-  for all to authenticated using (true) with check (true);
+drop policy if exists transactions_select on public.transactions;
+drop policy if exists transactions_write on public.transactions;
+create policy transactions_select on public.transactions for select to authenticated using (true);
+create policy transactions_write on public.transactions for all to authenticated
+  using (public.can_write()) with check (public.can_write());
 
 drop policy if exists payables_all on public.payables;
-create policy payables_all on public.payables
-  for all to authenticated using (true) with check (true);
+drop policy if exists payables_select on public.payables;
+drop policy if exists payables_write on public.payables;
+create policy payables_select on public.payables for select to authenticated using (true);
+create policy payables_write on public.payables for all to authenticated
+  using (public.can_write()) with check (public.can_write());
 
 drop policy if exists recurring_all on public.recurring_expenses;
-create policy recurring_all on public.recurring_expenses
-  for all to authenticated using (true) with check (true);
+drop policy if exists recurring_select on public.recurring_expenses;
+drop policy if exists recurring_write on public.recurring_expenses;
+create policy recurring_select on public.recurring_expenses for select to authenticated using (true);
+create policy recurring_write on public.recurring_expenses for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+
+-- Perfis: todos leem (para a tela de Usuários); só admin altera papéis.
+drop policy if exists profiles_select on public.profiles;
+drop policy if exists profiles_admin_update on public.profiles;
+create policy profiles_select on public.profiles for select to authenticated using (true);
+create policy profiles_admin_update on public.profiles for update to authenticated
+  using (public.current_user_role() = 'admin') with check (public.current_user_role() = 'admin');
 
 -- ---------- Storage (comprovantes) ----------
 

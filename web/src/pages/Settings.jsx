@@ -1,7 +1,16 @@
-import { useEffect, useState } from 'react'
-import { createCategory, deleteCategory, fullBackup, listAllCategories } from '../api'
+import { useContext, useEffect, useState } from 'react'
+import {
+  createCategory,
+  deleteCategory,
+  fullBackup,
+  listAllCategories,
+  listProfiles,
+  setProfileRole
+} from '../api'
+import { RoleContext } from '../role'
 
 export default function Settings() {
+  const { canWrite, isAdmin } = useContext(RoleContext)
   const [cats, setCats] = useState([])
   const [kind, setKind] = useState('income')
   const [name, setName] = useState('')
@@ -71,6 +80,7 @@ export default function Settings() {
 
   return (
     <>
+      {canWrite && (
       <form className="card" onSubmit={add}>
         <h2>Categorias</h2>
         {banner && <div className={`banner ${banner.type}`}>{banner.msg}</div>}
@@ -91,17 +101,19 @@ export default function Settings() {
           </div>
         </div>
       </form>
+      )}
 
       <div className="card">
         <h2>Categorias de Receita</h2>
-        <CategoryList items={income} onRemove={remove} />
+        <CategoryList items={income} onRemove={remove} canWrite={canWrite} />
       </div>
 
       <div className="card">
         <h2>Categorias de Despesa</h2>
-        <CategoryList items={expense} onRemove={remove} />
+        <CategoryList items={expense} onRemove={remove} canWrite={canWrite} />
       </div>
 
+      {canWrite && (
       <div className="card">
         <h2>Backup</h2>
         <small>Baixa todos os dados (membros, movimentações, contas, recorrentes, categorias) em um arquivo JSON.</small>
@@ -110,11 +122,14 @@ export default function Settings() {
           {downloading ? 'Gerando...' : '⬇ Baixar backup (JSON)'}
         </button>
       </div>
+      )}
+
+      {isAdmin && <Users />}
     </>
   )
 }
 
-function CategoryList({ items, onRemove }) {
+function CategoryList({ items, onRemove, canWrite }) {
   if (items.length === 0) return <span style={{ color: '#999' }}>Nenhuma.</span>
   return (
     <div className="table-wrap">
@@ -124,12 +139,77 @@ function CategoryList({ items, onRemove }) {
             <tr key={c.id}>
               <td>{c.name}</td>
               <td style={{ textAlign: 'right' }}>
-                <button className="link-btn" onClick={() => onRemove(c)}>remover</button>
+                {canWrite && <button className="link-btn" onClick={() => onRemove(c)}>remover</button>}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+const ROLES = ['admin', 'tesoureiro', 'consulta']
+
+function Users() {
+  const [rows, setRows] = useState([])
+  const [msg, setMsg] = useState(null)
+
+  async function load() {
+    try {
+      setRows(await listProfiles())
+    } catch (err) {
+      setMsg({ type: 'err', text: err.message })
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function change(id, role) {
+    setMsg(null)
+    try {
+      await setProfileRole(id, role)
+      setMsg({ type: 'ok', text: 'Papel atualizado.' })
+      load()
+    } catch (err) {
+      setMsg({ type: 'err', text: err.message })
+    }
+  }
+
+  return (
+    <div className="card">
+      <h2>Usuários</h2>
+      <small>
+        Papéis: <b>admin</b> (tudo + usuários), <b>tesoureiro</b> (lança/edita), <b>consulta</b> (só leitura).
+        Novos usuários entram como consulta.
+      </small>
+      {msg && <div className={`banner ${msg.type}`} style={{ marginTop: 10 }}>{msg.text}</div>}
+      <div className="table-wrap" style={{ marginTop: 12 }}>
+        <table>
+          <thead>
+            <tr><th>E-mail</th><th>Papel</th></tr>
+          </thead>
+          <tbody>
+            {rows.map((u) => (
+              <tr key={u.id}>
+                <td>{u.email}</td>
+                <td>
+                  <select value={u.role} onChange={(e) => change(u.id, e.target.value)}>
+                    {ROLES.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && (
+              <tr><td colSpan="2" style={{ color: '#999' }}>Nenhum usuário.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

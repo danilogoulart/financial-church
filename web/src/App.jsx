@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { getMyRole } from './api'
+import { RoleContext } from './role'
 import { APP_NAME, LOGO_URL } from './brand'
 import Login from './Login.jsx'
 import Home from './pages/Home.jsx'
@@ -28,6 +30,7 @@ export default function App() {
   const [session, setSession] = useState(null)
   const [ready, setReady] = useState(false)
   const [tab, setTab] = useState('home')
+  const [role, setRole] = useState('consulta')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -40,13 +43,20 @@ export default function App() {
     return () => sub.subscription.unsubscribe()
   }, [])
 
+  useEffect(() => {
+    if (session) getMyRole().then(setRole).catch(() => setRole('consulta'))
+    else setRole('consulta')
+  }, [session])
+
   if (!ready) return <div className="center">Carregando...</div>
   if (!session) return <Login />
 
   const Active = TABS.find((t) => t.id === tab).Component
+  const ctx = { role, canWrite: role === 'admin' || role === 'tesoureiro', isAdmin: role === 'admin' }
+  const roleLabel = { admin: 'Admin', tesoureiro: 'Tesoureiro', consulta: 'Consulta' }[role]
 
   return (
-    <div>
+    <RoleContext.Provider value={ctx}>
       <header>
         <div className="brand">
           <img
@@ -57,9 +67,12 @@ export default function App() {
           />
           <span className="brand-name">{APP_NAME}</span>
         </div>
-        <button className="logout" onClick={() => supabase.auth.signOut()}>
-          Sair
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 12, opacity: 0.75 }}>{roleLabel}</span>
+          <button className="logout" onClick={() => supabase.auth.signOut()}>
+            Sair
+          </button>
+        </div>
       </header>
 
       <nav>
@@ -75,8 +88,13 @@ export default function App() {
       </nav>
 
       <main>
+        {!ctx.canWrite && (
+          <div className="card" style={{ padding: '10px 16px' }}>
+            <small>👁️ Acesso somente leitura (perfil Consulta).</small>
+          </div>
+        )}
         <Active />
       </main>
-    </div>
+    </RoleContext.Provider>
   )
 }

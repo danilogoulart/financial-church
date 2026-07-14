@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import {
   createTransaction,
   deleteTransaction,
@@ -12,6 +12,7 @@ import {
 import ReceiptLink from '../components/ReceiptLink.jsx'
 import Pagination from '../components/Pagination.jsx'
 import { CULTS, PAYMENT_METHODS } from '../constants'
+import { RoleContext } from '../role'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const SIZE = 20
@@ -28,6 +29,7 @@ const EMPTY = {
 }
 
 export default function Transactions() {
+  const { canWrite } = useContext(RoleContext)
   const [form, setForm] = useState(EMPTY)
   const [editingId, setEditingId] = useState(null)
   const [existingReceipt, setExistingReceipt] = useState(null)
@@ -163,6 +165,7 @@ export default function Transactions() {
 
   return (
     <>
+      {canWrite && (
       <form className="card" onSubmit={save}>
         <h2>{editingId ? 'Editar Movimentação' : 'Nova Movimentação'}</h2>
         {banner && <div className={`banner ${banner.type}`}>{banner.msg}</div>}
@@ -240,6 +243,7 @@ export default function Transactions() {
           </button>
         )}
       </form>
+      )}
 
       <div className="card">
         <h2>Movimentações</h2>
@@ -297,9 +301,13 @@ export default function Transactions() {
                   <td style={{ textAlign: 'right' }}>{formatMoney(t.amount)}</td>
                   <td><ReceiptLink path={t.receipt_path} /></td>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    <button className="link-btn" onClick={() => startEdit(t)}>editar</button>
-                    {' · '}
-                    <button className="link-btn" onClick={() => remove(t)}>excluir</button>
+                    {canWrite ? (
+                      <>
+                        <button className="link-btn" onClick={() => startEdit(t)}>editar</button>
+                        {' · '}
+                        <button className="link-btn" onClick={() => remove(t)}>excluir</button>
+                      </>
+                    ) : '—'}
                   </td>
                 </tr>
               ))}

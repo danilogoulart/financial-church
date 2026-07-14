@@ -101,6 +101,34 @@ export async function deleteCategory(id) {
   if (error) throw error
 }
 
+// ---------- Papéis / usuários ----------
+
+export async function getMyRole() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return 'consulta'
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+  if (error) return 'consulta'
+  return data?.role || 'consulta'
+}
+
+export async function listProfiles() {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email, role')
+    .order('email')
+  if (error) throw error
+  return data
+}
+
+export async function setProfileRole(id, role) {
+  const { error } = await supabase.from('profiles').update({ role }).eq('id', id)
+  if (error) throw error
+}
+
 // ---------- Backup ----------
 
 export async function fullBackup() {

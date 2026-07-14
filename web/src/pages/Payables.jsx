@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import {
   createPayable,
   currentCompetency,
@@ -15,6 +15,7 @@ import {
 } from '../api'
 import ReceiptLink from '../components/ReceiptLink.jsx'
 import Pagination from '../components/Pagination.jsx'
+import { RoleContext } from '../role'
 
 const EMPTY = {
   description: '',
@@ -26,6 +27,7 @@ const EMPTY = {
 const SIZE = 20
 
 export default function Payables() {
+  const { canWrite } = useContext(RoleContext)
   const [form, setForm] = useState(EMPTY)
   const [editingId, setEditingId] = useState(null)
   const [existingReceipt, setExistingReceipt] = useState(null)
@@ -178,7 +180,7 @@ export default function Payables() {
 
   return (
     <>
-      {needsGenerate && (
+      {canWrite && needsGenerate && (
         <div className="card" style={{ borderColor: 'var(--primary)' }}>
           <div className="banner ok" style={{ marginBottom: 12 }}>
             Você ainda não gerou as contas fixas/parceladas de <b>{monthLabel(currentCompetency())}</b>.
@@ -193,6 +195,7 @@ export default function Payables() {
         </div>
       )}
 
+      {canWrite && (
       <div className="card">
         <h2>Gerar contas do mês</h2>
         {banner && <div className={`banner ${banner.type}`}>{banner.msg}</div>}
@@ -209,7 +212,9 @@ export default function Payables() {
         </div>
         <small>Cria as contas das despesas recorrentes vigentes. Pode clicar mais de uma vez sem duplicar.</small>
       </div>
+      )}
 
+      {canWrite && (
       <form className="card" onSubmit={save}>
         <h2>{editingId ? 'Editar Conta' : 'Nova Conta Avulsa'}</h2>
 
@@ -254,6 +259,7 @@ export default function Payables() {
           </button>
         )}
       </form>
+      )}
 
       <div className="card">
         <h2>Contas</h2>
@@ -304,15 +310,19 @@ export default function Payables() {
                   <td>{p.status}</td>
                   <td><ReceiptLink path={p.receipt_path} /></td>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    {p.status !== 'Pago' && (
+                    {canWrite ? (
                       <>
-                        <button className="link-btn" onClick={() => pay(p.id)}>pagar</button>
+                        {p.status !== 'Pago' && (
+                          <>
+                            <button className="link-btn" onClick={() => pay(p.id)}>pagar</button>
+                            {' · '}
+                          </>
+                        )}
+                        <button className="link-btn" onClick={() => startEdit(p)}>editar</button>
                         {' · '}
+                        <button className="link-btn" onClick={() => remove(p)}>excluir</button>
                       </>
-                    )}
-                    <button className="link-btn" onClick={() => startEdit(p)}>editar</button>
-                    {' · '}
-                    <button className="link-btn" onClick={() => remove(p)}>excluir</button>
+                    ) : '—'}
                   </td>
                 </tr>
               ))}

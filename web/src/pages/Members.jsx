@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { createMember, listMembersPage, setMemberActive, updateMember } from '../api'
 import { MINISTRIES } from '../constants'
 import Pagination from '../components/Pagination.jsx'
+import { RoleContext } from '../role'
 
 const EMPTY = { name: '', phone: '', family: '', ministry: 'Membros', tither: true, active: true }
 const SIZE = 20
 
 export default function Members() {
+  const { canWrite } = useContext(RoleContext)
   const [form, setForm] = useState(EMPTY)
   const [editingId, setEditingId] = useState(null)
   const [banner, setBanner] = useState(null)
@@ -103,6 +105,7 @@ export default function Members() {
 
   return (
     <>
+      {canWrite && (
       <form className="card" onSubmit={save}>
         <h2>{editingId ? 'Editar Membro' : 'Novo Membro'}</h2>
         {banner && <div className={`banner ${banner.type}`}>{banner.msg}</div>}
@@ -149,6 +152,7 @@ export default function Members() {
           </button>
         )}
       </form>
+      )}
 
       <div className="card">
         <h2>Membros</h2>
@@ -197,11 +201,15 @@ export default function Members() {
                   <td>{m.tither ? 'Sim' : 'Não'}</td>
                   <td>{m.active ? 'Sim' : 'Não'}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    <button className="link-btn" onClick={() => startEdit(m)}>editar</button>
-                    {' · '}
-                    <button className="link-btn" onClick={() => toggleActive(m)}>
-                      {m.active ? 'desativar' : 'ativar'}
-                    </button>
+                    {canWrite ? (
+                      <>
+                        <button className="link-btn" onClick={() => startEdit(m)}>editar</button>
+                        {' · '}
+                        <button className="link-btn" onClick={() => toggleActive(m)}>
+                          {m.active ? 'desativar' : 'ativar'}
+                        </button>
+                      </>
+                    ) : '—'}
                   </td>
                 </tr>
               ))}
