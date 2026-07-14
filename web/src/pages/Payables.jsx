@@ -36,6 +36,7 @@ export default function Payables() {
   const [page, setPage] = useState(0)
   const [total, setTotal] = useState(0)
   const [reload, setReload] = useState(0)
+  const [filters, setFilters] = useState({ status: '', search: '', from: '', to: '' })
   const [month, setMonth] = useState(currentCompetency())
   const [generating, setGenerating] = useState(false)
   const [needsGenerate, setNeedsGenerate] = useState(false)
@@ -45,11 +46,16 @@ export default function Payables() {
     setForm((f) => ({ ...f, [key]: value }))
   }
 
+  function setFilter(key, value) {
+    setFilters((f) => ({ ...f, [key]: value }))
+    setPage(0)
+  }
+
   async function load() {
     try {
       const [cats, pays, generated] = await Promise.all([
         listCategories(),
-        listPayablesPage(page, SIZE),
+        listPayablesPage(page, SIZE, filters),
         monthGenerated(currentCompetency())
       ])
       setCategories(cats.expense)
@@ -64,7 +70,7 @@ export default function Payables() {
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, reload])
+  }, [page, reload, filters])
 
   const refresh = () => setReload((r) => r + 1)
 
@@ -250,7 +256,33 @@ export default function Payables() {
       </form>
 
       <div className="card">
-        <h2>Contas recentes</h2>
+        <h2>Contas</h2>
+
+        <div className="row">
+          <div style={{ flex: 2 }}>
+            <label>Buscar por descrição</label>
+            <input value={filters.search} onChange={(e) => setFilter('search', e.target.value)} placeholder="Descrição..." />
+          </div>
+          <div>
+            <label>Situação</label>
+            <select value={filters.status} onChange={(e) => setFilter('status', e.target.value)}>
+              <option value="">Todas</option>
+              <option value="Em aberto">Em aberto</option>
+              <option value="Pago">Pago</option>
+            </select>
+          </div>
+        </div>
+        <div className="row">
+          <div>
+            <label>Vencimento de</label>
+            <input type="date" value={filters.from} onChange={(e) => setFilter('from', e.target.value)} />
+          </div>
+          <div>
+            <label>Vencimento até</label>
+            <input type="date" value={filters.to} onChange={(e) => setFilter('to', e.target.value)} />
+          </div>
+        </div>
+
         <div className="table-wrap">
           <table>
             <thead>

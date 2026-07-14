@@ -12,11 +12,13 @@ export async function listMembers() {
   return data
 }
 
-export async function listMembersPage(page = 0, size = 20) {
+export async function listMembersPage(page = 0, size = 20, filters = {}) {
   const from = page * size
-  const { data, count, error } = await supabase
-    .from('members')
-    .select('*', { count: 'exact' })
+  let q = supabase.from('members').select('*', { count: 'exact' })
+  if (filters.search) q = q.ilike('name', `%${filters.search}%`)
+  if (filters.ministry) q = q.eq('ministry', filters.ministry)
+  if (filters.activeOnly) q = q.eq('active', true)
+  const { data, count, error } = await q
     .order('created_at', { ascending: false })
     .range(from, from + size - 1)
   if (error) throw error
@@ -76,11 +78,15 @@ export async function listCategories() {
 
 // ---------- Movimentações ----------
 
-export async function listTransactionsPage(page = 0, size = 20) {
+export async function listTransactionsPage(page = 0, size = 20, filters = {}) {
   const from = page * size
-  const { data, count, error } = await supabase
-    .from('transactions')
-    .select('*, member:members(name)', { count: 'exact' })
+  let q = supabase.from('transactions').select('*, member:members(name)', { count: 'exact' })
+  if (filters.type) q = q.eq('type', filters.type)
+  if (filters.category) q = q.eq('category', filters.category)
+  if (filters.from) q = q.gte('date', filters.from)
+  if (filters.to) q = q.lte('date', filters.to)
+  const { data, count, error } = await q
+    .order('date', { ascending: false })
     .order('created_at', { ascending: false })
     .range(from, from + size - 1)
   if (error) throw error
@@ -115,12 +121,15 @@ export async function deleteTransaction(id) {
 
 // ---------- Contas a pagar ----------
 
-export async function listPayablesPage(page = 0, size = 20) {
+export async function listPayablesPage(page = 0, size = 20, filters = {}) {
   const from = page * size
-  const { data, count, error } = await supabase
-    .from('payables')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
+  let q = supabase.from('payables').select('*', { count: 'exact' })
+  if (filters.status) q = q.eq('status', filters.status)
+  if (filters.search) q = q.ilike('description', `%${filters.search}%`)
+  if (filters.from) q = q.gte('due_date', filters.from)
+  if (filters.to) q = q.lte('due_date', filters.to)
+  const { data, count, error } = await q
+    .order('due_date', { ascending: false })
     .range(from, from + size - 1)
   if (error) throw error
   return { rows: data, total: count || 0 }

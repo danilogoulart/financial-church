@@ -15,14 +15,20 @@ export default function Members() {
   const [page, setPage] = useState(0)
   const [total, setTotal] = useState(0)
   const [reload, setReload] = useState(0)
+  const [filters, setFilters] = useState({ search: '', ministry: '', activeOnly: false })
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }))
   }
 
+  function setFilter(key, value) {
+    setFilters((f) => ({ ...f, [key]: value }))
+    setPage(0)
+  }
+
   async function load() {
     try {
-      const { rows, total } = await listMembersPage(page, SIZE)
+      const { rows, total } = await listMembersPage(page, SIZE, filters)
       setRows(rows)
       setTotal(total)
     } catch (err) {
@@ -33,7 +39,7 @@ export default function Members() {
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, reload])
+  }, [page, reload, filters])
 
   const refresh = () => setReload((r) => r + 1)
 
@@ -146,6 +152,32 @@ export default function Members() {
 
       <div className="card">
         <h2>Membros</h2>
+
+        <div className="row">
+          <div style={{ flex: 2 }}>
+            <label>Buscar por nome</label>
+            <input value={filters.search} onChange={(e) => setFilter('search', e.target.value)} placeholder="Digite um nome..." />
+          </div>
+          <div>
+            <label>Ministério</label>
+            <select value={filters.ministry} onChange={(e) => setFilter('ministry', e.target.value)}>
+              <option value="">Todos</option>
+              {MINISTRIES.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="check">
+          <input
+            id="activeOnly"
+            type="checkbox"
+            checked={filters.activeOnly}
+            onChange={(e) => setFilter('activeOnly', e.target.checked)}
+          />
+          <label htmlFor="activeOnly" style={{ margin: 0 }}>Somente ativos</label>
+        </div>
+
         <div className="table-wrap">
           <table>
             <thead>

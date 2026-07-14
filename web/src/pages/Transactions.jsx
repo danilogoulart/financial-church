@@ -39,10 +39,16 @@ export default function Transactions() {
   const [page, setPage] = useState(0)
   const [total, setTotal] = useState(0)
   const [reload, setReload] = useState(0)
+  const [filters, setFilters] = useState({ type: '', category: '', from: '', to: '' })
   const fileRef = useRef(null)
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }))
+  }
+
+  function setFilter(key, value) {
+    setFilters((f) => ({ ...f, [key]: value }))
+    setPage(0)
   }
 
   async function load() {
@@ -50,7 +56,7 @@ export default function Transactions() {
       const [ms, cats, txs] = await Promise.all([
         listMembers(),
         listCategories(),
-        listTransactionsPage(page, SIZE)
+        listTransactionsPage(page, SIZE, filters)
       ])
       setMembers(ms)
       setCategories(cats)
@@ -64,9 +70,10 @@ export default function Transactions() {
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, reload])
+  }, [page, reload, filters])
 
   const refresh = () => setReload((r) => r + 1)
+  const allCategories = [...new Set([...categories.income, ...categories.expense])]
 
   const categoryOptions = form.type === 'Despesa' ? categories.expense : categories.income
 
@@ -235,7 +242,38 @@ export default function Transactions() {
       </form>
 
       <div className="card">
-        <h2>Movimentações recentes</h2>
+        <h2>Movimentações</h2>
+
+        <div className="row">
+          <div>
+            <label>Tipo</label>
+            <select value={filters.type} onChange={(e) => setFilter('type', e.target.value)}>
+              <option value="">Todos</option>
+              <option value="Receita">Receita</option>
+              <option value="Despesa">Despesa</option>
+            </select>
+          </div>
+          <div>
+            <label>Categoria</label>
+            <select value={filters.category} onChange={(e) => setFilter('category', e.target.value)}>
+              <option value="">Todas</option>
+              {allCategories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="row">
+          <div>
+            <label>De</label>
+            <input type="date" value={filters.from} onChange={(e) => setFilter('from', e.target.value)} />
+          </div>
+          <div>
+            <label>Até</label>
+            <input type="date" value={filters.to} onChange={(e) => setFilter('to', e.target.value)} />
+          </div>
+        </div>
+
         <div className="table-wrap">
           <table>
             <thead>
