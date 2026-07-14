@@ -5,6 +5,7 @@ import {
   incomeBreakdowns,
   monthLabel,
   nonTitherWorkers,
+  offCashReport,
   tithersLast3Months
 } from '../api'
 
@@ -13,6 +14,7 @@ export default function Reports() {
   const [workers, setWorkers] = useState(null)
   const [fc, setFc] = useState(null)
   const [income, setIncome] = useState(null)
+  const [offcash, setOffcash] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -20,6 +22,7 @@ export default function Reports() {
     nonTitherWorkers().then(setWorkers).catch((e) => setError(e.message))
     forecast(3).then(setFc).catch((e) => setError(e.message))
     incomeBreakdowns().then(setIncome).catch((e) => setError(e.message))
+    offCashReport().then(setOffcash).catch((e) => setError(e.message))
   }, [])
 
   return (
@@ -78,10 +81,10 @@ export default function Reports() {
                 <thead>
                   <tr>
                     <th>Membro</th>
-                    <th>Ministério</th>
                     {tithers.months.map((m) => (
-                      <th key={m}>{monthLabel(m)}</th>
+                      <th key={m} style={{ textAlign: 'right' }}>{monthLabel(m)}</th>
                     ))}
+                    <th style={{ textAlign: 'right' }}>Total</th>
                     <th>Meses</th>
                   </tr>
                 </thead>
@@ -89,10 +92,10 @@ export default function Reports() {
                   {tithers.rows.map((r) => (
                     <tr key={r.id}>
                       <td>{r.name}</td>
-                      <td>{r.ministry || '—'}</td>
-                      {r.perMonth.map((did, i) => (
-                        <td key={i}>{did ? '✅' : '—'}</td>
+                      {r.perMonth.map((v, i) => (
+                        <td key={i} style={{ textAlign: 'right' }}>{v > 0 ? formatMoney(v) : '—'}</td>
                       ))}
+                      <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{formatMoney(r.total)}</td>
                       <td>
                         <span className={`pill ${r.monthsTithed < 3 ? 'warn' : 'ok'}`}>
                           {r.monthsTithed}/3
@@ -143,6 +146,41 @@ export default function Reports() {
                     </td>
                   </tr>
                 )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="card">
+        <h2>Iniciativas / eventos (extra-caixa)</h2>
+        <small>Receitas de eventos por ministério que não entram no caixa.</small>
+        {!offcash ? (
+          <div style={{ color: '#999', marginTop: 8 }}>Carregando...</div>
+        ) : offcash.rows.length === 0 ? (
+          <div style={{ color: '#999', marginTop: 8 }}>Nenhuma receita extra-caixa.</div>
+        ) : (
+          <div className="table-wrap" style={{ marginTop: 12 }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Ministério</th>
+                  <th style={{ textAlign: 'right' }}>Arrecadado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.keys(offcash.byMinistry)
+                  .sort((a, b) => offcash.byMinistry[b] - offcash.byMinistry[a])
+                  .map((m) => (
+                    <tr key={m}>
+                      <td>{m}</td>
+                      <td style={{ textAlign: 'right' }}>{formatMoney(offcash.byMinistry[m])}</td>
+                    </tr>
+                  ))}
+                <tr className="tot">
+                  <td style={{ fontWeight: 'bold' }}>Total</td>
+                  <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{formatMoney(offcash.total)}</td>
+                </tr>
               </tbody>
             </table>
           </div>

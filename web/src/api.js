@@ -344,7 +344,7 @@ export async function receiptShareUrl(path) {
 // aberto" é sempre o retrato atual (não depende do período).
 export async function dashboardTotals(from, to) {
   const [{ data: txs, error: e1 }, { data: pays, error: e2 }] = await Promise.all([
-    supabase.from('transactions').select('type, category, amount, date'),
+    supabase.from('transactions').select('type, category, amount, date').eq('off_cash', false),
     supabase.from('payables').select('status, amount, category, payment_date')
   ])
   if (e1) throw e1
@@ -554,29 +554,35 @@ export async function tithersLast3Months() {
     supabase.from('members').select('id, name, ministry').eq('tither', true).order('name'),
     supabase
       .from('transactions')
-      .select('member_id, date')
+      .select('member_id, date, amount')
       .eq('type', 'Receita')
       .eq('category', 'Dízimos')
+      .eq('off_cash', false)
       .gte('date', months[0] + '-01')
       .lt('date', currentCompetency() + '-01')
   ])
   if (e1) throw e1
   if (e2) throw e2
 
+  // member_id -> { 'YYYY-MM': soma dos dízimos no mês }
   const byMember = {}
   tithes.forEach((t) => {
     if (!t.member_id) return
-    ;(byMember[t.member_id] = byMember[t.member_id] || new Set()).add((t.date || '').slice(0, 7))
+    const mm = (t.date || '').slice(0, 7)
+    const map = (byMember[t.member_id] = byMember[t.member_id] || {})
+    map[mm] = (map[mm] || 0) + (Number(t.amount) || 0)
   })
 
   const rows = tithers.map((m) => {
-    const set = byMember[m.id] || new Set()
+    const map = byMember[m.id] || {}
+    const perMonth = months.map((mm) => map[mm] || 0)
     return {
       id: m.id,
       name: m.name,
       ministry: m.ministry,
-      perMonth: months.map((mm) => set.has(mm)),
-      monthsTithed: months.filter((mm) => set.has(mm)).length
+      perMonth,
+      total: perMonth.reduce((s, v) => s + v, 0),
+      monthsTithed: perMonth.filter((v) => v > 0).length
     }
   })
 
@@ -592,6 +598,7 @@ export async function incomeBreakdowns() {
     .from('transactions')
     .select('cult, payment_method, amount')
     .eq('type', 'Receita')
+    .eq('off_cash', false)
   if (error) throw error
 
   const byCult = {}
@@ -604,6 +611,27 @@ export async function incomeBreakdowns() {
     byPayment[p] = (byPayment[p] || 0) + amt
   })
   return { byCult, byPayment }
+}
+
+// Receitas extra-caixa (iniciativas/eventos) agrupadas por ministério.
+export async function offCashReport() {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('date, ministry, category, amount, observation')
+    .eq('type', 'Receita')
+    .eq('off_cash', true)
+    .order('date', { ascending: false })
+  if (error) throw error
+
+  const byMinistry = {}
+  let total = 0
+  data.forEach((t) => {
+    const amt = Number(t.amount) || 0
+    total += amt
+    const m = t.ministry || '(sem ministério)'
+    byMinistry[m] = (byMinistry[m] || 0) + amt
+  })
+  return { byMinistry, total, rows: data }
 }
 
 // Obreiros (altar/obreiros) que não são dizimistas.
@@ -626,7 +654,7 @@ export async function monthlySeries(n = 6) {
   const months = lastNMonths(n)
 
   const [{ data: txs, error: e1 }, { data: pays, error: e2 }] = await Promise.all([
-    supabase.from('transactions').select('type, amount, date'),
+    supabase.from('transactions').select('type, amount, date').eq('off_cash', false),
     supabase.from('payables').select('amount, payment_date').eq('status', 'Pago')
   ])
   if (e1) throw e1
@@ -688,7 +716,7 @@ export async function forecast(n = 3) {
     await Promise.all([
       supabase.from('recurring_expenses').select('*'),
       supabase.from('payables').select('status, amount, due_date, recurring_id'),
-      supabase.from('transactions').select('type, amount, date')
+      supabase.from('transactions').select('type, amount, date').eq('off_cash', false)
     ])
   if (e1) throw e1
   if (e2) throw e2
@@ -754,7 +782,10 @@ export async function forecast(n = 3) {
 // em ordem cronológica, com saldo anterior e saldo acumulado no período.
 export async function cashBook(from, to) {
   const [{ data: txs, error: e1 }, { data: pays, error: e2 }] = await Promise.all([
-    supabase.from('transactions').select('date, type, amount, category, observation, receipt_path'),
+    supabase
+      .from('transactions')
+      .select('date, type, amount, category, observation, receipt_path')
+      .eq('off_cash', false),
     supabase
       .from('payables')
       .select('payment_date, amount, category, description, receipt_path')

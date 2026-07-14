@@ -46,6 +46,13 @@ create table if not exists public.transactions (
   updated_at     timestamptz default now()
 );
 
+-- Receitas de iniciativas/eventos que NÃO entram no caixa (ex.: cantina de
+-- um congresso), atribuídas a um ministério.
+alter table public.transactions
+  add column if not exists off_cash boolean not null default false;
+alter table public.transactions
+  add column if not exists ministry text;
+
 create table if not exists public.payables (
   id           uuid primary key default gen_random_uuid(),
   description  text not null,

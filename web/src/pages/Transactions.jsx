@@ -6,6 +6,7 @@ import {
   listCategories,
   listCultNames,
   listMembers,
+  listMinistryNames,
   listTransactionsPage,
   updateTransaction,
   uploadReceipt
@@ -26,7 +27,9 @@ const EMPTY = {
   cult: '',
   payment_method: 'Dinheiro',
   amount: '',
-  observation: ''
+  observation: '',
+  off_cash: false,
+  ministry: ''
 }
 
 export default function Transactions() {
@@ -44,10 +47,12 @@ export default function Transactions() {
   const [reload, setReload] = useState(0)
   const [filters, setFilters] = useState({ type: '', category: '', from: '', to: '' })
   const [cults, setCults] = useState([])
+  const [ministries, setMinistries] = useState([])
   const fileRef = useRef(null)
 
   useEffect(() => {
     listCultNames().then(setCults).catch(() => {})
+    listMinistryNames().then(setMinistries).catch(() => {})
   }, [])
 
   function set(key, value) {
@@ -96,7 +101,9 @@ export default function Transactions() {
       cult: t.cult || '',
       payment_method: t.payment_method || 'Dinheiro',
       amount: t.amount,
-      observation: t.observation || ''
+      observation: t.observation || '',
+      off_cash: t.off_cash || false,
+      ministry: t.ministry || ''
     })
     if (fileRef.current) fileRef.current.value = ''
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -135,6 +142,8 @@ export default function Transactions() {
         payment_method: form.type === 'Receita' ? form.payment_method : null,
         amount: Number(form.amount),
         observation: form.observation,
+        off_cash: form.type === 'Receita' ? form.off_cash : false,
+        ministry: form.type === 'Receita' && form.off_cash ? form.ministry : null,
         receipt_path
       }
 
@@ -222,6 +231,33 @@ export default function Transactions() {
           </div>
         )}
 
+        {form.type === 'Receita' && (
+          <>
+            <div className="check">
+              <input
+                id="offcash"
+                type="checkbox"
+                checked={form.off_cash}
+                onChange={(e) => set('off_cash', e.target.checked)}
+              />
+              <label htmlFor="offcash" style={{ margin: 0 }}>
+                Não entra no caixa (iniciativa/evento)
+              </label>
+            </div>
+            {form.off_cash && (
+              <>
+                <label>Ministério responsável</label>
+                <select value={form.ministry} onChange={(e) => set('ministry', e.target.value)}>
+                  <option value="">—</option>
+                  {ministries.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </>
+            )}
+          </>
+        )}
+
         <label>Valor (R$)</label>
         <input type="number" step="0.01" min="0" value={form.amount} onChange={(e) => set('amount', e.target.value)} required />
 
@@ -303,7 +339,10 @@ export default function Transactions() {
               {rows.map((t) => (
                 <tr key={t.id}>
                   <td>{t.date}</td>
-                  <td>{t.type}</td>
+                  <td>
+                    {t.type}
+                    {t.off_cash && <span className="pill warn" style={{ marginLeft: 6 }}>extra-caixa</span>}
+                  </td>
                   <td>{t.category || '—'}</td>
                   <td>{t.member?.name || '—'}</td>
                   <td style={{ textAlign: 'right' }}>{formatMoney(t.amount)}</td>
