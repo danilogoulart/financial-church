@@ -25,6 +25,8 @@ export default function MonthlyChart({ data }) {
   const gap = 2
 
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => top * f)
+  const firstProj = data.findIndex((d) => d.projected)
+  const hasProj = firstProj >= 0
 
   return (
     <div>
@@ -49,13 +51,15 @@ export default function MonthlyChart({ data }) {
           const gx = padL + i * groupW + groupW / 2
           const x1 = gx - barW - gap / 2
           const x2 = gx + gap / 2
+          const op = d.projected ? 0.4 : 1
+          const label = d.projected ? ' (projeção)' : ''
           return (
             <g key={d.month}>
-              <rect x={x1} y={y(d.income)} width={barW} height={baseY - y(d.income)} rx="4" fill={INCOME}>
-                <title>{`${monthLabel(d.month)} — Receitas: ${formatMoney(d.income)}`}</title>
+              <rect x={x1} y={y(d.income)} width={barW} height={baseY - y(d.income)} rx="4" fill={INCOME} fillOpacity={op}>
+                <title>{`${monthLabel(d.month)}${label} — Receitas: ${formatMoney(d.income)}`}</title>
               </rect>
-              <rect x={x2} y={y(d.expense)} width={barW} height={baseY - y(d.expense)} rx="4" fill={EXPENSE}>
-                <title>{`${monthLabel(d.month)} — Despesas: ${formatMoney(d.expense)}`}</title>
+              <rect x={x2} y={y(d.expense)} width={barW} height={baseY - y(d.expense)} rx="4" fill={EXPENSE} fillOpacity={op}>
+                <title>{`${monthLabel(d.month)}${label} — Despesas: ${formatMoney(d.expense)}`}</title>
               </rect>
               <text className="chart-xlabel" x={gx} y={baseY + 18} textAnchor="middle" fontSize="11">
                 {monthLabel(d.month)}
@@ -64,8 +68,24 @@ export default function MonthlyChart({ data }) {
           )
         })}
 
+        {hasProj && firstProj > 0 && (
+          <line
+            className="chart-axis"
+            x1={padL + firstProj * groupW}
+            x2={padL + firstProj * groupW}
+            y1={padT}
+            y2={baseY}
+            strokeWidth="1"
+            strokeDasharray="4 3"
+          />
+        )}
+
         <line className="chart-axis" x1={padL} x2={W - padR} y1={baseY} y2={baseY} strokeWidth="1" />
       </svg>
+
+      {hasProj && (
+        <small>Barras mais claras (à direita da linha tracejada) = projeção.</small>
+      )}
     </div>
   )
 }

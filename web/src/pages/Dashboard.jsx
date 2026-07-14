@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
-import { currentCompetency, dashboardTotals, formatMoney, monthlySeries } from '../api'
+import {
+  currentCompetency,
+  dashboardTotals,
+  forecast,
+  formatMoney,
+  monthlySeries,
+  payableAlerts
+} from '../api'
 import MonthlyChart from '../components/MonthlyChart.jsx'
+import { printBalancete } from '../reportPrint'
 
 const firstOfMonth = () => currentCompetency() + '-01'
 const today = () => new Date().toISOString().slice(0, 10)
@@ -9,7 +17,8 @@ export default function Dashboard() {
   const [from, setFrom] = useState(firstOfMonth())
   const [to, setTo] = useState(today())
   const [totals, setTotals] = useState(null)
-  const [series, setSeries] = useState(null)
+  const [chart, setChart] = useState(null)
+  const [alerts, setAlerts] = useState(null)
   const [error, setError] = useState('')
 
   function loadTotals() {
@@ -18,7 +27,15 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadTotals()
-    monthlySeries(6).then(setSeries).catch((e) => setError(e.message))
+    Promise.all([monthlySeries(6), forecast(3)])
+      .then(([s, fc]) => {
+        setChart([
+          ...s.map((x) => ({ ...x, projected: false })),
+          ...fc.rows.map((r) => ({ month: r.month, income: r.income, expense: r.expense, projected: true }))
+        ])
+      })
+      .catch((e) => setError(e.message))
+    payableAlerts(7).then(setAlerts).catch((e) => setError(e.message))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -27,6 +44,42 @@ export default function Dashboard() {
 
   return (
     <>
+      {alerts && (alerts.overdue.length > 0 || alerts.soon.length > 0) && (
+        <div className="card">
+          <h2>Alertas de contas</h2>
+          {alerts.overdue.length > 0 && (
+            <div className="banner err">
+              <b>Vencidas ({alerts.overdue.length}):</b> {formatMoney(alerts.overdueTotal)}
+            </div>
+          )}
+          {alerts.soon.length > 0 && (
+            <div className="banner" style={{ background: '#FFF8E1', color: '#8a6d00' }}>
+              <b>A vencer em 7 dias ({alerts.soon.length}):</b> {formatMoney(alerts.soonTotal)}
+            </div>
+          )}
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Descrição</th>
+                  <th>Vencimento</th>
+                  <th style={{ textAlign: 'right' }}>Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...alerts.overdue, ...alerts.soon].map((p) => (
+                  <tr key={p.id}>
+                    <td>{p.description}</td>
+                    <td>{p.due_date}</td>
+                    <td style={{ textAlign: 'right' }}>{formatMoney(p.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       <div className="card">
         <h2>Balancete do período</h2>
         <div className="row" style={{ alignItems: 'flex-end' }}>
@@ -42,6 +95,13 @@ export default function Dashboard() {
             <button className="primary" onClick={loadTotals}>Aplicar</button>
           </div>
         </div>
+        <button
+          className="link-btn"
+          style={{ marginTop: 12 }}
+          onClick={() => printBalancete({ from, to, totals })}
+        >
+          🖨 Gerar prestação de contas (PDF)
+        </button>
 
         <div className="kpis" style={{ marginTop: 8 }}>
           <div className="kpi income">
@@ -60,8 +120,8 @@ export default function Dashboard() {
       </div>
 
       <div className="card">
-        <h2>Receitas x Despesas (últimos 6 meses)</h2>
-        {series ? <MonthlyChart data={series} /> : <span style={{ color: '#999' }}>Carregando...</span>}
+        <h2>Receitas x Despesas — 6 meses + projeção</h2>
+        {chart ? <MonthlyChart data={chart} /> : <span style={{ color: '#999' }}>Carregando...</span>}
       </div>
 
       <div className="card">

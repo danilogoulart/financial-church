@@ -427,6 +427,33 @@ export async function monthlySeries(n = 6) {
   return months.map((m) => base[m])
 }
 
+// ---------- Alertas de contas (vencidas / a vencer) ----------
+
+export async function payableAlerts(days = 7) {
+  const now = new Date()
+  const today = now.toISOString().slice(0, 10)
+  const limitDate = new Date(now.getTime() + days * 86400000).toISOString().slice(0, 10)
+
+  const { data, error } = await supabase
+    .from('payables')
+    .select('id, description, amount, due_date')
+    .neq('status', 'Pago')
+    .order('due_date')
+  if (error) throw error
+
+  const overdue = data.filter((p) => p.due_date && p.due_date < today)
+  const soon = data.filter((p) => p.due_date && p.due_date >= today && p.due_date <= limitDate)
+  const sum = (arr) => arr.reduce((s, p) => s + Number(p.amount), 0)
+
+  return {
+    days,
+    overdue,
+    soon,
+    overdueTotal: sum(overdue),
+    soonTotal: sum(soon)
+  }
+}
+
 // ---------- Projeção de caixa (forecast) ----------
 
 // Projeta os próximos n meses: despesas conhecidas (recorrentes + parcelas
