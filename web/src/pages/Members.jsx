@@ -1,10 +1,15 @@
 import { useContext, useEffect, useState } from 'react'
-import { createMember, listMembersPage, setMemberActive, updateMember } from '../api'
-import { MINISTRIES } from '../constants'
+import {
+  createMember,
+  listMembersPage,
+  listMinistryNames,
+  setMemberActive,
+  updateMember
+} from '../api'
 import Pagination from '../components/Pagination.jsx'
 import { RoleContext } from '../role'
 
-const EMPTY = { name: '', phone: '', family: '', ministry: 'Membros', tither: true, active: true }
+const EMPTY = { name: '', phone: '', family: '', ministry: '', tither: true, active: true }
 const SIZE = 20
 
 export default function Members() {
@@ -18,6 +23,11 @@ export default function Members() {
   const [total, setTotal] = useState(0)
   const [reload, setReload] = useState(0)
   const [filters, setFilters] = useState({ search: '', ministry: '', activeOnly: false })
+  const [ministries, setMinistries] = useState([])
+
+  useEffect(() => {
+    listMinistryNames().then(setMinistries).catch(() => {})
+  }, [])
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -124,7 +134,8 @@ export default function Members() {
           <div>
             <label>Ministério</label>
             <select value={form.ministry} onChange={(e) => set('ministry', e.target.value)}>
-              {MINISTRIES.map((m) => (
+              <option value="">—</option>
+              {ministries.map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>
@@ -166,7 +177,7 @@ export default function Members() {
             <label>Ministério</label>
             <select value={filters.ministry} onChange={(e) => setFilter('ministry', e.target.value)}>
               <option value="">Todos</option>
-              {MINISTRIES.map((m) => (
+              {ministries.map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>

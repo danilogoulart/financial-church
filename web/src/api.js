@@ -1,5 +1,4 @@
 import { supabase } from './supabaseClient'
-import { WORKER_MINISTRIES } from './constants'
 
 // ---------- Membros ----------
 
@@ -98,6 +97,78 @@ export async function createCategory(kind, name) {
 
 export async function deleteCategory(id) {
   const { error } = await supabase.from('categories').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ---------- Ministérios ----------
+
+export async function listMinistries() {
+  const { data, error } = await supabase
+    .from('ministries')
+    .select('id, name, is_worker')
+    .order('name')
+  if (error) throw error
+  return data
+}
+
+export async function listMinistryNames() {
+  const { data, error } = await supabase.from('ministries').select('name').order('name')
+  if (error) throw error
+  return data.map((r) => r.name)
+}
+
+export async function workerMinistryNames() {
+  const { data, error } = await supabase.from('ministries').select('name').eq('is_worker', true)
+  if (error) throw error
+  return data.map((r) => r.name)
+}
+
+export async function createMinistry(name, isWorker) {
+  const { data, error } = await supabase
+    .from('ministries')
+    .insert({ name: name.trim(), is_worker: !!isWorker })
+    .select()
+    .single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function setMinistryWorker(id, isWorker) {
+  const { error } = await supabase.from('ministries').update({ is_worker: isWorker }).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteMinistry(id) {
+  const { error } = await supabase.from('ministries').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ---------- Cultos ----------
+
+export async function listCults() {
+  const { data, error } = await supabase.from('cults').select('id, name').order('name')
+  if (error) throw error
+  return data
+}
+
+export async function listCultNames() {
+  const { data, error } = await supabase.from('cults').select('name').order('name')
+  if (error) throw error
+  return data.map((r) => r.name)
+}
+
+export async function createCult(name) {
+  const { data, error } = await supabase
+    .from('cults')
+    .insert({ name: name.trim() })
+    .select()
+    .single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function deleteCult(id) {
+  const { error } = await supabase.from('cults').delete().eq('id', id)
   if (error) throw error
 }
 
@@ -346,6 +417,12 @@ function mapError(error) {
     if (msg.includes('categories_kind_name_unique')) {
       return new Error('Essa categoria já existe.')
     }
+    if (msg.includes('ministries')) {
+      return new Error('Esse ministério já existe.')
+    }
+    if (msg.includes('cults')) {
+      return new Error('Esse culto já existe.')
+    }
     return new Error('Registro duplicado.')
   }
   return new Error(error.message || 'Erro ao salvar.')
@@ -511,11 +588,13 @@ export async function tithersLast3Months() {
 
 // Obreiros (altar/obreiros) que não são dizimistas.
 export async function nonTitherWorkers() {
+  const workers = await workerMinistryNames()
+  if (workers.length === 0) return []
   const { data, error } = await supabase
     .from('members')
     .select('id, name, ministry, phone')
     .eq('tither', false)
-    .in('ministry', WORKER_MINISTRIES)
+    .in('ministry', workers)
     .order('name')
   if (error) throw error
   return data

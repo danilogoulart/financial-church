@@ -4,6 +4,7 @@ import {
   deleteTransaction,
   formatMoney,
   listCategories,
+  listCultNames,
   listMembers,
   listTransactionsPage,
   updateTransaction,
@@ -11,7 +12,7 @@ import {
 } from '../api'
 import ReceiptLink from '../components/ReceiptLink.jsx'
 import Pagination from '../components/Pagination.jsx'
-import { CULTS, PAYMENT_METHODS } from '../constants'
+import { PAYMENT_METHODS } from '../constants'
 import { RoleContext } from '../role'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -42,7 +43,12 @@ export default function Transactions() {
   const [total, setTotal] = useState(0)
   const [reload, setReload] = useState(0)
   const [filters, setFilters] = useState({ type: '', category: '', from: '', to: '' })
+  const [cults, setCults] = useState([])
   const fileRef = useRef(null)
+
+  useEffect(() => {
+    listCultNames().then(setCults).catch(() => {})
+  }, [])
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -199,7 +205,7 @@ export default function Transactions() {
             <label>Culto</label>
             <select value={form.cult} onChange={(e) => set('cult', e.target.value)}>
               <option value="">—</option>
-              {CULTS.map((c) => (
+              {cults.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>

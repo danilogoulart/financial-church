@@ -197,3 +197,39 @@ create policy receipts_read on storage.objects
 drop policy if exists receipts_insert on storage.objects;
 create policy receipts_insert on storage.objects
   for insert to authenticated with check (bucket_id = 'receipts');
+
+-- ---------- Ministérios e Cultos (listas editáveis) ----------
+
+create table if not exists public.ministries (
+  id        uuid primary key default gen_random_uuid(),
+  name      text not null unique,
+  is_worker boolean not null default false   -- conta como "obreiro" nos relatórios
+);
+
+create table if not exists public.cults (
+  id   uuid primary key default gen_random_uuid(),
+  name text not null unique
+);
+
+insert into public.ministries (name, is_worker) values
+  ('Obreiros de altar', true), ('Obreiros', true), ('Membros', false)
+  on conflict (name) do nothing;
+
+insert into public.cults (name) values
+  ('Domingo'), ('Quinta'), ('Terça'), ('Consagração')
+  on conflict (name) do nothing;
+
+alter table public.ministries enable row level security;
+alter table public.cults      enable row level security;
+
+drop policy if exists ministries_select on public.ministries;
+drop policy if exists ministries_write on public.ministries;
+create policy ministries_select on public.ministries for select to authenticated using (true);
+create policy ministries_write on public.ministries for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+
+drop policy if exists cults_select on public.cults;
+drop policy if exists cults_write on public.cults;
+create policy cults_select on public.cults for select to authenticated using (true);
+create policy cults_write on public.cults for all to authenticated
+  using (public.can_write()) with check (public.can_write());
