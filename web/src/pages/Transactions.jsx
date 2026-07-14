@@ -60,10 +60,17 @@ export default function Transactions() {
 
   async function save(e) {
     e.preventDefault()
-    setSaving(true)
     setBanner(null)
+
+    const file = fileRef.current?.files?.[0]
+    if (form.type === 'Despesa' && !file) {
+      setBanner({ type: 'err', msg: 'Comprovante é obrigatório para despesas.' })
+      return
+    }
+
+    setSaving(true)
     try {
-      const receipt_path = await uploadReceipt(fileRef.current?.files?.[0])
+      const receipt_path = await uploadReceipt(file)
 
       const trx = await createTransaction({
         date: form.date,
@@ -153,8 +160,12 @@ export default function Transactions() {
         <label>Observação</label>
         <textarea rows="2" value={form.observation} onChange={(e) => set('observation', e.target.value)} />
 
-        <label>Comprovante <small>(opcional — imagem ou PDF)</small></label>
-        <input ref={fileRef} type="file" accept="image/*,application/pdf" />
+        {form.type === 'Despesa' && (
+          <>
+            <label>Comprovante <small>(obrigatório para despesa — imagem ou PDF)</small></label>
+            <input ref={fileRef} type="file" accept="image/*,application/pdf" />
+          </>
+        )}
 
         <button className="primary" disabled={saving}>
           {saving ? 'Salvando...' : 'Salvar'}

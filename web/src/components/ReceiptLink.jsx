@@ -1,34 +1,38 @@
 import { useState } from 'react'
-import { receiptUrl } from '../api'
+import { receiptDownloadUrl, receiptShareUrl, receiptUrl } from '../api'
 
-// Gera uma URL assinada sob demanda (expira em 1h) e abre em nova aba.
+// Acesso ao comprovante: ver, baixar e gerar link de 7 dias.
 export default function ReceiptLink({ path }) {
-  const [loading, setLoading] = useState(false)
+  const [busy, setBusy] = useState('')
 
   if (!path) return <span>—</span>
 
-  async function open() {
-    setLoading(true)
+  async function run(kind) {
+    setBusy(kind)
     try {
-      const url = await receiptUrl(path)
-      window.open(url, '_blank', 'noopener')
+      if (kind === 'ver') {
+        window.open(await receiptUrl(path), '_blank', 'noopener')
+      } else if (kind === 'baixar') {
+        window.open(await receiptDownloadUrl(path), '_blank', 'noopener')
+      } else if (kind === 'link') {
+        const url = await receiptShareUrl(path)
+        await navigator.clipboard.writeText(url)
+        alert('Link copiado (válido por 7 dias).')
+      }
     } catch (err) {
-      alert('Não foi possível abrir o comprovante: ' + err.message)
+      alert('Não foi possível acessar o comprovante: ' + err.message)
     } finally {
-      setLoading(false)
+      setBusy('')
     }
   }
 
   return (
-    <a
-      className="link"
-      href="#"
-      onClick={(e) => {
-        e.preventDefault()
-        open()
-      }}
-    >
-      {loading ? 'abrindo...' : 'ver'}
-    </a>
+    <span style={{ whiteSpace: 'nowrap' }}>
+      <button className="link-btn" onClick={() => run('ver')} disabled={!!busy}>ver</button>
+      {' · '}
+      <button className="link-btn" onClick={() => run('baixar')} disabled={!!busy}>baixar</button>
+      {' · '}
+      <button className="link-btn" onClick={() => run('link')} disabled={!!busy}>link</button>
+    </span>
   )
 }

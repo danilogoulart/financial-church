@@ -32,6 +32,22 @@ export async function createMember(member) {
   return data
 }
 
+export async function updateMember(id, fields) {
+  const { data, error } = await supabase
+    .from('members')
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function setMemberActive(id, active) {
+  const { error } = await supabase.from('members').update({ active }).eq('id', id)
+  if (error) throw error
+}
+
 // ---------- Categorias ----------
 
 export async function listCategories() {
@@ -108,6 +124,24 @@ export async function receiptUrl(path) {
   const { data, error } = await supabase.storage
     .from('receipts')
     .createSignedUrl(path, 3600)
+  if (error) throw error
+  return data.signedUrl
+}
+
+// URL que força download (Content-Disposition: attachment).
+export async function receiptDownloadUrl(path) {
+  const { data, error } = await supabase.storage
+    .from('receipts')
+    .createSignedUrl(path, 3600, { download: true })
+  if (error) throw error
+  return data.signedUrl
+}
+
+// Link compartilhável válido por 7 dias (para enviar a contador/auditor).
+export async function receiptShareUrl(path) {
+  const { data, error } = await supabase.storage
+    .from('receipts')
+    .createSignedUrl(path, 7 * 24 * 3600)
   if (error) throw error
   return data.signedUrl
 }

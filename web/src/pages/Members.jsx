@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { createMember, listRecentMembers } from '../api'
+import { createMember, listRecentMembers, setMemberActive, updateMember } from '../api'
 import { MINISTRIES } from '../constants'
 
-const EMPTY = { name: '', phone: '', family: '', ministry: 'Membros', tither: true }
+const EMPTY = { name: '', phone: '', family: '', ministry: 'Membros', tither: true, active: true }
 
 export default function Members() {
   const [form, setForm] = useState(EMPTY)
+  const [editingId, setEditingId] = useState(null)
   const [banner, setBanner] = useState(null)
   const [saving, setSaving] = useState(false)
   const [rows, setRows] = useState([])
@@ -26,20 +27,45 @@ export default function Members() {
     load()
   }, [])
 
+  function startEdit(m) {
+    setEditingId(m.id)
+    setForm({
+      name: m.name,
+      phone: m.phone || '',
+      family: m.family || '',
+      ministry: m.ministry || 'Membros',
+      tither: m.tither,
+      active: m.active
+    })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setForm(EMPTY)
+    setBanner(null)
+  }
+
   async function save(e) {
     e.preventDefault()
     setSaving(true)
     setBanner(null)
     try {
-      const member = await createMember({
+      const payload = {
         name: form.name.trim(),
         phone: form.phone,
         family: form.family,
         ministry: form.ministry,
-        tither: form.tither,
-        active: true
-      })
-      setBanner({ type: 'ok', msg: `Membro "${member.name}" cadastrado.` })
+        tither: form.tither
+      }
+      if (editingId) {
+        await updateMember(editingId, { ...payload, active: form.active })
+        setBanner({ type: 'ok', msg: 'Membro atualizado.' })
+        setEditingId(null)
+      } else {
+        const m = await createMember({ ...payload, active: true })
+        setBanner({ type: 'ok', msg: `Membro "${m.name}" cadastrado.` })
+      }
       setForm(EMPTY)
       load()
     } catch (err) {
@@ -49,10 +75,19 @@ export default function Members() {
     }
   }
 
+  async function toggleActive(m) {
+    try {
+      await setMemberActive(m.id, !m.active)
+      load()
+    } catch (err) {
+      setBanner({ type: 'err', msg: err.message })
+    }
+  }
+
   return (
     <>
       <form className="card" onSubmit={save}>
-        <h2>Novo Membro</h2>
+        <h2>{editingId ? 'Editar Membro' : 'Novo Membro'}</h2>
         {banner && <div className={`banner ${banner.type}`}>{banner.msg}</div>}
 
         <label>Nome</label>
@@ -77,44 +112,59 @@ export default function Members() {
         </div>
 
         <div className="check">
-          <input
-            id="tither"
-            type="checkbox"
-            checked={form.tither}
-            onChange={(e) => set('tither', e.target.checked)}
-          />
+          <input id="tither" type="checkbox" checked={form.tither} onChange={(e) => set('tither', e.target.checked)} />
           <label htmlFor="tither" style={{ margin: 0 }}>É dizimista</label>
         </div>
 
+        {editingId && (
+          <div className="check">
+            <input id="active" type="checkbox" checked={form.active} onChange={(e) => set('active', e.target.checked)} />
+            <label htmlFor="active" style={{ margin: 0 }}>Ativo</label>
+          </div>
+        )}
+
         <button className="primary" disabled={saving}>
-          {saving ? 'Salvando...' : 'Salvar'}
+          {saving ? 'Salvando...' : editingId ? 'Atualizar' : 'Salvar'}
         </button>
+        {editingId && (
+          <button type="button" className="link-btn" style={{ marginTop: 10 }} onClick={cancelEdit}>
+            Cancelar edição
+          </button>
+        )}
       </form>
 
       <div className="card">
-        <h2>Membros recentes</h2>
+        <h2>Membros</h2>
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Nome</th>
-                <th>Telefone</th>
                 <th>Ministério</th>
                 <th>Dizimista</th>
+                <th>Ativo</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {rows.map((m) => (
-                <tr key={m.id}>
+                <tr key={m.id} style={{ opacity: m.active ? 1 : 0.5 }}>
                   <td>{m.name}</td>
-                  <td>{m.phone || '—'}</td>
                   <td>{m.ministry || '—'}</td>
                   <td>{m.tither ? 'Sim' : 'Não'}</td>
+                  <td>{m.active ? 'Sim' : 'Não'}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <button className="link-btn" onClick={() => startEdit(m)}>editar</button>
+                    {' · '}
+                    <button className="link-btn" onClick={() => toggleActive(m)}>
+                      {m.active ? 'desativar' : 'ativar'}
+                    </button>
+                  </td>
                 </tr>
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan="4" style={{ color: '#999' }}>Nenhum membro ainda.</td>
+                  <td colSpan="5" style={{ color: '#999' }}>Nenhum membro ainda.</td>
                 </tr>
               )}
             </tbody>
