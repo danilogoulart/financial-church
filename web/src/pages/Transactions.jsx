@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   createTransaction,
+  deleteTransaction,
   formatMoney,
   listCategories,
   listMembers,
   listRecentTransactions,
+  updateTransaction,
   uploadReceipt
 } from '../api'
 import ReceiptLink from '../components/ReceiptLink.jsx'
@@ -26,6 +28,8 @@ const EMPTY = {
 
 export default function Transactions() {
   const [form, setForm] = useState(EMPTY)
+  const [editingId, setEditingId] = useState(null)
+  const [existingReceipt, setExistingReceipt] = useState(null)
   const [members, setMembers] = useState([])
   const [categories, setCategories] = useState({ income: [], expense: [] })
   const [banner, setBanner] = useState(null)
@@ -58,21 +62,49 @@ export default function Transactions() {
 
   const categoryOptions = form.type === 'Despesa' ? categories.expense : categories.income
 
+  function startEdit(t) {
+    setEditingId(t.id)
+    setExistingReceipt(t.receipt_path || null)
+    setForm({
+      date: t.date,
+      competency: t.competency || '',
+      member_id: t.member_id || '',
+      type: t.type,
+      category: t.category || '',
+      cult: t.cult || '',
+      payment_method: t.payment_method || 'Dinheiro',
+      amount: t.amount,
+      observation: t.observation || ''
+    })
+    if (fileRef.current) fileRef.current.value = ''
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setExistingReceipt(null)
+    setForm({ ...EMPTY, date: today(), competency: today().slice(0, 7) })
+    setBanner(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
   async function save(e) {
     e.preventDefault()
     setBanner(null)
 
     const file = fileRef.current?.files?.[0]
-    if (form.type === 'Despesa' && !file) {
+    // Despesa exige comprovante: ao criar, ou ao editar se ainda não houver um.
+    if (form.type === 'Despesa' && !file && !existingReceipt) {
       setBanner({ type: 'err', msg: 'Comprovante é obrigatório para despesas.' })
       return
     }
 
     setSaving(true)
     try {
-      const receipt_path = await uploadReceipt(file)
+      let receipt_path = editingId ? existingReceipt : null
+      if (file) receipt_path = await uploadReceipt(file)
 
-      const trx = await createTransaction({
+      const payload = {
         date: form.date,
         competency: form.competency,
         member_id: form.member_id || null,
@@ -83,9 +115,17 @@ export default function Transactions() {
         amount: Number(form.amount),
         observation: form.observation,
         receipt_path
-      })
+      }
 
-      setBanner({ type: 'ok', msg: `Movimentação de ${formatMoney(trx.amount)} registrada.` })
+      if (editingId) {
+        await updateTransaction(editingId, payload)
+        setBanner({ type: 'ok', msg: 'Movimentação atualizada.' })
+        setEditingId(null)
+        setExistingReceipt(null)
+      } else {
+        const trx = await createTransaction(payload)
+        setBanner({ type: 'ok', msg: `Movimentação de ${formatMoney(trx.amount)} registrada.` })
+      }
       setForm({ ...EMPTY, date: today(), competency: today().slice(0, 7) })
       if (fileRef.current) fileRef.current.value = ''
       load()
@@ -96,10 +136,21 @@ export default function Transactions() {
     }
   }
 
+  async function remove(t) {
+    if (!window.confirm(`Excluir a movimentação de ${formatMoney(t.amount)}?`)) return
+    try {
+      await deleteTransaction(t.id)
+      if (editingId === t.id) cancelEdit()
+      load()
+    } catch (err) {
+      setBanner({ type: 'err', msg: err.message })
+    }
+  }
+
   return (
     <>
       <form className="card" onSubmit={save}>
-        <h2>Nova Movimentação</h2>
+        <h2>{editingId ? 'Editar Movimentação' : 'Nova Movimentação'}</h2>
         {banner && <div className={`banner ${banner.type}`}>{banner.msg}</div>}
 
         <div className="row">
@@ -162,14 +213,26 @@ export default function Transactions() {
 
         {form.type === 'Despesa' && (
           <>
-            <label>Comprovante <small>(obrigatório para despesa — imagem ou PDF)</small></label>
+            <label>
+              Comprovante{' '}
+              <small>
+                {existingReceipt
+                  ? '(há um comprovante; envie outro só para substituir)'
+                  : '(obrigatório para despesa — imagem ou PDF)'}
+              </small>
+            </label>
             <input ref={fileRef} type="file" accept="image/*,application/pdf" />
           </>
         )}
 
         <button className="primary" disabled={saving}>
-          {saving ? 'Salvando...' : 'Salvar'}
+          {saving ? 'Salvando...' : editingId ? 'Atualizar' : 'Salvar'}
         </button>
+        {editingId && (
+          <button type="button" className="link-btn" style={{ marginTop: 10 }} onClick={cancelEdit}>
+            Cancelar edição
+          </button>
+        )}
       </form>
 
       <div className="card">
@@ -182,8 +245,9 @@ export default function Transactions() {
                 <th>Tipo</th>
                 <th>Categoria</th>
                 <th>Membro</th>
-                <th>Valor</th>
+                <th style={{ textAlign: 'right' }}>Valor</th>
                 <th>Comprovante</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -193,13 +257,18 @@ export default function Transactions() {
                   <td>{t.type}</td>
                   <td>{t.category || '—'}</td>
                   <td>{t.member?.name || '—'}</td>
-                  <td>{formatMoney(t.amount)}</td>
+                  <td style={{ textAlign: 'right' }}>{formatMoney(t.amount)}</td>
                   <td><ReceiptLink path={t.receipt_path} /></td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    <button className="link-btn" onClick={() => startEdit(t)}>editar</button>
+                    {' · '}
+                    <button className="link-btn" onClick={() => remove(t)}>excluir</button>
+                  </td>
                 </tr>
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan="6" style={{ color: '#999' }}>Nenhuma movimentação ainda.</td>
+                  <td colSpan="7" style={{ color: '#999' }}>Nenhuma movimentação ainda.</td>
                 </tr>
               )}
             </tbody>

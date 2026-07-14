@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   createPayable,
   currentCompetency,
+  deletePayable,
   formatMoney,
   generateMonthPayables,
   listCategories,
@@ -9,6 +10,7 @@ import {
   markPayablePaid,
   monthGenerated,
   monthLabel,
+  updatePayable,
   uploadReceipt
 } from '../api'
 import ReceiptLink from '../components/ReceiptLink.jsx'
@@ -23,6 +25,8 @@ const EMPTY = {
 
 export default function Payables() {
   const [form, setForm] = useState(EMPTY)
+  const [editingId, setEditingId] = useState(null)
+  const [existingReceipt, setExistingReceipt] = useState(null)
   const [categories, setCategories] = useState([])
   const [banner, setBanner] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -84,15 +88,50 @@ export default function Payables() {
     }
   }
 
+  function startEdit(p) {
+    setEditingId(p.id)
+    setExistingReceipt(p.receipt_path || null)
+    setForm({
+      description: p.description,
+      category: p.category || '',
+      amount: p.amount,
+      due_date: p.due_date || '',
+      payment_date: p.payment_date || ''
+    })
+    if (fileRef.current) fileRef.current.value = ''
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setExistingReceipt(null)
+    setForm(EMPTY)
+    setBanner(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  async function remove(p) {
+    if (!window.confirm(`Excluir a conta "${p.description}"?`)) return
+    try {
+      await deletePayable(p.id)
+      if (editingId === p.id) cancelEdit()
+      load()
+    } catch (err) {
+      setBanner({ type: 'err', msg: err.message })
+    }
+  }
+
   async function save(e) {
     e.preventDefault()
     setSaving(true)
     setBanner(null)
     try {
-      const receipt_path = await uploadReceipt(fileRef.current?.files?.[0])
-      const hasPayment = !!form.payment_date
+      let receipt_path = editingId ? existingReceipt : null
+      const file = fileRef.current?.files?.[0]
+      if (file) receipt_path = await uploadReceipt(file)
 
-      const payable = await createPayable({
+      const hasPayment = !!form.payment_date
+      const payload = {
         description: form.description.trim(),
         category: form.category || categories[0] || null,
         amount: Number(form.amount),
@@ -100,9 +139,17 @@ export default function Payables() {
         payment_date: form.payment_date || null,
         status: hasPayment ? 'Pago' : 'Em aberto',
         receipt_path
-      })
+      }
 
-      setBanner({ type: 'ok', msg: `Conta "${payable.description}" registrada (${payable.status}).` })
+      if (editingId) {
+        await updatePayable(editingId, payload)
+        setBanner({ type: 'ok', msg: 'Conta atualizada.' })
+        setEditingId(null)
+        setExistingReceipt(null)
+      } else {
+        const payable = await createPayable(payload)
+        setBanner({ type: 'ok', msg: `Conta "${payable.description}" registrada (${payable.status}).` })
+      }
       setForm(EMPTY)
       if (fileRef.current) fileRef.current.value = ''
       load()
@@ -148,7 +195,7 @@ export default function Payables() {
       </div>
 
       <form className="card" onSubmit={save}>
-        <h2>Nova Conta Avulsa</h2>
+        <h2>{editingId ? 'Editar Conta' : 'Nova Conta Avulsa'}</h2>
 
         <label>Descrição</label>
         <input value={form.description} onChange={(e) => set('description', e.target.value)} required />
@@ -174,12 +221,22 @@ export default function Payables() {
         <label>Pagamento <small>(opcional)</small></label>
         <input type="date" value={form.payment_date} onChange={(e) => set('payment_date', e.target.value)} />
 
-        <label style={{ marginTop: 14 }}>Comprovante <small>(opcional — imagem ou PDF)</small></label>
+        <label style={{ marginTop: 14 }}>
+          Comprovante{' '}
+          <small>
+            {existingReceipt ? '(há um; envie outro só para substituir)' : '(opcional — imagem ou PDF)'}
+          </small>
+        </label>
         <input ref={fileRef} type="file" accept="image/*,application/pdf" />
 
         <button className="primary" disabled={saving}>
-          {saving ? 'Salvando...' : 'Salvar'}
+          {saving ? 'Salvando...' : editingId ? 'Atualizar' : 'Salvar'}
         </button>
+        {editingId && (
+          <button type="button" className="link-btn" style={{ marginTop: 10 }} onClick={cancelEdit}>
+            Cancelar edição
+          </button>
+        )}
       </form>
 
       <div className="card">
@@ -204,10 +261,16 @@ export default function Payables() {
                   <td>{p.due_date}</td>
                   <td>{p.status}</td>
                   <td><ReceiptLink path={p.receipt_path} /></td>
-                  <td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     {p.status !== 'Pago' && (
-                      <button className="link-btn" onClick={() => pay(p.id)}>Pagar</button>
+                      <>
+                        <button className="link-btn" onClick={() => pay(p.id)}>pagar</button>
+                        {' · '}
+                      </>
                     )}
+                    <button className="link-btn" onClick={() => startEdit(p)}>editar</button>
+                    {' · '}
+                    <button className="link-btn" onClick={() => remove(p)}>excluir</button>
                   </td>
                 </tr>
               ))}

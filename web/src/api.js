@@ -85,6 +85,22 @@ export async function createTransaction(transaction) {
   return data
 }
 
+export async function updateTransaction(id, fields) {
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function deleteTransaction(id) {
+  const { error } = await supabase.from('transactions').delete().eq('id', id)
+  if (error) throw error
+}
+
 // ---------- Contas a pagar ----------
 
 export async function listRecentPayables(limit = 50) {
@@ -105,6 +121,22 @@ export async function createPayable(payable) {
     .single()
   if (error) throw mapError(error)
   return data
+}
+
+export async function updatePayable(id, fields) {
+  const { data, error } = await supabase
+    .from('payables')
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function deletePayable(id) {
+  const { error } = await supabase.from('payables').delete().eq('id', id)
+  if (error) throw error
 }
 
 // ---------- Comprovantes (Storage) ----------
