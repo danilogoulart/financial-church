@@ -14,6 +14,13 @@ import CashBook from './pages/CashBook.jsx'
 import Reports from './pages/Reports.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Settings from './pages/Settings.jsx'
+import { MyCredential, MyContributions, MyProfile } from './pages/MemberPortal.jsx'
+
+const TABS_MEMBER = [
+  { id: 'my-credential', label: '🪪 Credencial', Component: MyCredential },
+  { id: 'my-contrib', label: '💰 Contribuições', Component: MyContributions },
+  { id: 'my-profile', label: '👤 Meus Dados', Component: MyProfile }
+]
 
 const TABS = [
   { id: 'home', label: '🏠 Início', Component: Home },
@@ -54,9 +61,11 @@ export default function App() {
   if (!ready) return <div className="center">Carregando...</div>
   if (!session) return <Login />
 
-  const Active = TABS.find((t) => t.id === tab).Component
   const ctx = { role, canWrite: role === 'admin' || role === 'tesoureiro', isAdmin: role === 'admin' }
-  const roleLabel = { admin: 'Admin', tesoureiro: 'Tesoureiro', consulta: 'Consulta' }[role]
+  const roleLabel = { admin: 'Admin', tesoureiro: 'Tesoureiro', consulta: 'Consulta', membro: 'Membro' }[role]
+  const tabs = role === 'membro' ? TABS_MEMBER : TABS
+  const active = tabs.find((t) => t.id === tab) || tabs[0]
+  const Active = active.Component
 
   return (
     <RoleContext.Provider value={ctx}>
@@ -84,10 +93,10 @@ export default function App() {
       </header>
 
       <nav className={menuOpen ? 'open' : ''}>
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.id}
-            className={t.id === tab ? 'active' : ''}
+            className={t.id === active.id ? 'active' : ''}
             onClick={() => {
               setTab(t.id)
               setMenuOpen(false)
@@ -99,7 +108,7 @@ export default function App() {
       </nav>
 
       <main>
-        {!ctx.canWrite && (
+        {role === 'consulta' && (
           <div className="card" style={{ padding: '10px 16px' }}>
             <small>👁️ Acesso somente leitura (perfil Consulta).</small>
           </div>

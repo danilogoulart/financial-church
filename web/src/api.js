@@ -198,6 +198,44 @@ export async function deleteCult(id) {
   if (error) throw error
 }
 
+// ---------- Portal do membro ----------
+
+// Admin cria o login do membro (via Edge Function com service_role).
+export async function createMemberUser(memberId, email, password) {
+  const { data, error } = await supabase.functions.invoke('admin-create-member-user', {
+    body: { member_id: memberId, email, password }
+  })
+  if (error) throw new Error(error.message || 'Falha ao criar acesso.')
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
+// Registro do próprio membro logado.
+export async function getMyMember() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data, error } = await supabase.from('members').select('*').eq('user_id', user.id).maybeSingle()
+  if (error) throw error
+  return data
+}
+
+// Contribuições do próprio membro (RLS já restringe ao próprio member_id).
+export async function myContributions() {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('date, type, category, amount')
+    .order('date', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function updateMyProfile(fields) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Não autenticado.')
+  const { error } = await supabase.from('members').update(fields).eq('user_id', user.id)
+  if (error) throw error
+}
+
 // ---------- Papéis / usuários ----------
 
 export async function getMyRole() {

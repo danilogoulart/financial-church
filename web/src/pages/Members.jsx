@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef, useState } from 'react'
 import {
   createMember,
+  createMemberUser,
   listCargoNames,
   listMembersPage,
   listMinistryNames,
@@ -11,11 +12,11 @@ import {
 import Pagination from '../components/Pagination.jsx'
 import { RoleContext } from '../role'
 
-const EMPTY = { name: '', phone: '', family: '', cargo: '', ministries: [], tither: true, active: true }
+const EMPTY = { name: '', phone: '', email: '', family: '', cargo: '', ministries: [], tither: true, active: true }
 const SIZE = 20
 
 export default function Members() {
-  const { canWrite } = useContext(RoleContext)
+  const { canWrite, isAdmin } = useContext(RoleContext)
   const [form, setForm] = useState(EMPTY)
   const [editingId, setEditingId] = useState(null)
   const [banner, setBanner] = useState(null)
@@ -76,6 +77,7 @@ export default function Members() {
     setForm({
       name: m.name,
       phone: m.phone || '',
+      email: m.email || '',
       family: m.family || '',
       cargo: m.cargo || '',
       ministries: m.ministries || [],
@@ -105,6 +107,7 @@ export default function Members() {
       const payload = {
         name: form.name.trim(),
         phone: form.phone,
+        email: form.email || null,
         family: form.family,
         cargo: form.cargo || null,
         ministries: form.ministries,
@@ -140,6 +143,22 @@ export default function Members() {
     }
   }
 
+  async function createAccess(m) {
+    if (!m.email) {
+      setBanner({ type: 'err', msg: 'Cadastre o e-mail do membro primeiro.' })
+      return
+    }
+    const pass = window.prompt(`Senha inicial para ${m.email} (em branco = gerar automática):`, '')
+    if (pass === null) return
+    try {
+      const res = await createMemberUser(m.id, m.email, pass)
+      setBanner({ type: 'ok', msg: `Acesso criado — e-mail: ${res.email} · senha: ${res.password}` })
+      refresh()
+    } catch (err) {
+      setBanner({ type: 'err', msg: err.message })
+    }
+  }
+
   return (
     <>
       {canWrite && (
@@ -156,10 +175,13 @@ export default function Members() {
             <input value={form.phone} onChange={(e) => set('phone', e.target.value)} />
           </div>
           <div>
-            <label>Família</label>
-            <input value={form.family} onChange={(e) => set('family', e.target.value)} />
+            <label>E-mail <small>(p/ acesso do membro)</small></label>
+            <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
           </div>
         </div>
+
+        <label>Família</label>
+        <input value={form.family} onChange={(e) => set('family', e.target.value)} />
 
         <label>Cargo</label>
         <select value={form.cargo} onChange={(e) => set('cargo', e.target.value)}>
@@ -271,6 +293,14 @@ export default function Members() {
                         <button className="link-btn" onClick={() => toggleActive(m)}>
                           {m.active ? 'desativar' : 'ativar'}
                         </button>
+                        {isAdmin && (m.user_id ? (
+                          <span style={{ color: '#888' }}>{' · '}com acesso</span>
+                        ) : (
+                          <>
+                            {' · '}
+                            <button className="link-btn" onClick={() => createAccess(m)}>criar acesso</button>
+                          </>
+                        ))}
                       </>
                     ) : '—'}
                   </td>

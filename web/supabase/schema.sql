@@ -293,3 +293,84 @@ create policy photos_read on storage.objects
 drop policy if exists photos_write on storage.objects;
 create policy photos_write on storage.objects
   for insert to authenticated with check (bucket_id = 'photos');
+
+-- ================= Portal do membro =================
+-- Papel 'membro': login próprio que vê a própria credencial, os próprios
+-- dízimos e edita os próprios dados básicos. Contas são criadas pelo admin
+-- (via Edge Function admin-create-member-user, que usa a service_role).
+
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check
+  check (role in ('admin', 'tesoureiro', 'consulta', 'membro'));
+
+alter table public.members add column if not exists email text;
+alter table public.members add column if not exists user_id uuid references auth.users(id) on delete set null;
+create index if not exists members_user_id_idx on public.members (user_id);
+
+create or replace function public.is_staff()
+returns boolean language sql stable as $$
+  select public.current_user_role() in ('admin', 'tesoureiro', 'consulta');
+$$;
+
+create or replace function public.my_member_id()
+returns uuid language sql stable security definer set search_path = public as $$
+  select id from public.members where user_id = auth.uid() limit 1;
+$$;
+
+-- Membro só altera dados básicos (nome/telefone/família/foto); trava o resto.
+create or replace function public.members_membro_guard()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if public.current_user_role() = 'membro' then
+    new.cargo := old.cargo;
+    new.tither := old.tither;
+    new.active := old.active;
+    new.ministries := old.ministries;
+    new.user_id := old.user_id;
+    new.email := old.email;
+  end if;
+  return new;
+end; $$;
+drop trigger if exists members_membro_guard_trg on public.members;
+create trigger members_membro_guard_trg before update on public.members
+  for each row execute function public.members_membro_guard();
+
+-- Membros: staff vê todos; membro vê/edita só o próprio.
+drop policy if exists members_select on public.members;
+drop policy if exists members_write on public.members;
+drop policy if exists members_self_update on public.members;
+create policy members_select on public.members for select to authenticated
+  using (public.is_staff() or user_id = auth.uid());
+create policy members_write on public.members for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+create policy members_self_update on public.members for update to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Transações: membro vê só as próprias; escrita só staff.
+drop policy if exists transactions_select on public.transactions;
+drop policy if exists transactions_write on public.transactions;
+create policy transactions_select on public.transactions for select to authenticated
+  using (public.is_staff() or member_id = public.my_member_id());
+create policy transactions_write on public.transactions for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+
+-- Tabelas de tesouraria: apenas staff lê.
+drop policy if exists payables_select on public.payables;
+create policy payables_select on public.payables for select to authenticated using (public.is_staff());
+drop policy if exists recurring_select on public.recurring_expenses;
+create policy recurring_select on public.recurring_expenses for select to authenticated using (public.is_staff());
+drop policy if exists categories_select on public.categories;
+create policy categories_select on public.categories for select to authenticated using (public.is_staff());
+-- Cargos ficam legíveis a todos autenticados (não é sensível; o portal do
+-- membro precisa saber se o próprio cargo é "obreiro" para a credencial).
+drop policy if exists cargos_select on public.cargos;
+create policy cargos_select on public.cargos for select to authenticated using (true);
+drop policy if exists ministries_select on public.ministries;
+create policy ministries_select on public.ministries for select to authenticated using (public.is_staff());
+drop policy if exists cults_select on public.cults;
+create policy cults_select on public.cults for select to authenticated using (public.is_staff());
+
+-- Perfis: staff vê todos; membro vê só o próprio.
+drop policy if exists profiles_select on public.profiles;
+create policy profiles_select on public.profiles for select to authenticated
+  using (public.is_staff() or id = auth.uid());
