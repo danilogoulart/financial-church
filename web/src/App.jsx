@@ -4,6 +4,7 @@ import { getMyRole } from './api'
 import { RoleContext } from './role'
 import { APP_NAME, LOGO_URL } from './brand'
 import Login from './Login.jsx'
+import SetPassword from './SetPassword.jsx'
 import Home from './pages/Home.jsx'
 import Members from './pages/Members.jsx'
 import Credentials from './pages/Credentials.jsx'
@@ -41,14 +42,16 @@ export default function App() {
   const [tab, setTab] = useState('home')
   const [role, setRole] = useState('consulta')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [recovery, setRecovery] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       setReady(true)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s)
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true)
     })
     return () => sub.subscription.unsubscribe()
   }, [])
@@ -59,6 +62,7 @@ export default function App() {
   }, [session])
 
   if (!ready) return <div className="center">Carregando...</div>
+  if (recovery) return <SetPassword onDone={() => setRecovery(false)} />
   if (!session) return <Login />
 
   const ctx = { role, canWrite: role === 'admin' || role === 'tesoureiro', isAdmin: role === 'admin' }
