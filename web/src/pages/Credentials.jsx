@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { assetUrl, getSettings, listMembersPage, workerCargoNames } from '../api'
 import Pagination from '../components/Pagination.jsx'
 import { printCredential } from '../credentialPrint'
+import { downloadCredentialPng } from '../credentialImage'
 
 const SIZE = 20
 const logoUrl = () => window.location.origin + '/logo.png'
@@ -35,24 +36,37 @@ export default function Credentials() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search])
 
-  async function generate(member) {
+  async function buildData(member) {
+    const isWorker = workers.includes(member.cargo)
+    const [photoUrl, presSigUrl, secSigUrl] = await Promise.all([
+      assetUrl(member.photo_path),
+      assetUrl(settings?.president_sig),
+      assetUrl(settings?.secretary_sig)
+    ])
+    return {
+      member,
+      settings: settings || {},
+      logoUrl: logoUrl(),
+      photoUrl,
+      presSigUrl,
+      secSigUrl,
+      title: isWorker ? 'Credencial de Obreiro' : 'Credencial de Membro'
+    }
+  }
+
+  async function generatePdf(member) {
     setBanner(null)
     try {
-      const isWorker = workers.includes(member.cargo)
-      const [photoUrl, presSigUrl, secSigUrl] = await Promise.all([
-        assetUrl(member.photo_path),
-        assetUrl(settings?.president_sig),
-        assetUrl(settings?.secretary_sig)
-      ])
-      printCredential({
-        member,
-        settings: settings || {},
-        logoUrl: logoUrl(),
-        photoUrl,
-        presSigUrl,
-        secSigUrl,
-        title: isWorker ? 'Credencial de Obreiro' : 'Credencial de Membro'
-      })
+      printCredential(await buildData(member))
+    } catch (err) {
+      setBanner({ type: 'err', msg: err.message })
+    }
+  }
+
+  async function generatePng(member) {
+    setBanner(null)
+    try {
+      await downloadCredentialPng(await buildData(member))
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     }
@@ -88,8 +102,10 @@ export default function Credentials() {
               <tr key={m.id}>
                 <td>{m.name}</td>
                 <td>{m.cargo || '—'}</td>
-                <td style={{ textAlign: 'right' }}>
-                  <button className="link-btn" onClick={() => generate(m)}>gerar credencial</button>
+                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  <button className="link-btn" onClick={() => generatePdf(m)}>PDF</button>
+                  {' · '}
+                  <button className="link-btn" onClick={() => generatePng(m)}>PNG</button>
                 </td>
               </tr>
             ))}
