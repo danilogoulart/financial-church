@@ -127,7 +127,7 @@ export default function Reports() {
               <thead>
                 <tr>
                   <th>Nome</th>
-                  <th>Ministério</th>
+                  <th>Cargo</th>
                   <th>Telefone</th>
                 </tr>
               </thead>
@@ -135,7 +135,7 @@ export default function Reports() {
                 {workers.map((w) => (
                   <tr key={w.id}>
                     <td>{w.name}</td>
-                    <td>{w.ministry}</td>
+                    <td>{w.cargo}</td>
                     <td>{w.phone || '—'}</td>
                   </tr>
                 ))}

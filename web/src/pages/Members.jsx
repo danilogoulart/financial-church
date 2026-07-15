@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState } from 'react'
 import {
   createMember,
+  listCargoNames,
   listMembersPage,
   listMinistryNames,
   setMemberActive,
@@ -9,7 +10,7 @@ import {
 import Pagination from '../components/Pagination.jsx'
 import { RoleContext } from '../role'
 
-const EMPTY = { name: '', phone: '', family: '', ministry: '', tither: true, active: true }
+const EMPTY = { name: '', phone: '', family: '', cargo: '', ministries: [], tither: true, active: true }
 const SIZE = 20
 
 export default function Members() {
@@ -22,15 +23,26 @@ export default function Members() {
   const [page, setPage] = useState(0)
   const [total, setTotal] = useState(0)
   const [reload, setReload] = useState(0)
-  const [filters, setFilters] = useState({ search: '', ministry: '', activeOnly: false })
+  const [filters, setFilters] = useState({ search: '', cargo: '', activeOnly: false })
+  const [cargos, setCargos] = useState([])
   const [ministries, setMinistries] = useState([])
 
   useEffect(() => {
+    listCargoNames().then(setCargos).catch(() => {})
     listMinistryNames().then(setMinistries).catch(() => {})
   }, [])
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }))
+  }
+
+  function toggleMinistry(m) {
+    setForm((f) => ({
+      ...f,
+      ministries: f.ministries.includes(m)
+        ? f.ministries.filter((x) => x !== m)
+        : [...f.ministries, m]
+    }))
   }
 
   function setFilter(key, value) {
@@ -61,7 +73,8 @@ export default function Members() {
       name: m.name,
       phone: m.phone || '',
       family: m.family || '',
-      ministry: m.ministry || 'Membros',
+      cargo: m.cargo || '',
+      ministries: m.ministries || [],
       tither: m.tither,
       active: m.active
     })
@@ -83,7 +96,8 @@ export default function Members() {
         name: form.name.trim(),
         phone: form.phone,
         family: form.family,
-        ministry: form.ministry,
+        cargo: form.cargo || null,
+        ministries: form.ministries,
         tither: form.tither
       }
       if (editingId) {
@@ -123,26 +137,44 @@ export default function Members() {
         <label>Nome</label>
         <input value={form.name} onChange={(e) => set('name', e.target.value)} required />
 
-        <label>Telefone</label>
-        <input value={form.phone} onChange={(e) => set('phone', e.target.value)} />
-
         <div className="row">
+          <div>
+            <label>Telefone</label>
+            <input value={form.phone} onChange={(e) => set('phone', e.target.value)} />
+          </div>
           <div>
             <label>Família</label>
             <input value={form.family} onChange={(e) => set('family', e.target.value)} />
           </div>
-          <div>
-            <label>Ministério</label>
-            <select value={form.ministry} onChange={(e) => set('ministry', e.target.value)}>
-              <option value="">—</option>
-              {ministries.map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-          </div>
         </div>
 
-        <div className="check">
+        <label>Cargo</label>
+        <select value={form.cargo} onChange={(e) => set('cargo', e.target.value)}>
+          <option value="">—</option>
+          {cargos.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+
+        <label>Ministérios</label>
+        {ministries.length === 0 ? (
+          <small>Nenhum ministério cadastrado (adicione em Configurações).</small>
+        ) : (
+          <div className="check-list">
+            {ministries.map((m) => (
+              <label key={m} className="check-item">
+                <input
+                  type="checkbox"
+                  checked={form.ministries.includes(m)}
+                  onChange={() => toggleMinistry(m)}
+                />
+                {m}
+              </label>
+            ))}
+          </div>
+        )}
+
+        <div className="check" style={{ marginTop: 14 }}>
           <input id="tither" type="checkbox" checked={form.tither} onChange={(e) => set('tither', e.target.checked)} />
           <label htmlFor="tither" style={{ margin: 0 }}>É dizimista</label>
         </div>
@@ -174,11 +206,11 @@ export default function Members() {
             <input value={filters.search} onChange={(e) => setFilter('search', e.target.value)} placeholder="Digite um nome..." />
           </div>
           <div>
-            <label>Ministério</label>
-            <select value={filters.ministry} onChange={(e) => setFilter('ministry', e.target.value)}>
+            <label>Cargo</label>
+            <select value={filters.cargo} onChange={(e) => setFilter('cargo', e.target.value)}>
               <option value="">Todos</option>
-              {ministries.map((m) => (
-                <option key={m} value={m}>{m}</option>
+              {cargos.map((c) => (
+                <option key={c} value={c}>{c}</option>
               ))}
             </select>
           </div>
@@ -198,7 +230,8 @@ export default function Members() {
             <thead>
               <tr>
                 <th>Nome</th>
-                <th>Ministério</th>
+                <th>Cargo</th>
+                <th>Ministérios</th>
                 <th>Dizimista</th>
                 <th>Ativo</th>
                 <th></th>
@@ -208,7 +241,8 @@ export default function Members() {
               {rows.map((m) => (
                 <tr key={m.id} style={{ opacity: m.active ? 1 : 0.5 }}>
                   <td>{m.name}</td>
-                  <td>{m.ministry || '—'}</td>
+                  <td>{m.cargo || '—'}</td>
+                  <td>{(m.ministries || []).join(', ') || '—'}</td>
                   <td>{m.tither ? 'Sim' : 'Não'}</td>
                   <td>{m.active ? 'Sim' : 'Não'}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
@@ -226,7 +260,7 @@ export default function Members() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan="5" style={{ color: '#999' }}>Nenhum membro ainda.</td>
+                  <td colSpan="6" style={{ color: '#999' }}>Nenhum membro ainda.</td>
                 </tr>
               )}
             </tbody>

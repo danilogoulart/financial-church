@@ -1,17 +1,20 @@
 import { useContext, useEffect, useState } from 'react'
 import {
+  createCargo,
   createCategory,
   createCult,
   createMinistry,
+  deleteCargo,
   deleteCategory,
   deleteCult,
   deleteMinistry,
   fullBackup,
   listAllCategories,
+  listCargos,
   listCults,
   listMinistries,
   listProfiles,
-  setMinistryWorker,
+  setCargoWorker,
   setProfileRole
 } from '../api'
 import { RoleContext } from '../role'
@@ -120,6 +123,7 @@ export default function Settings() {
         <CategoryList items={expense} onRemove={remove} canWrite={canWrite} />
       </div>
 
+      <Cargos canWrite={canWrite} />
       <Ministries canWrite={canWrite} />
       <Cults canWrite={canWrite} />
 
@@ -159,10 +163,111 @@ function CategoryList({ items, onRemove, canWrite }) {
   )
 }
 
-function Ministries({ canWrite }) {
+function Cargos({ canWrite }) {
   const [rows, setRows] = useState([])
   const [name, setName] = useState('')
   const [isWorker, setIsWorker] = useState(false)
+  const [msg, setMsg] = useState(null)
+
+  async function load() {
+    try {
+      setRows(await listCargos())
+    } catch (err) {
+      setMsg({ type: 'err', text: err.message })
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function add(e) {
+    e.preventDefault()
+    if (!name.trim()) return
+    setMsg(null)
+    try {
+      await createCargo(name, isWorker)
+      setName('')
+      setIsWorker(false)
+      load()
+    } catch (err) {
+      setMsg({ type: 'err', text: err.message })
+    }
+  }
+
+  async function toggle(c) {
+    try {
+      await setCargoWorker(c.id, !c.is_worker)
+      load()
+    } catch (err) {
+      setMsg({ type: 'err', text: err.message })
+    }
+  }
+
+  async function remove(c) {
+    if (!window.confirm(`Remover o cargo "${c.name}"?`)) return
+    try {
+      await deleteCargo(c.id)
+      load()
+    } catch (err) {
+      setMsg({ type: 'err', text: err.message })
+    }
+  }
+
+  return (
+    <div className="card">
+      <h2>Cargos</h2>
+      <small>Classificação do membro (1 por pessoa). "Obreiro" define quem entra no relatório de obreiros não dizimistas.</small>
+      {msg && <div className={`banner ${msg.type}`} style={{ marginTop: 10 }}>{msg.text}</div>}
+
+      {canWrite && (
+        <form onSubmit={add} style={{ marginTop: 12 }}>
+          <div className="row" style={{ alignItems: 'flex-end' }}>
+            <div style={{ flex: 2 }}>
+              <label>Novo cargo</label>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Diácono" />
+            </div>
+            <div>
+              <button className="primary">Adicionar</button>
+            </div>
+          </div>
+          <div className="check">
+            <input id="isWorker" type="checkbox" checked={isWorker} onChange={(e) => setIsWorker(e.target.checked)} />
+            <label htmlFor="isWorker" style={{ margin: 0 }}>É obreiro</label>
+          </div>
+        </form>
+      )}
+
+      <div className="table-wrap">
+        <table>
+          <tbody>
+            {rows.map((c) => (
+              <tr key={c.id}>
+                <td>{c.name}</td>
+                <td>{c.is_worker ? <span className="pill ok">obreiro</span> : ''}</td>
+                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {canWrite && (
+                    <>
+                      <button className="link-btn" onClick={() => toggle(c)}>
+                        {c.is_worker ? 'não obreiro' : 'marcar obreiro'}
+                      </button>
+                      {' · '}
+                      <button className="link-btn" onClick={() => remove(c)}>remover</button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function Ministries({ canWrite }) {
+  const [rows, setRows] = useState([])
+  const [name, setName] = useState('')
   const [msg, setMsg] = useState(null)
 
   async function load() {
@@ -182,18 +287,8 @@ function Ministries({ canWrite }) {
     if (!name.trim()) return
     setMsg(null)
     try {
-      await createMinistry(name, isWorker)
+      await createMinistry(name)
       setName('')
-      setIsWorker(false)
-      load()
-    } catch (err) {
-      setMsg({ type: 'err', text: err.message })
-    }
-  }
-
-  async function toggle(m) {
-    try {
-      await setMinistryWorker(m.id, !m.is_worker)
       load()
     } catch (err) {
       setMsg({ type: 'err', text: err.message })
@@ -213,7 +308,7 @@ function Ministries({ canWrite }) {
   return (
     <div className="card">
       <h2>Ministérios</h2>
-      <small>"Obreiro" define quem entra no relatório de obreiros não dizimistas.</small>
+      <small>Grupos/ministérios (Jovens, Louvor…). Um membro pode participar de vários.</small>
       {msg && <div className={`banner ${msg.type}`} style={{ marginTop: 10 }}>{msg.text}</div>}
 
       {canWrite && (
@@ -221,15 +316,11 @@ function Ministries({ canWrite }) {
           <div className="row" style={{ alignItems: 'flex-end' }}>
             <div style={{ flex: 2 }}>
               <label>Novo ministério</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Louvor" />
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex.: Jovens" />
             </div>
             <div>
               <button className="primary">Adicionar</button>
             </div>
-          </div>
-          <div className="check">
-            <input id="isWorker" type="checkbox" checked={isWorker} onChange={(e) => setIsWorker(e.target.checked)} />
-            <label htmlFor="isWorker" style={{ margin: 0 }}>É obreiro</label>
           </div>
         </form>
       )}
@@ -240,17 +331,8 @@ function Ministries({ canWrite }) {
             {rows.map((m) => (
               <tr key={m.id}>
                 <td>{m.name}</td>
-                <td>{m.is_worker ? <span className="pill ok">obreiro</span> : ''}</td>
-                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  {canWrite && (
-                    <>
-                      <button className="link-btn" onClick={() => toggle(m)}>
-                        {m.is_worker ? 'não obreiro' : 'marcar obreiro'}
-                      </button>
-                      {' · '}
-                      <button className="link-btn" onClick={() => remove(m)}>remover</button>
-                    </>
-                  )}
+                <td style={{ textAlign: 'right' }}>
+                  {canWrite && <button className="link-btn" onClick={() => remove(m)}>remover</button>}
                 </td>
               </tr>
             ))}

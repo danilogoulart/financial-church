@@ -205,12 +205,20 @@ drop policy if exists receipts_insert on storage.objects;
 create policy receipts_insert on storage.objects
   for insert to authenticated with check (bucket_id = 'receipts');
 
--- ---------- Ministérios e Cultos (listas editáveis) ----------
+-- ---------- Cargos, Ministérios e Cultos (listas editáveis) ----------
+-- Cargo: classificação do membro (Obreiro/Membro), 1 por pessoa; is_worker
+--   define quem entra no relatório de obreiros não dizimistas.
+-- Ministério: grupo/ministério real (Jovens, Louvor); um membro pode ter vários.
 
-create table if not exists public.ministries (
+create table if not exists public.cargos (
   id        uuid primary key default gen_random_uuid(),
   name      text not null unique,
-  is_worker boolean not null default false   -- conta como "obreiro" nos relatórios
+  is_worker boolean not null default false
+);
+
+create table if not exists public.ministries (
+  id   uuid primary key default gen_random_uuid(),
+  name text not null unique
 );
 
 create table if not exists public.cults (
@@ -218,16 +226,32 @@ create table if not exists public.cults (
   name text not null unique
 );
 
-insert into public.ministries (name, is_worker) values
-  ('Obreiros de altar', true), ('Obreiros', true), ('Membros', false)
+-- is_worker agora vive em cargos; remove da tabela ministries se existir.
+alter table public.ministries drop column if exists is_worker;
+
+insert into public.cargos (name, is_worker) values
+  ('Obreiro de altar', true), ('Obreiro', true), ('Membro', false)
   on conflict (name) do nothing;
 
 insert into public.cults (name) values
   ('Domingo'), ('Quinta'), ('Terça'), ('Consagração')
   on conflict (name) do nothing;
 
+-- Membro passa a ter cargo (1) e ministries (vários).
+alter table public.members add column if not exists cargo text;
+alter table public.members add column if not exists ministries text[] default '{}';
+-- Migra o antigo "ministry" (que guardava o cargo) para a coluna cargo.
+update public.members set cargo = ministry where cargo is null and ministry is not null;
+
+alter table public.cargos     enable row level security;
 alter table public.ministries enable row level security;
 alter table public.cults      enable row level security;
+
+drop policy if exists cargos_select on public.cargos;
+drop policy if exists cargos_write on public.cargos;
+create policy cargos_select on public.cargos for select to authenticated using (true);
+create policy cargos_write on public.cargos for all to authenticated
+  using (public.can_write()) with check (public.can_write());
 
 drop policy if exists ministries_select on public.ministries;
 drop policy if exists ministries_write on public.ministries;

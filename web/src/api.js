@@ -15,7 +15,7 @@ export async function listMembersPage(page = 0, size = 20, filters = {}) {
   const from = page * size
   let q = supabase.from('members').select('*', { count: 'exact' })
   if (filters.search) q = q.ilike('name', `%${filters.search}%`)
-  if (filters.ministry) q = q.eq('ministry', filters.ministry)
+  if (filters.cargo) q = q.eq('cargo', filters.cargo)
   if (filters.activeOnly) q = q.eq('active', true)
   const { data, count, error } = await q
     .order('created_at', { ascending: false })
@@ -100,13 +100,50 @@ export async function deleteCategory(id) {
   if (error) throw error
 }
 
-// ---------- Ministérios ----------
+// ---------- Cargos (classificação do membro) ----------
+
+export async function listCargos() {
+  const { data, error } = await supabase.from('cargos').select('id, name, is_worker').order('name')
+  if (error) throw error
+  return data
+}
+
+export async function listCargoNames() {
+  const { data, error } = await supabase.from('cargos').select('name').order('name')
+  if (error) throw error
+  return data.map((r) => r.name)
+}
+
+export async function workerCargoNames() {
+  const { data, error } = await supabase.from('cargos').select('name').eq('is_worker', true)
+  if (error) throw error
+  return data.map((r) => r.name)
+}
+
+export async function createCargo(name, isWorker) {
+  const { data, error } = await supabase
+    .from('cargos')
+    .insert({ name: name.trim(), is_worker: !!isWorker })
+    .select()
+    .single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function setCargoWorker(id, isWorker) {
+  const { error } = await supabase.from('cargos').update({ is_worker: isWorker }).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteCargo(id) {
+  const { error } = await supabase.from('cargos').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ---------- Ministérios (grupos; um membro pode ter vários) ----------
 
 export async function listMinistries() {
-  const { data, error } = await supabase
-    .from('ministries')
-    .select('id, name, is_worker')
-    .order('name')
+  const { data, error } = await supabase.from('ministries').select('id, name').order('name')
   if (error) throw error
   return data
 }
@@ -117,25 +154,14 @@ export async function listMinistryNames() {
   return data.map((r) => r.name)
 }
 
-export async function workerMinistryNames() {
-  const { data, error } = await supabase.from('ministries').select('name').eq('is_worker', true)
-  if (error) throw error
-  return data.map((r) => r.name)
-}
-
-export async function createMinistry(name, isWorker) {
+export async function createMinistry(name) {
   const { data, error } = await supabase
     .from('ministries')
-    .insert({ name: name.trim(), is_worker: !!isWorker })
+    .insert({ name: name.trim() })
     .select()
     .single()
   if (error) throw mapError(error)
   return data
-}
-
-export async function setMinistryWorker(id, isWorker) {
-  const { error } = await supabase.from('ministries').update({ is_worker: isWorker }).eq('id', id)
-  if (error) throw error
 }
 
 export async function deleteMinistry(id) {
@@ -417,6 +443,9 @@ function mapError(error) {
     if (msg.includes('categories_kind_name_unique')) {
       return new Error('Essa categoria já existe.')
     }
+    if (msg.includes('cargos')) {
+      return new Error('Esse cargo já existe.')
+    }
     if (msg.includes('ministries')) {
       return new Error('Esse ministério já existe.')
     }
@@ -551,7 +580,7 @@ export async function tithersLast3Months() {
   const months = previousMonths(3)
 
   const [{ data: tithers, error: e1 }, { data: tithes, error: e2 }] = await Promise.all([
-    supabase.from('members').select('id, name, ministry').eq('tither', true).order('name'),
+    supabase.from('members').select('id, name').eq('tither', true).order('name'),
     supabase
       .from('transactions')
       .select('member_id, date, amount')
@@ -579,7 +608,6 @@ export async function tithersLast3Months() {
     return {
       id: m.id,
       name: m.name,
-      ministry: m.ministry,
       perMonth,
       total: perMonth.reduce((s, v) => s + v, 0),
       monthsTithed: perMonth.filter((v) => v > 0).length
@@ -636,13 +664,13 @@ export async function offCashReport() {
 
 // Obreiros (altar/obreiros) que não são dizimistas.
 export async function nonTitherWorkers() {
-  const workers = await workerMinistryNames()
+  const workers = await workerCargoNames()
   if (workers.length === 0) return []
   const { data, error } = await supabase
     .from('members')
-    .select('id, name, ministry, phone')
+    .select('id, name, cargo, phone')
     .eq('tither', false)
-    .in('ministry', workers)
+    .in('cargo', workers)
     .order('name')
   if (error) throw error
   return data
