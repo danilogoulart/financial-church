@@ -1,7 +1,7 @@
 import { APP_NAME, CHURCH_ADDRESS, CHURCH_FULL_NAME } from './brand'
 
-const W = 420
-const H = 396
+const W = 380
+const H = 404
 
 const esc = (s) =>
   String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
@@ -62,18 +62,18 @@ async function toDataUrl(url) {
   }
 }
 
-const kv = (x, y, label, value) =>
-  `<text x="${x}" y="${y}" font-size="11"><tspan fill="#666">${esc(label)} </tspan><tspan fill="#111" font-weight="bold">${esc(clip(value || '—', 22))}</tspan></text>`
+const kv = (x, y, label, value, max = 24) =>
+  `<text x="${x}" y="${y}" font-size="11"><tspan fill="#666">${esc(label)} </tspan><tspan fill="#111">${esc(clip(value || '—', max))}</tspan></text>`
 
-function sigGroup(cx, dataUrl, name, role) {
+function sigGroup(cx, dataUrl, name, role, y = 292) {
   const img = dataUrl
-    ? `<image x="${cx - 50}" y="326" width="100" height="30" href="${dataUrl}" preserveAspectRatio="xMidYMid meet"/>`
+    ? `<image x="${cx - 50}" y="${y}" width="100" height="34" href="${dataUrl}" preserveAspectRatio="xMidYMid meet"/>`
     : ''
   return `
     ${img}
-    <line x1="${cx - 72}" y1="358" x2="${cx + 72}" y2="358" stroke="#222"/>
-    <text x="${cx}" y="372" text-anchor="middle" font-size="11" font-weight="bold" fill="#111">${esc(clip(name || '—', 26))}</text>
-    <text x="${cx}" y="384" text-anchor="middle" font-size="10" fill="#666">${role}</text>`
+    <line x1="${cx - 74}" y1="${y + 38}" x2="${cx + 74}" y2="${y + 38}" stroke="#222"/>
+    <text x="${cx}" y="${y + 52}" text-anchor="middle" font-size="11" font-weight="bold" fill="#111">${esc(clip(name || '—', 26))}</text>
+    <text x="${cx}" y="${y + 64}" text-anchor="middle" font-size="10" fill="#666">${role}</text>`
 }
 
 function buildSvg({ member, settings, logo, photo, presSig, secSig }) {
@@ -82,40 +82,39 @@ function buildSvg({ member, settings, logo, photo, presSig, secSig }) {
   const { issued, until } = validity()
 
   const photoEl = photo
-    ? `<image x="14" y="90" width="88" height="108" href="${photo}" preserveAspectRatio="xMidYMid slice"/>
-       <rect x="14" y="90" width="88" height="108" rx="6" fill="none" stroke="#ccc"/>`
-    : `<rect x="14" y="90" width="88" height="108" rx="6" fill="#f0f0f0" stroke="#ccc"/>
-       <text x="58" y="146" text-anchor="middle" font-size="11" fill="#aaa">sem foto</text>`
+    ? `<image x="14" y="70" width="84" height="108" href="${photo}" preserveAspectRatio="xMidYMid slice"/>
+       <rect x="14" y="70" width="84" height="108" rx="6" fill="none" stroke="#ccc"/>`
+    : `<rect x="14" y="70" width="84" height="108" rx="6" fill="#f0f0f0" stroke="#ccc"/>
+       <text x="56" y="128" text-anchor="middle" font-size="11" fill="#aaa">sem foto</text>`
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif">
     <rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="12" fill="#fff" stroke="#222"/>
-    <path d="M0 12 A12 12 0 0 1 12 0 H408 A12 12 0 0 1 420 12 V48 H0 Z" fill="#000"/>
-    ${logo ? `<image x="14" y="11" width="40" height="26" href="${logo}" preserveAspectRatio="xMidYMid meet"/>` : ''}
-    <text x="62" y="26" font-size="15" font-weight="bold" fill="#fff">${esc(APP_NAME)}</text>
-    <text x="62" y="40" font-size="10" fill="#cfd3d9">Credencial</text>
+    <path d="M0 12 A12 12 0 0 1 12 0 H368 A12 12 0 0 1 380 12 V48 H0 Z" fill="#000"/>
+    ${logo ? `<image x="14" y="12" width="40" height="26" href="${logo}" preserveAspectRatio="xMidYMid meet"/>` : ''}
+    <text x="68" y="26" font-size="15" font-weight="bold" fill="#fff">${esc(APP_NAME)}</text>
+    <text x="68" y="40" font-size="10" fill="#fff">Credencial</text>
 
-    <rect x="0" y="48" width="210" height="7" fill="#009c3b"/>
-    <rect x="210" y="48" width="210" height="7" fill="#ffdf00"/>
-
-    ${centered(210, 70, 11, wrap(CHURCH_FULL_NAME, 52, 2), 'font-size="9" fill="#333"')}
+    <rect x="0" y="48" width="190" height="6" fill="#009c3b"/>
+    <rect x="190" y="48" width="190" height="6" fill="#ffdf00"/>
 
     ${photoEl}
 
-    <text x="116" y="112" font-size="15" font-weight="bold" fill="#111">${esc(clip(member.name, 28))}</text>
-    ${kv(116, 132, 'Cargo:', member.cargo)}
+    <text x="112" y="88" font-size="15" font-weight="bold" fill="#111">${esc(clip(member.name, 28))}</text>
+    ${kv(112, 108, 'Cargo:', member.cargo, 28)}
+    ${kv(112, 126, 'Matrícula:', registro, 18)}
+    ${kv(112, 144, 'Membro desde:', desde, 16)}
+    ${kv(112, 162, 'RG:', member.rg, 18)}
+    ${kv(112, 180, 'CPF:', member.cpf, 18)}
+    ${kv(112, 198, 'Nascimento:', fmtDate(member.birth_date), 14)}
 
-    ${kv(14, 220, 'Matrícula:', registro)}
-    ${kv(220, 220, 'Membro desde:', desde)}
-    ${kv(14, 238, 'RG:', member.rg)}
-    ${kv(220, 238, 'CPF:', member.cpf)}
-    ${kv(14, 256, 'Nascimento:', fmtDate(member.birth_date))}
+    <text x="14" y="232" font-size="11" font-weight="bold" fill="#111">Emitida em ${issued} · Válida até ${until}</text>
+    <text x="14" y="248" font-size="10" font-style="italic" fill="#666">Válida em todo o território nacional.</text>
 
-    <text x="14" y="280" font-size="11" font-weight="bold" fill="#111">Emitida em ${issued} · Válida até ${until}</text>
-    <text x="14" y="296" font-size="9" font-style="italic" fill="#666">Válida em todo o território nacional.</text>
-    ${centered(210, 312, 10, wrap(CHURCH_ADDRESS, 62, 2), 'font-size="8" fill="#888"')}
+    ${sigGroup(104, presSig, settings.president_name, 'Presidente', 274)}
+    ${sigGroup(276, secSig, settings.secretary_name, 'Secretário(a)', 274)}
 
-    ${sigGroup(120, presSig, settings.president_name, 'Presidente')}
-    ${sigGroup(300, secSig, settings.secretary_name, 'Secretário(a)')}
+    ${centered(190, 362, 11, wrap(CHURCH_FULL_NAME, 52, 2), 'font-size="10" font-weight="bold" fill="#333"')}
+    ${centered(190, 388, 10, wrap(CHURCH_ADDRESS, 70, 2), 'font-size="9" fill="#666"')}
   </svg>`
 }
 
