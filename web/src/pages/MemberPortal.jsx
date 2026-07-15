@@ -31,8 +31,7 @@ export function MyCredential() {
       logoUrl: window.location.origin + '/logo.png',
       photoUrl,
       presSigUrl,
-      secSigUrl,
-      title: member.cargo ? `Credencial de ${member.cargo}` : 'Credencial de Membro'
+      secSigUrl
     }
   }
 

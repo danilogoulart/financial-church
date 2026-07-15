@@ -46,8 +46,7 @@ export default function Credentials() {
       logoUrl: logoUrl(),
       photoUrl,
       presSigUrl,
-      secSigUrl,
-      title: member.cargo ? `Credencial de ${member.cargo}` : 'Credencial de Membro'
+      secSigUrl
     }
   }
 

@@ -1,4 +1,4 @@
-import { APP_NAME } from './brand'
+import { APP_NAME, CHURCH_ADDRESS, CHURCH_FULL_NAME } from './brand'
 
 const esc = (s) =>
   String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
@@ -14,14 +14,12 @@ function validity() {
 }
 
 // Abre uma janela de impressão com a credencial (imprime/salva como PDF).
-export function printCredential({ member, settings, logoUrl, photoUrl, presSigUrl, secSigUrl, title }) {
-  const ministries = (member.ministries || []).join(', ') || '—'
+export function printCredential({ member, settings, logoUrl, photoUrl, presSigUrl, secSigUrl }) {
   const registro = member.matricula || String(member.id || '').slice(0, 8).toUpperCase()
   const desde = fmtDate(member.joined_date || member.created_at)
   const { issued, until } = validity()
 
-  const field = (label, value) =>
-    `<div><b>${label}</b> ${esc(value || '—')}</div>`
+  const field = (label, value) => `<div><b>${label}</b> ${esc(value || '—')}</div>`
 
   const sig = (url, name, role) => `
     <div class="sig">
@@ -38,26 +36,27 @@ export function printCredential({ member, settings, logoUrl, photoUrl, presSigUr
   * { box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; margin: 0; display: flex; justify-content: center; padding: 24px; }
   .card { width: 380px; border: 1px solid #222; border-radius: 12px; overflow: hidden; }
-  .card-h { background: #10105a; color: #fff; display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
-  .card-h img { height: 26px; }
-  .card-h .n { font-size: 14px; font-weight: bold; letter-spacing: .3px; }
-  .card-h .t { font-size: 11px; opacity: .9; }
+  .card-h { background: #000; color: #fff; display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+  .card-h img { height: 28px; }
+  .card-h .n { font-size: 15px; font-weight: bold; letter-spacing: .3px; }
+  .card-h .t { font-size: 11px; opacity: .85; }
   .flag { height: 6px; display: flex; }
   .flag i { flex: 1; }
   .flag .g { background: #009c3b; }
   .flag .y { background: #ffdf00; }
-  .body { display: flex; gap: 14px; padding: 14px; }
+  .fullname { text-align: center; font-size: 10px; color: #333; padding: 6px 14px 0; }
+  .body { display: flex; gap: 14px; padding: 12px 14px; }
   .photo { width: 84px; height: 108px; object-fit: cover; border: 1px solid #ccc; border-radius: 6px; }
   .photo.ph { display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 11px; }
   .fields { font-size: 12px; }
   .fields .name { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
-  .fields div { margin: 2px 0; }
   .fields b { color: #666; font-weight: normal; }
   .docs { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; padding: 0 14px; font-size: 12px; }
   .docs b { color: #666; font-weight: normal; }
-  .validity { padding: 8px 14px 0; font-size: 11px; color: #333; }
-  .obs { padding: 6px 14px; font-size: 10px; color: #666; font-style: italic; }
-  .sigs { display: flex; gap: 18px; padding: 6px 14px 16px; }
+  .validity { padding: 8px 14px 0; font-size: 11px; color: #111; font-weight: bold; }
+  .obs { padding: 4px 14px; font-size: 10px; color: #666; font-style: italic; }
+  .addr { padding: 2px 14px 8px; font-size: 9px; color: #888; text-align: center; }
+  .sigs { display: flex; gap: 18px; padding: 4px 14px 16px; }
   .sig { flex: 1; text-align: center; }
   .sigimg { height: 36px; object-fit: contain; margin: 0 auto 2px; display: block; }
   .sigline { border-top: 1px solid #222; }
@@ -71,17 +70,17 @@ export function printCredential({ member, settings, logoUrl, photoUrl, presSigUr
       ${logoUrl ? `<img src="${logoUrl}">` : ''}
       <div>
         <div class="n">${esc(APP_NAME)}</div>
-        <div class="t">${esc(title)}</div>
+        <div class="t">Credencial</div>
       </div>
     </div>
     <div class="flag"><i class="g"></i><i class="y"></i></div>
+    <div class="fullname">${esc(CHURCH_FULL_NAME)}</div>
 
     <div class="body">
       ${photoUrl ? `<img class="photo" src="${photoUrl}">` : '<div class="photo ph">sem foto</div>'}
       <div class="fields">
         <div class="name">${esc(member.name)}</div>
         <div><b>Cargo:</b> ${esc(member.cargo || '—')}</div>
-        <div><b>Ministérios:</b> ${esc(ministries)}</div>
       </div>
     </div>
 
@@ -93,8 +92,9 @@ export function printCredential({ member, settings, logoUrl, photoUrl, presSigUr
       ${field('Nascimento:', fmtDate(member.birth_date))}
     </div>
 
-    <div class="validity"><b>Emitida em ${issued} · Válida até ${until}</b></div>
-    <div class="obs">Válida em todo o território nacional, acompanhada da respectiva carta de recomendação.</div>
+    <div class="validity">Emitida em ${issued} · Válida até ${until}</div>
+    <div class="obs">Válida em todo o território nacional.</div>
+    <div class="addr">${esc(CHURCH_ADDRESS)}</div>
 
     <div class="sigs">
       ${sig(presSigUrl, settings.president_name, 'Presidente')}

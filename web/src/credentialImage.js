@@ -1,7 +1,7 @@
-import { APP_NAME } from './brand'
+import { APP_NAME, CHURCH_ADDRESS, CHURCH_FULL_NAME } from './brand'
 
 const W = 420
-const H = 360
+const H = 396
 
 const esc = (s) =>
   String(s ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
@@ -19,6 +19,31 @@ function validity() {
 function clip(s, max) {
   s = String(s ?? '')
   return s.length > max ? s.slice(0, max - 1) + '…' : s
+}
+
+function wrap(text, maxChars, maxLines) {
+  const words = String(text || '').split(/\s+/)
+  const lines = []
+  let cur = ''
+  for (const w of words) {
+    if ((cur + ' ' + w).trim().length <= maxChars) cur = (cur + ' ' + w).trim()
+    else {
+      if (cur) lines.push(cur)
+      cur = w
+    }
+  }
+  if (cur) lines.push(cur)
+  if (lines.length > maxLines) {
+    lines.length = maxLines
+    lines[maxLines - 1] += '…'
+  }
+  return lines
+}
+
+function centered(cx, y, lineHeight, lines, attrs) {
+  return `<text x="${cx}" y="${y}" text-anchor="middle" ${attrs}>${lines
+    .map((ln, i) => `<tspan x="${cx}" dy="${i === 0 ? 0 : lineHeight}">${esc(ln)}</tspan>`)
+    .join('')}</text>`
 }
 
 async function toDataUrl(url) {
@@ -42,58 +67,59 @@ const kv = (x, y, label, value) =>
 
 function sigGroup(cx, dataUrl, name, role) {
   const img = dataUrl
-    ? `<image x="${cx - 50}" y="290" width="100" height="30" href="${dataUrl}" preserveAspectRatio="xMidYMid meet"/>`
+    ? `<image x="${cx - 50}" y="326" width="100" height="30" href="${dataUrl}" preserveAspectRatio="xMidYMid meet"/>`
     : ''
   return `
     ${img}
-    <line x1="${cx - 72}" y1="322" x2="${cx + 72}" y2="322" stroke="#222"/>
-    <text x="${cx}" y="336" text-anchor="middle" font-size="11" font-weight="bold" fill="#111">${esc(clip(name || '—', 26))}</text>
-    <text x="${cx}" y="348" text-anchor="middle" font-size="10" fill="#666">${role}</text>`
+    <line x1="${cx - 72}" y1="358" x2="${cx + 72}" y2="358" stroke="#222"/>
+    <text x="${cx}" y="372" text-anchor="middle" font-size="11" font-weight="bold" fill="#111">${esc(clip(name || '—', 26))}</text>
+    <text x="${cx}" y="384" text-anchor="middle" font-size="10" fill="#666">${role}</text>`
 }
 
-function buildSvg({ member, settings, logo, photo, presSig, secSig, title }) {
-  const ministries = clip((member.ministries || []).join(', ') || '—', 40)
+function buildSvg({ member, settings, logo, photo, presSig, secSig }) {
   const registro = member.matricula || String(member.id || '').slice(0, 8).toUpperCase()
   const desde = fmtDate(member.joined_date || member.created_at)
   const { issued, until } = validity()
 
   const photoEl = photo
-    ? `<image x="14" y="66" width="88" height="112" href="${photo}" preserveAspectRatio="xMidYMid slice"/>
-       <rect x="14" y="66" width="88" height="112" rx="6" fill="none" stroke="#ccc"/>`
-    : `<rect x="14" y="66" width="88" height="112" rx="6" fill="#f0f0f0" stroke="#ccc"/>
-       <text x="58" y="124" text-anchor="middle" font-size="11" fill="#aaa">sem foto</text>`
+    ? `<image x="14" y="90" width="88" height="108" href="${photo}" preserveAspectRatio="xMidYMid slice"/>
+       <rect x="14" y="90" width="88" height="108" rx="6" fill="none" stroke="#ccc"/>`
+    : `<rect x="14" y="90" width="88" height="108" rx="6" fill="#f0f0f0" stroke="#ccc"/>
+       <text x="58" y="146" text-anchor="middle" font-size="11" fill="#aaa">sem foto</text>`
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif">
     <rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="12" fill="#fff" stroke="#222"/>
-    <path d="M0 12 A12 12 0 0 1 12 0 H408 A12 12 0 0 1 420 12 V48 H0 Z" fill="#10105a"/>
+    <path d="M0 12 A12 12 0 0 1 12 0 H408 A12 12 0 0 1 420 12 V48 H0 Z" fill="#000"/>
     ${logo ? `<image x="14" y="11" width="40" height="26" href="${logo}" preserveAspectRatio="xMidYMid meet"/>` : ''}
-    <text x="62" y="26" font-size="14" font-weight="bold" fill="#fff">${esc(APP_NAME)}</text>
-    <text x="62" y="40" font-size="10" fill="#cfd3d9">${esc(title)}</text>
+    <text x="62" y="26" font-size="15" font-weight="bold" fill="#fff">${esc(APP_NAME)}</text>
+    <text x="62" y="40" font-size="10" fill="#cfd3d9">Credencial</text>
 
     <rect x="0" y="48" width="210" height="7" fill="#009c3b"/>
     <rect x="210" y="48" width="210" height="7" fill="#ffdf00"/>
 
+    ${centered(210, 70, 11, wrap(CHURCH_FULL_NAME, 52, 2), 'font-size="9" fill="#333"')}
+
     ${photoEl}
 
-    <text x="116" y="88" font-size="15" font-weight="bold" fill="#111">${esc(clip(member.name, 28))}</text>
-    ${kv(116, 108, 'Cargo:', member.cargo)}
-    ${kv(116, 126, 'Ministérios:', ministries)}
+    <text x="116" y="112" font-size="15" font-weight="bold" fill="#111">${esc(clip(member.name, 28))}</text>
+    ${kv(116, 132, 'Cargo:', member.cargo)}
 
-    ${kv(14, 202, 'Matrícula:', registro)}
-    ${kv(220, 202, 'Membro desde:', desde)}
-    ${kv(14, 220, 'RG:', member.rg)}
-    ${kv(220, 220, 'CPF:', member.cpf)}
-    ${kv(14, 238, 'Nascimento:', fmtDate(member.birth_date))}
+    ${kv(14, 220, 'Matrícula:', registro)}
+    ${kv(220, 220, 'Membro desde:', desde)}
+    ${kv(14, 238, 'RG:', member.rg)}
+    ${kv(220, 238, 'CPF:', member.cpf)}
+    ${kv(14, 256, 'Nascimento:', fmtDate(member.birth_date))}
 
-    <text x="14" y="260" font-size="11" font-weight="bold" fill="#111">Emitida em ${issued} · Válida até ${until}</text>
-    <text x="14" y="276" font-size="9" font-style="italic" fill="#666">Válida em todo o território nacional, acompanhada da carta de recomendação.</text>
+    <text x="14" y="280" font-size="11" font-weight="bold" fill="#111">Emitida em ${issued} · Válida até ${until}</text>
+    <text x="14" y="296" font-size="9" font-style="italic" fill="#666">Válida em todo o território nacional.</text>
+    ${centered(210, 312, 10, wrap(CHURCH_ADDRESS, 62, 2), 'font-size="8" fill="#888"')}
 
     ${sigGroup(120, presSig, settings.president_name, 'Presidente')}
     ${sigGroup(300, secSig, settings.secretary_name, 'Secretário(a)')}
   </svg>`
 }
 
-export async function downloadCredentialPng({ member, settings, logoUrl, photoUrl, presSigUrl, secSigUrl, title }) {
+export async function downloadCredentialPng({ member, settings, logoUrl, photoUrl, presSigUrl, secSigUrl }) {
   const [logo, photo, presSig, secSig] = await Promise.all([
     toDataUrl(logoUrl),
     toDataUrl(photoUrl),
@@ -101,7 +127,7 @@ export async function downloadCredentialPng({ member, settings, logoUrl, photoUr
     toDataUrl(secSigUrl)
   ])
 
-  const svg = buildSvg({ member, settings: settings || {}, logo, photo, presSig, secSig, title })
+  const svg = buildSvg({ member, settings: settings || {}, logo, photo, presSig, secSig })
   const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
 
   await new Promise((resolve, reject) => {
