@@ -1,11 +1,12 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import {
   createMember,
   listCargoNames,
   listMembersPage,
   listMinistryNames,
   setMemberActive,
-  updateMember
+  updateMember,
+  uploadAsset
 } from '../api'
 import Pagination from '../components/Pagination.jsx'
 import { RoleContext } from '../role'
@@ -26,6 +27,8 @@ export default function Members() {
   const [filters, setFilters] = useState({ search: '', cargo: '', activeOnly: false })
   const [cargos, setCargos] = useState([])
   const [ministries, setMinistries] = useState([])
+  const [existingPhoto, setExistingPhoto] = useState(null)
+  const photoRef = useRef(null)
 
   useEffect(() => {
     listCargoNames().then(setCargos).catch(() => {})
@@ -69,6 +72,7 @@ export default function Members() {
 
   function startEdit(m) {
     setEditingId(m.id)
+    setExistingPhoto(m.photo_path || null)
     setForm({
       name: m.name,
       phone: m.phone || '',
@@ -78,13 +82,16 @@ export default function Members() {
       tither: m.tither,
       active: m.active
     })
+    if (photoRef.current) photoRef.current.value = ''
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function cancelEdit() {
     setEditingId(null)
+    setExistingPhoto(null)
     setForm(EMPTY)
     setBanner(null)
+    if (photoRef.current) photoRef.current.value = ''
   }
 
   async function save(e) {
@@ -92,13 +99,17 @@ export default function Members() {
     setSaving(true)
     setBanner(null)
     try {
+      const photoFile = photoRef.current?.files?.[0]
+      const photo_path = photoFile ? await uploadAsset(photoFile, 'members/') : (editingId ? existingPhoto : null)
+
       const payload = {
         name: form.name.trim(),
         phone: form.phone,
         family: form.family,
         cargo: form.cargo || null,
         ministries: form.ministries,
-        tither: form.tither
+        tither: form.tither,
+        photo_path
       }
       if (editingId) {
         await updateMember(editingId, { ...payload, active: form.active })
@@ -110,6 +121,8 @@ export default function Members() {
         setPage(0)
       }
       setForm(EMPTY)
+      setExistingPhoto(null)
+      if (photoRef.current) photoRef.current.value = ''
       refresh()
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
@@ -174,7 +187,12 @@ export default function Members() {
           </div>
         )}
 
-        <div className="check" style={{ marginTop: 14 }}>
+        <label style={{ marginTop: 14 }}>
+          Foto <small>{existingPhoto ? '(há uma; envie outra para substituir)' : '(opcional)'}</small>
+        </label>
+        <input ref={photoRef} type="file" accept="image/*" />
+
+        <div className="check">
           <input id="tither" type="checkbox" checked={form.tither} onChange={(e) => set('tither', e.target.checked)} />
           <label htmlFor="tither" style={{ margin: 0 }}>É dizimista</label>
         </div>

@@ -226,6 +226,37 @@ export async function setProfileRole(id, role) {
   if (error) throw error
 }
 
+// ---------- Imagens (fotos / assinaturas) + configurações ----------
+
+export async function uploadAsset(file, prefix = '') {
+  if (!file) return null
+  const safe = file.name.replace(/[^\w.\-]+/g, '_')
+  const path = `${prefix}${crypto.randomUUID()}-${safe}`
+  const { error } = await supabase.storage.from('photos').upload(path, file)
+  if (error) throw error
+  return path
+}
+
+export async function assetUrl(path) {
+  if (!path) return null
+  const { data, error } = await supabase.storage.from('photos').createSignedUrl(path, 3600)
+  if (error) throw error
+  return data.signedUrl
+}
+
+export async function getSettings() {
+  const { data, error } = await supabase.from('settings').select('key, value')
+  if (error) throw error
+  const out = {}
+  ;(data || []).forEach((r) => (out[r.key] = r.value))
+  return out
+}
+
+export async function setSetting(key, value) {
+  const { error } = await supabase.from('settings').upsert({ key, value }, { onConflict: 'key' })
+  if (error) throw error
+}
+
 // ---------- Backup ----------
 
 export async function fullBackup() {

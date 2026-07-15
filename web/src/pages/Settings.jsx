@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import {
   createCargo,
   createCategory,
@@ -9,13 +9,16 @@ import {
   deleteCult,
   deleteMinistry,
   fullBackup,
+  getSettings,
   listAllCategories,
   listCargos,
   listCults,
   listMinistries,
   listProfiles,
   setCargoWorker,
-  setProfileRole
+  setProfileRole,
+  setSetting,
+  uploadAsset
 } from '../api'
 import { RoleContext } from '../role'
 
@@ -126,6 +129,8 @@ export default function Settings() {
       <Cargos canWrite={canWrite} />
       <Ministries canWrite={canWrite} />
       <Cults canWrite={canWrite} />
+
+      {canWrite && <Credential />}
 
       {canWrite && (
       <div className="card">
@@ -417,6 +422,88 @@ function Cults({ canWrite }) {
         </table>
       </div>
     </div>
+  )
+}
+
+function Credential() {
+  const [names, setNames] = useState({ president_name: '', secretary_name: '' })
+  const [current, setCurrent] = useState({ president_sig: null, secretary_sig: null })
+  const [msg, setMsg] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const presRef = useRef(null)
+  const secRef = useRef(null)
+
+  async function load() {
+    try {
+      const s = await getSettings()
+      setNames({ president_name: s.president_name || '', secretary_name: s.secretary_name || '' })
+      setCurrent({ president_sig: s.president_sig || null, secretary_sig: s.secretary_sig || null })
+    } catch (err) {
+      setMsg({ type: 'err', text: err.message })
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function save(e) {
+    e.preventDefault()
+    setSaving(true)
+    setMsg(null)
+    try {
+      await setSetting('president_name', names.president_name)
+      await setSetting('secretary_name', names.secretary_name)
+      const pf = presRef.current?.files?.[0]
+      if (pf) await setSetting('president_sig', await uploadAsset(pf, 'signatures/'))
+      const sf = secRef.current?.files?.[0]
+      if (sf) await setSetting('secretary_sig', await uploadAsset(sf, 'signatures/'))
+      setMsg({ type: 'ok', text: 'Configuração da credencial salva.' })
+      if (presRef.current) presRef.current.value = ''
+      if (secRef.current) secRef.current.value = ''
+      load()
+    } catch (err) {
+      setMsg({ type: 'err', text: err.message })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form className="card" onSubmit={save}>
+      <h2>Credencial — assinaturas</h2>
+      <small>Nomes e imagens de assinatura do presidente e secretário(a), usados nas credenciais.</small>
+      {msg && <div className={`banner ${msg.type}`} style={{ marginTop: 10 }}>{msg.text}</div>}
+
+      <div className="row" style={{ marginTop: 12 }}>
+        <div>
+          <label>Nome do presidente</label>
+          <input
+            value={names.president_name}
+            onChange={(e) => setNames((n) => ({ ...n, president_name: e.target.value }))}
+          />
+          <label>
+            Assinatura do presidente{' '}
+            <small>{current.president_sig ? '(há uma; envie outra para trocar)' : '(imagem)'}</small>
+          </label>
+          <input ref={presRef} type="file" accept="image/*" />
+        </div>
+        <div>
+          <label>Nome do secretário(a)</label>
+          <input
+            value={names.secretary_name}
+            onChange={(e) => setNames((n) => ({ ...n, secretary_name: e.target.value }))}
+          />
+          <label>
+            Assinatura do secretário(a){' '}
+            <small>{current.secretary_sig ? '(há uma; envie outra para trocar)' : '(imagem)'}</small>
+          </label>
+          <input ref={secRef} type="file" accept="image/*" />
+        </div>
+      </div>
+
+      <button className="primary" disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</button>
+    </form>
   )
 }
 

@@ -240,6 +240,7 @@ insert into public.cults (name) values
 -- Membro passa a ter cargo (1) e ministries (vários).
 alter table public.members add column if not exists cargo text;
 alter table public.members add column if not exists ministries text[] default '{}';
+alter table public.members add column if not exists photo_path text;
 -- Migra o antigo "ministry" (que guardava o cargo) para a coluna cargo.
 update public.members set cargo = ministry where cargo is null and ministry is not null;
 
@@ -264,3 +265,31 @@ drop policy if exists cults_write on public.cults;
 create policy cults_select on public.cults for select to authenticated using (true);
 create policy cults_write on public.cults for all to authenticated
   using (public.can_write()) with check (public.can_write());
+
+-- ---------- Configurações gerais (assinaturas, nomes) ----------
+
+create table if not exists public.settings (
+  key   text primary key,
+  value text
+);
+
+alter table public.settings enable row level security;
+drop policy if exists settings_select on public.settings;
+drop policy if exists settings_write on public.settings;
+create policy settings_select on public.settings for select to authenticated using (true);
+create policy settings_write on public.settings for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+
+-- ---------- Storage de imagens (fotos de membro, assinaturas) ----------
+
+insert into storage.buckets (id, name, public)
+  values ('photos', 'photos', false)
+  on conflict (id) do nothing;
+
+drop policy if exists photos_read on storage.objects;
+create policy photos_read on storage.objects
+  for select to authenticated using (bucket_id = 'photos');
+
+drop policy if exists photos_write on storage.objects;
+create policy photos_write on storage.objects
+  for insert to authenticated with check (bucket_id = 'photos');
