@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { assetUrl, getSettings, listMembersPage, workerCargoNames } from '../api'
+import { assetUrl, getSettings, listMembersPage } from '../api'
 import Pagination from '../components/Pagination.jsx'
 import { printCredential } from '../credentialPrint'
 import { downloadCredentialPng } from '../credentialImage'
@@ -13,12 +13,10 @@ export default function Credentials() {
   const [total, setTotal] = useState(0)
   const [search, setSearch] = useState('')
   const [settings, setSettings] = useState(null)
-  const [workers, setWorkers] = useState([])
   const [banner, setBanner] = useState(null)
 
   useEffect(() => {
     getSettings().then(setSettings).catch((e) => setBanner({ type: 'err', msg: e.message }))
-    workerCargoNames().then(setWorkers).catch(() => {})
   }, [])
 
   async function load() {
@@ -37,7 +35,6 @@ export default function Credentials() {
   }, [page, search])
 
   async function buildData(member) {
-    const isWorker = workers.includes(member.cargo)
     const [photoUrl, presSigUrl, secSigUrl] = await Promise.all([
       assetUrl(member.photo_path),
       assetUrl(settings?.president_sig),
@@ -50,7 +47,7 @@ export default function Credentials() {
       photoUrl,
       presSigUrl,
       secSigUrl,
-      title: isWorker ? 'Credencial de Obreiro' : 'Credencial de Membro'
+      title: member.cargo ? `Credencial de ${member.cargo}` : 'Credencial de Membro'
     }
   }
 

@@ -6,8 +6,7 @@ import {
   getSettings,
   myContributions,
   updateMyProfile,
-  uploadAsset,
-  workerCargoNames
+  uploadAsset
 } from '../api'
 import { printCredential } from '../credentialPrint'
 import { downloadCredentialPng } from '../credentialImage'
@@ -19,11 +18,7 @@ export function MyCredential() {
   const [busy, setBusy] = useState(false)
 
   async function build() {
-    const [member, settings, workers] = await Promise.all([
-      getMyMember(),
-      getSettings(),
-      workerCargoNames()
-    ])
+    const [member, settings] = await Promise.all([getMyMember(), getSettings()])
     if (!member) throw new Error('Seu cadastro de membro não foi encontrado.')
     const [photoUrl, presSigUrl, secSigUrl] = await Promise.all([
       assetUrl(member.photo_path),
@@ -37,7 +32,7 @@ export function MyCredential() {
       photoUrl,
       presSigUrl,
       secSigUrl,
-      title: workers.includes(member.cargo) ? 'Credencial de Obreiro' : 'Credencial de Membro'
+      title: member.cargo ? `Credencial de ${member.cargo}` : 'Credencial de Membro'
     }
   }
 

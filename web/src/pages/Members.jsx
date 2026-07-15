@@ -12,7 +12,10 @@ import {
 import Pagination from '../components/Pagination.jsx'
 import { RoleContext } from '../role'
 
-const EMPTY = { name: '', phone: '', email: '', family: '', cargo: '', ministries: [], tither: true, active: true }
+const EMPTY = {
+  name: '', phone: '', email: '', family: '', cargo: '', ministries: [], tither: true, active: true,
+  matricula: '', rg: '', cpf: '', birth_date: '', joined_date: ''
+}
 const SIZE = 20
 
 export default function Members() {
@@ -82,7 +85,12 @@ export default function Members() {
       cargo: m.cargo || '',
       ministries: m.ministries || [],
       tither: m.tither,
-      active: m.active
+      active: m.active,
+      matricula: m.matricula || '',
+      rg: m.rg || '',
+      cpf: m.cpf || '',
+      birth_date: m.birth_date || '',
+      joined_date: m.joined_date || ''
     })
     if (photoRef.current) photoRef.current.value = ''
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -112,6 +120,11 @@ export default function Members() {
         cargo: form.cargo || null,
         ministries: form.ministries,
         tither: form.tither,
+        matricula: form.matricula || null,
+        rg: form.rg || null,
+        cpf: form.cpf || null,
+        birth_date: form.birth_date || null,
+        joined_date: form.joined_date || null,
         photo_path
       }
       if (editingId) {
@@ -208,6 +221,29 @@ export default function Members() {
             ))}
           </div>
         )}
+
+        <div className="row">
+          <div>
+            <label>Matrícula</label>
+            <input value={form.matricula} onChange={(e) => set('matricula', e.target.value)} placeholder="Ex.: 0224" />
+          </div>
+          <div>
+            <label>Data de entrada na igreja</label>
+            <input type="date" value={form.joined_date} onChange={(e) => set('joined_date', e.target.value)} />
+          </div>
+        </div>
+        <div className="row">
+          <div>
+            <label>RG</label>
+            <input value={form.rg} onChange={(e) => set('rg', e.target.value)} />
+          </div>
+          <div>
+            <label>CPF</label>
+            <input value={form.cpf} onChange={(e) => set('cpf', e.target.value)} />
+          </div>
+        </div>
+        <label>Data de nascimento</label>
+        <input type="date" value={form.birth_date} onChange={(e) => set('birth_date', e.target.value)} />
 
         <label style={{ marginTop: 14 }}>
           Foto <small>{existingPhoto ? '(há uma; envie outra para substituir)' : '(opcional)'}</small>

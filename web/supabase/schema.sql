@@ -241,6 +241,11 @@ insert into public.cults (name) values
 alter table public.members add column if not exists cargo text;
 alter table public.members add column if not exists ministries text[] default '{}';
 alter table public.members add column if not exists photo_path text;
+alter table public.members add column if not exists matricula text;
+alter table public.members add column if not exists rg text;
+alter table public.members add column if not exists cpf text;
+alter table public.members add column if not exists birth_date date;
+alter table public.members add column if not exists joined_date date;
 -- Migra o antigo "ministry" (que guardava o cargo) para a coluna cargo.
 update public.members set cargo = ministry where cargo is null and ministry is not null;
 
@@ -328,6 +333,11 @@ begin
     new.ministries := old.ministries;
     new.user_id := old.user_id;
     new.email := old.email;
+    new.matricula := old.matricula;
+    new.rg := old.rg;
+    new.cpf := old.cpf;
+    new.birth_date := old.birth_date;
+    new.joined_date := old.joined_date;
   end if;
   return new;
 end; $$;

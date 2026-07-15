@@ -222,7 +222,7 @@ function Cargos({ canWrite }) {
   return (
     <div className="card">
       <h2>Cargos</h2>
-      <small>Classificação do membro (1 por pessoa). "Obreiro" define quem entra no relatório de obreiros não dizimistas.</small>
+      <small>Classificação do membro (1 por pessoa), no <b>singular</b> e com o gênero certo (ex.: Pastor, Missionária) — é assim que aparece na credencial. "Obreiro" define quem entra no relatório de obreiros não dizimistas.</small>
       {msg && <div className={`banner ${msg.type}`} style={{ marginTop: 10 }}>{msg.text}</div>}
 
       {canWrite && (
