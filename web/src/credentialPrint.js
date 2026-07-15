@@ -80,25 +80,27 @@ export function printCredential({ member, settings, logoUrl, photoUrl, presSigUr
       <div class="fields">
         <div class="name">${esc(member.name)}</div>
         <div><b>Cargo:</b> ${esc(member.cargo || '—')}</div>
-        <div class="docs">
-          ${field('Matrícula:', registro)}
-          ${field('Membro desde:', desde)}
-          ${field('RG:', member.rg)}
-          ${field('CPF:', member.cpf)}
-          ${field('Nascimento:', fmtDate(member.birth_date))}
-        </div>
+        <div><b>Matrícula:</b> ${esc(registro || '—')}</div>
+        <div><b>Membro desde:</b> ${esc(desde || '—')}</div>
+        <div><b>RG:</b> ${esc(member.rg || '—')}</div>
+        <div><b>CPF:</b> ${esc(member.cpf || '—')}</div>
+        <div><b>Nascimento:</b> ${esc(fmtDate(member.birth_date) || '—')}</div>
       </div>
     </div>
+
+    <div class="docs">
+      
+    </div>
+
     <div class="validity">Emitida em ${issued} · Válida até ${until}</div>
     <div class="obs">Válida em todo o território nacional.</div>
-    <br><br><br>
-    <div class="fullname"><strong>${esc(CHURCH_FULL_NAME)}</strong></div>
-    <div class="addr">${esc(CHURCH_ADDRESS)}</div>
 
     <div class="sigs">
       ${sig(presSigUrl, settings.president_name, 'Presidente')}
       ${sig(secSigUrl, settings.secretary_name, 'Secretário(a)')}
     </div>
+    <div class="fullname"><strong>${esc(CHURCH_FULL_NAME)}</strong></div>
+    <div class="addr">${esc(CHURCH_ADDRESS)}</div>
   </div>
 </body></html>`
 
