@@ -15,7 +15,7 @@ import CashBook from './pages/CashBook.jsx'
 import Reports from './pages/Reports.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Settings from './pages/Settings.jsx'
-import { SitePosts, SiteEvents, SiteStudies } from './pages/Site.jsx'
+import { SitePosts, SiteEvents, SiteStudies, SiteBanners, SitePages } from './pages/Site.jsx'
 import { MyCredential, MyContributions, MyProfile } from './pages/MemberPortal.jsx'
 
 const TABS_MEMBER = [
@@ -62,7 +62,9 @@ const GROUPS = [
     tabs: [
       { id: 'site-posts', label: '📰 Notícias', Component: SitePosts },
       { id: 'site-events', label: '📅 Eventos', Component: SiteEvents },
-      { id: 'site-studies', label: '📖 Estudos Bíblicos', Component: SiteStudies }
+      { id: 'site-studies', label: '📖 Estudos Bíblicos', Component: SiteStudies },
+      { id: 'site-banners', label: '🖼️ Banners', Component: SiteBanners },
+      { id: 'site-pages', label: '📄 Páginas', Component: SitePages }
     ]
   },
   {

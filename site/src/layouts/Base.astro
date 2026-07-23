@@ -1,8 +1,11 @@
 ---
 import '@fontsource-variable/inter'
 import '@fontsource-variable/fraunces'
+import { getMenuPages } from '../lib/content'
 
 const { title, description, image } = Astro.props
+
+const menuPages = await getMenuPages()
 
 const CHURCH = 'Igreja AD Alpha'
 const FULL = 'Igreja Assembleia de Deus Alpha Ministério Central Praia Linda'
@@ -13,6 +16,7 @@ const desc = description || `Site oficial da ${FULL}. Notícias, eventos e estud
 
 const nav = [
   { href: '/', label: 'Início' },
+  ...menuPages.map((p) => ({ href: `/${p.slug}`, label: p.title })),
   { href: '/noticias', label: 'Notícias' },
   { href: '/eventos', label: 'Eventos' },
   { href: '/estudos', label: 'Estudos Bíblicos' }
@@ -43,13 +47,17 @@ const year = new Date().getFullYear()
           <img src="/logo.png" alt={CHURCH} class="logo" />
           <span class="brand-name">{CHURCH}</span>
         </a>
-        <nav class="nav">
+        <button class="nav-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="site-nav">
+          <span></span><span></span><span></span>
+        </button>
+        <nav class="nav" id="site-nav">
           {nav.map((n) => (
             <a href={n.href} class={isActive(n.href) ? 'active' : ''}>{n.label}</a>
           ))}
         </nav>
       </div>
     </header>
+    <div class="nav-backdrop" hidden></div>
 
     <main class="wrap">
       <slot />
@@ -75,19 +83,39 @@ const year = new Date().getFullYear()
 
     <script>
       // Animação do header no scroll: encolhe/ganha blur ao rolar; esconde
-      // ao descer e reaparece ao subir.
+      // ao descer e reaparece ao subir (não esconde com o menu aberto).
       const header = document.querySelector('.site-header')
       if (header) {
         let last = window.scrollY
         const onScroll = () => {
           const y = window.scrollY
           header.classList.toggle('scrolled', y > 16)
+          if (header.classList.contains('nav-open')) return
           if (y > 240 && y > last + 4) header.classList.add('hidden')
           else if (y < last - 4 || y < 240) header.classList.remove('hidden')
           last = y
         }
         window.addEventListener('scroll', onScroll, { passive: true })
         onScroll()
+
+        // Menu mobile (hambúrguer)
+        const toggle = header.querySelector('.nav-toggle')
+        const backdrop = document.querySelector('.nav-backdrop')
+        const setOpen = (open) => {
+          header.classList.toggle('nav-open', open)
+          toggle?.setAttribute('aria-expanded', open ? 'true' : 'false')
+          toggle?.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu')
+          if (backdrop) {
+            if (open) { backdrop.hidden = false; requestAnimationFrame(() => backdrop.classList.add('show')) }
+            else { backdrop.classList.remove('show'); setTimeout(() => (backdrop.hidden = true), 300) }
+          }
+        }
+        toggle?.addEventListener('click', () => setOpen(!header.classList.contains('nav-open')))
+        backdrop?.addEventListener('click', () => setOpen(false))
+        header.querySelectorAll('.nav a').forEach((a) => a.addEventListener('click', () => setOpen(false)))
+        window.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false) })
+        // Ao voltar pro desktop, garante o menu fechado.
+        matchMedia('(min-width: 761px)').addEventListener('change', (e) => { if (e.matches) setOpen(false) })
       }
     </script>
 
@@ -186,9 +214,79 @@ const year = new Date().getFullYear()
       .nav a:hover { color: #fff; background: rgba(255,255,255,.1); }
       .nav a.active { background: var(--chrome); color: #1a1c1f; font-weight: 600; }
 
+      /* Botão hambúrguer (só no mobile) */
+      .nav-toggle {
+        display: none;
+        position: relative;
+        z-index: 31;
+        width: 44px;
+        height: 44px;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        padding: 0;
+      }
+      .nav-toggle span {
+        display: block;
+        width: 24px;
+        height: 2px;
+        margin: 5px auto;
+        background: #fff;
+        border-radius: 2px;
+        transition: transform .3s ease, opacity .2s ease;
+      }
+      .site-header.nav-open .nav-toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+      .site-header.nav-open .nav-toggle span:nth-child(2) { opacity: 0; }
+      .site-header.nav-open .nav-toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+      .nav-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.55);
+        z-index: 20;
+        opacity: 0;
+        transition: opacity .3s ease;
+      }
+      .nav-backdrop.show { opacity: 1; }
+
+      @media (max-width: 760px) {
+        .nav-toggle { display: block; }
+        .header-inner { min-height: 64px; flex-wrap: nowrap; }
+        .site-header.scrolled .header-inner { min-height: 56px; }
+        .brand-name { font-size: 15px; letter-spacing: .12em; }
+
+        .nav {
+          position: fixed;
+          top: 0;
+          right: 0;
+          height: 100dvh;
+          width: min(80vw, 320px);
+          background: #0e0f11;
+          border-left: 1px solid rgba(255,255,255,.08);
+          box-shadow: -20px 0 60px rgba(0,0,0,.4);
+          flex-direction: column;
+          align-items: stretch;
+          gap: 4px;
+          padding: 88px 20px 24px;
+          transform: translateX(100%);
+          transition: transform .32s cubic-bezier(.4,0,.2,1);
+          z-index: 25;
+          overflow-y: auto;
+        }
+        .site-header.nav-open .nav { transform: translateX(0); }
+        .nav a {
+          font-size: 17px;
+          padding: 14px 16px;
+          border-radius: 10px;
+        }
+        .nav a.active { background: rgba(255,255,255,.14); color: #fff; }
+      }
+
       /* Sections */
       main { padding: 40px 22px 64px; }
       section + section { margin-top: 56px; }
+      /* Respiro maior logo abaixo do carrossel full-bleed. */
+      .carousel + section { margin-top: 80px; }
       .section-head {
         display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
         margin: 0 0 22px;
@@ -271,6 +369,20 @@ const year = new Date().getFullYear()
       .card p { margin: 0; color: #4a443c; font-size: 15px; }
 
       .tag { display: inline-block; font-size: 12px; color: var(--steel); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
+
+      /* Banners quadrados (1:1, estilo Instagram) */
+      .banner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+      .banner {
+        position: relative;
+        aspect-ratio: 1 / 1;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        display: block;
+      }
+      .banner img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s ease; }
+      a.banner:hover img { transform: scale(1.05); }
 
       .empty { color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); padding: 32px; text-align: center; }
 

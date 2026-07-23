@@ -523,3 +523,62 @@ create policy site_storage_update on storage.objects
   for update to authenticated using (bucket_id = 'site' and public.can_edit_site());
 create policy site_storage_delete on storage.objects
   for delete to authenticated using (bucket_id = 'site' and public.can_edit_site());
+
+-- ================= Banners (cultos) + Páginas institucionais =================
+
+-- Banners quadrados (formato post do Instagram) para divulgar cultos/campanhas.
+create table if not exists public.site_banners (
+  id         uuid primary key default gen_random_uuid(),
+  title      text default '',
+  image_path text,                 -- imagem quadrada (1:1) no bucket 'site'
+  link_url   text,                 -- link opcional ao clicar
+  sort       int not null default 0,
+  published  boolean not null default false,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+create index if not exists site_banners_pub_idx
+  on public.site_banners (published, sort, created_at desc);
+
+-- Páginas institucionais (Quem somos, Nossa história, etc.).
+create table if not exists public.site_pages (
+  id           uuid primary key default gen_random_uuid(),
+  title        text not null,
+  slug         text not null unique,
+  content      text default '',
+  show_in_menu boolean not null default false,
+  sort         int not null default 0,
+  published    boolean not null default false,
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now()
+);
+create index if not exists site_pages_menu_idx
+  on public.site_pages (published, show_in_menu, sort);
+
+alter table public.site_banners enable row level security;
+alter table public.site_pages   enable row level security;
+
+drop policy if exists site_banners_public on public.site_banners;
+drop policy if exists site_banners_staff  on public.site_banners;
+drop policy if exists site_banners_write  on public.site_banners;
+create policy site_banners_public on public.site_banners for select to anon using (published);
+create policy site_banners_staff  on public.site_banners for select to authenticated using (true);
+create policy site_banners_write  on public.site_banners for all to authenticated
+  using (public.can_edit_site()) with check (public.can_edit_site());
+
+drop policy if exists site_pages_public on public.site_pages;
+drop policy if exists site_pages_staff  on public.site_pages;
+drop policy if exists site_pages_write  on public.site_pages;
+create policy site_pages_public on public.site_pages for select to anon using (published);
+create policy site_pages_staff  on public.site_pages for select to authenticated using (true);
+create policy site_pages_write  on public.site_pages for all to authenticated
+  using (public.can_edit_site()) with check (public.can_edit_site());
+
+-- Página "Quem somos" inicial (edite o conteúdo no painel, em Site → Páginas).
+insert into public.site_pages (title, slug, content, show_in_menu, published, sort)
+values (
+  'Quem somos',
+  'quem-somos',
+  E'A Igreja AD Alpha é uma comunidade cristã dedicada à adoração, à comunhão e ao ensino da Palavra.\n\nEdite este texto no painel administrativo, em Site → Páginas.',
+  true, true, 1
+) on conflict (slug) do nothing;

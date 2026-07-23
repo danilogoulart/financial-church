@@ -414,6 +414,65 @@ export async function deleteStudy(id) {
   if (error) throw error
 }
 
+// Banners quadrados (cultos/campanhas)
+export async function listBanners() {
+  const { data, error } = await supabase
+    .from('site_banners')
+    .select('*')
+    .order('sort', { ascending: true })
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createBanner(banner) {
+  const { data, error } = await supabase.from('site_banners').insert(banner).select().single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function updateBanner(id, fields) {
+  const patch = { ...fields, updated_at: new Date().toISOString() }
+  const { data, error } = await supabase.from('site_banners').update(patch).eq('id', id).select().single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function deleteBanner(id) {
+  const { error } = await supabase.from('site_banners').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Páginas institucionais (Quem somos, etc.)
+export async function listPages() {
+  const { data, error } = await supabase
+    .from('site_pages')
+    .select('*')
+    .order('sort', { ascending: true })
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createPage(page) {
+  const row = { ...page, slug: page.slug?.trim() || slugify(page.title) }
+  const { data, error } = await supabase.from('site_pages').insert(row).select().single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function updatePage(id, fields) {
+  const patch = { ...fields, updated_at: new Date().toISOString() }
+  const { data, error } = await supabase.from('site_pages').update(patch).eq('id', id).select().single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function deletePage(id) {
+  const { error } = await supabase.from('site_pages').delete().eq('id', id)
+  if (error) throw error
+}
+
 // ---------- Backup ----------
 
 export async function fullBackup() {

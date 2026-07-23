@@ -1,17 +1,25 @@
 import { useContext, useEffect, useState } from 'react'
 import { RoleContext } from '../role'
 import {
+  createBanner,
   createEvent,
+  createPage,
   createPost,
   createStudy,
+  deleteBanner,
   deleteEvent,
+  deletePage,
   deletePost,
   deleteStudy,
+  listBanners,
   listEvents,
+  listPages,
   listPosts,
   listStudies,
   siteImageUrl,
+  updateBanner,
   updateEvent,
+  updatePage,
   updatePost,
   updateStudy,
   uploadSiteImage
@@ -379,6 +387,110 @@ export function SiteStudies() {
           <td>{r.title}</td>
           <td>{r.teacher || '—'}</td>
           <td>{fmtDate(r.studied_on)}</td>
+        </>
+      )}
+    />
+  )
+}
+
+// ---------- Banners (cultos) ----------
+
+export function SiteBanners() {
+  return (
+    <CrudPage
+      icon="🖼️"
+      title="Banners (cultos)"
+      head={['Banner']}
+      api={{ list: listBanners, create: createBanner, update: updateBanner, remove: deleteBanner }}
+      emptyForm={() => ({ title: '', link_url: '', sort: 0, cover_path: null, published: false, _coverFile: null, _coverPreview: null })}
+      toForm={(r) => ({
+        title: r.title || '', link_url: r.link_url || '', sort: r.sort || 0,
+        cover_path: r.image_path, published: r.published, _coverFile: null, _coverPreview: null
+      })}
+      fromForm={async (f) => ({
+        title: f.title || '',
+        link_url: f.link_url || '',
+        sort: Number(f.sort) || 0,
+        image_path: await resolveCover(f, 'banners/'),
+        published: !!f.published
+      })}
+      renderFields={(f, set) => (
+        <>
+          <label>Imagem quadrada <small>(formato Instagram, ex.: 1080×1080)</small></label>
+          <CoverField form={f} setField={set} />
+          <label>Título <small>(opcional)</small></label>
+          <input value={f.title} onChange={(e) => set('title', e.target.value)} placeholder="Ex.: Culto de Domingo" />
+          <label>Link ao clicar <small>(opcional)</small></label>
+          <input value={f.link_url} onChange={(e) => set('link_url', e.target.value)} placeholder="https://... ou /eventos" />
+          <label>Ordem <small>(menor aparece primeiro)</small></label>
+          <input type="number" value={f.sort} onChange={(e) => set('sort', e.target.value)} />
+        </>
+      )}
+      renderCells={(r) => (
+        <td>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {r.image_path && (
+              <img
+                src={siteImageUrl(r.image_path)}
+                alt=""
+                style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6 }}
+              />
+            )}
+            <span>{r.title || '(sem título)'}</span>
+          </div>
+        </td>
+      )}
+    />
+  )
+}
+
+// ---------- Páginas institucionais ----------
+
+export function SitePages() {
+  return (
+    <CrudPage
+      icon="📄"
+      title="Páginas"
+      head={['Página', 'No menu']}
+      api={{ list: listPages, create: createPage, update: updatePage, remove: deletePage }}
+      emptyForm={() => ({ title: '', slug: '', content: '', show_in_menu: false, sort: 0, published: false })}
+      toForm={(r) => ({
+        title: r.title, slug: r.slug, content: r.content || '',
+        show_in_menu: r.show_in_menu, sort: r.sort || 0, published: r.published
+      })}
+      fromForm={async (f) => ({
+        title: f.title.trim(),
+        slug: f.slug || '',
+        content: f.content || '',
+        show_in_menu: !!f.show_in_menu,
+        sort: Number(f.sort) || 0,
+        published: !!f.published
+      })}
+      renderFields={(f, set) => (
+        <>
+          <label>Título</label>
+          <input value={f.title} onChange={(e) => set('title', e.target.value)} required />
+          <label>Link (slug) <small>(vazio = gerado do título)</small></label>
+          <input value={f.slug} onChange={(e) => set('slug', e.target.value)} placeholder="quem-somos" />
+          <label>Conteúdo</label>
+          <textarea rows={10} value={f.content} onChange={(e) => set('content', e.target.value)} />
+          <label>Ordem no menu</label>
+          <input type="number" value={f.sort} onChange={(e) => set('sort', e.target.value)} />
+          <div className="check">
+            <input
+              id="show_in_menu"
+              type="checkbox"
+              checked={!!f.show_in_menu}
+              onChange={(e) => set('show_in_menu', e.target.checked)}
+            />
+            <label htmlFor="show_in_menu" style={{ margin: 0 }}>Mostrar no menu do site</label>
+          </div>
+        </>
+      )}
+      renderCells={(r) => (
+        <>
+          <td>{r.title}<br /><small>/{r.slug}</small></td>
+          <td>{r.show_in_menu ? 'sim' : '—'}</td>
         </>
       )}
     />

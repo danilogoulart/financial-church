@@ -1,12 +1,13 @@
 ---
 import Base from '../layouts/Base.astro'
 import Carousel from '../components/Carousel.astro'
-import { getPosts, getEvents } from '../lib/content'
+import { getPosts, getEvents, getBanners } from '../lib/content'
 import { imageUrl } from '../lib/supabase'
 import { fmtDateTime } from '../lib/format'
 
 const posts = await getPosts(3)
 const events = await getEvents({ upcomingOnly: true, limit: 3 })
+const banners = await getBanners()
 
 const ADDR = 'Rua Rio de Janeiro, N°6 - Praia Linda, São Pedro Da Aldeia - Rio de Janeiro - Brasil'
 const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(ADDR)}&output=embed`
@@ -32,12 +33,31 @@ const cults = [
         crianças, jovens e adultos.
       </p>
       <p>Seja para uma visita ou para fazer parte, você será muito bem recebido.</p>
-      <a class="btn" href="/noticias">Conheça nossas atividades</a>
+      <a class="btn" href="/quem-somos">Conheça nossa história</a>
     </div>
     <div class="about-media">
       <img src="/logo.png" alt="Igreja AD Alpha" />
     </div>
   </section>
+
+  {banners.length > 0 && (
+    <section>
+      <div class="section-head"><h2>Cultos</h2></div>
+      <div class="banner-grid">
+        {banners.map((b) => (
+          b.link_url ? (
+            <a class="banner" href={b.link_url}>
+              <img src={imageUrl(b.image_path)} alt={b.title || 'Banner de culto'} loading="lazy" />
+            </a>
+          ) : (
+            <div class="banner">
+              <img src={imageUrl(b.image_path)} alt={b.title || 'Banner de culto'} loading="lazy" />
+            </div>
+          )
+        ))}
+      </div>
+    </section>
+  )}
 
   <section>
     <div class="section-head"><h2>Nossos encontros</h2></div>

@@ -61,3 +61,46 @@ export async function getStudies(limit) {
   }
   return data
 }
+
+export async function getBanners() {
+  const { data, error } = await supabase
+    .from('site_banners')
+    .select('*')
+    .eq('published', true)
+    .order('sort', { ascending: true })
+    .order('created_at', { ascending: false })
+  if (error) {
+    console.error(error)
+    return []
+  }
+  return data
+}
+
+// Páginas institucionais marcadas para aparecer no menu.
+export async function getMenuPages() {
+  const { data, error } = await supabase
+    .from('site_pages')
+    .select('title, slug')
+    .eq('published', true)
+    .eq('show_in_menu', true)
+    .order('sort', { ascending: true })
+  if (error) {
+    console.error(error)
+    return []
+  }
+  return data
+}
+
+export async function getPage(slug) {
+  const { data, error } = await supabase
+    .from('site_pages')
+    .select('*')
+    .eq('published', true)
+    .eq('slug', slug)
+    .maybeSingle()
+  if (error) {
+    console.error(error)
+    return null
+  }
+  return data
+}

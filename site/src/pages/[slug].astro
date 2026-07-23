@@ -1,0 +1,30 @@
+---
+// Página institucional (Quem somos, etc.) por slug. As rotas estáticas
+// (/noticias, /eventos, /estudos, /admin) têm prioridade sobre este catch-all.
+import Base from '../layouts/Base.astro'
+import { getPage } from '../lib/content'
+
+const { slug } = Astro.params
+const page = await getPage(slug)
+
+if (!page) {
+  Astro.response.status = 404
+}
+---
+
+{page ? (
+  <Base title={page.title} description={(page.content || '').slice(0, 155)}>
+    <article class="article">
+      <h1>{page.title}</h1>
+      <div class="content">{page.content}</div>
+    </article>
+  </Base>
+) : (
+  <Base title="Página não encontrada">
+    <article class="article">
+      <h1>Página não encontrada</h1>
+      <p class="lead">O conteúdo que você procura não existe ou não está publicado.</p>
+      <a class="btn" href="/">Voltar ao início</a>
+    </article>
+  </Base>
+)}
