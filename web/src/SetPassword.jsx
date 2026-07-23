@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from './supabaseClient'
+import { updatePassword } from './auth'
 import { APP_NAME, LOGO_URL } from './brand'
 
 // Mostrada após o usuário abrir o link de redefinição (evento PASSWORD_RECOVERY).
@@ -21,13 +21,14 @@ export default function SetPassword({ onDone }) {
       return
     }
     setLoading(true)
-    const { error } = await supabase.auth.updateUser({ password })
-    setLoading(false)
-    if (error) {
-      setMsg({ type: 'err', text: error.message })
-      return
+    try {
+      await updatePassword(password)
+      onDone()
+    } catch (err) {
+      setMsg({ type: 'err', text: err.message })
+    } finally {
+      setLoading(false)
     }
-    onDone()
   }
 
   return (

@@ -73,12 +73,12 @@ nav {
   position: sticky;
   top: 56px;
   z-index: 5;
-  overflow-x: auto;
-  scrollbar-width: thin;
+  overflow: visible;
 }
-nav::-webkit-scrollbar { height: 0; }
-nav button {
-  flex: 0 0 auto;
+
+/* Grupos do menu (Financeiro, Site…) com submenu suspenso. */
+.nav-group { position: relative; flex: 0 0 auto; display: flex; }
+.nav-group-btn {
   border: none;
   background: transparent;
   color: var(--muted);
@@ -87,13 +87,51 @@ nav button {
   cursor: pointer;
   white-space: nowrap;
   border-bottom: 2px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
-nav button:hover { color: var(--ink); }
-nav button.active {
+.nav-group-btn:hover { color: var(--ink); }
+.nav-group-btn.active {
   color: var(--ink);
   font-weight: 600;
   border-bottom-color: var(--primary);
 }
+.nav-group-btn .caret { font-size: 10px; opacity: .7; }
+
+.nav-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 190px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+  z-index: 30;
+}
+.nav-group.open .nav-dropdown { display: block; }
+.nav-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-bottom: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 10px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.nav-dropdown button:hover { color: var(--ink); background: var(--bg); }
+.nav-dropdown button.active { color: var(--ink); font-weight: 600; background: var(--bg); }
+
+/* Fecha o dropdown ao clicar fora (desktop). */
+.nav-backdrop { position: fixed; inset: 0; z-index: 4; }
 
 .hamburger {
   display: none;
@@ -132,14 +170,32 @@ main { max-width: 720px; margin: 0 auto; padding: 20px; }
     z-index: 10;
   }
   nav.open { display: flex; }
-  nav button {
+
+  /* No mobile os grupos viram seções empilhadas com os itens sempre visíveis. */
+  .nav-group { flex-direction: column; width: 100%; }
+  .nav-group-btn {
     width: 100%;
-    text-align: left;
+    justify-content: space-between;
     padding: 13px 12px;
     border-bottom: none;
     border-radius: 8px;
   }
-  nav button.active { background: var(--primary); color: #fff; }
+  .nav-group-btn.active { background: var(--primary); color: #fff; }
+  .nav-group-btn .caret { display: none; }
+
+  .nav-dropdown {
+    display: block;
+    position: static;
+    min-width: 0;
+    padding: 2px 0 6px 12px;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+  .nav-dropdown button { padding: 12px; border-radius: 8px; }
+  .nav-dropdown button.active { background: var(--primary); color: #fff; }
+
+  .nav-backdrop { display: none; }
 
   main { padding: 14px; }
   .card { padding: 16px; }

@@ -384,3 +384,142 @@ create policy cults_select on public.cults for select to authenticated using (pu
 drop policy if exists profiles_select on public.profiles;
 create policy profiles_select on public.profiles for select to authenticated
   using (public.is_staff() or id = auth.uid());
+
+-- ================= Site público + CMS =================
+-- Conteúdo editável do site da igreja (notícias, eventos, sermões), publicado
+-- por um editor. O site público (visitante NÃO autenticado, role 'anon') lê
+-- apenas o que está publicado; a equipe autenticada enxerga rascunhos também,
+-- para pré-visualizar antes de publicar.
+
+-- Novo papel 'editor': cuida do conteúdo do site e NÃO tem acesso à tesouraria
+-- (não entra em is_staff, então as policias financeiras já o excluem).
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check
+  check (role in ('admin', 'tesoureiro', 'consulta', 'membro', 'editor'));
+
+create or replace function public.can_edit_site()
+returns boolean language sql stable as $$
+  select public.current_user_role() in ('admin', 'editor');
+$$;
+
+-- ---------- Tabelas de conteúdo ----------
+
+-- Notícias / avisos / posts do blog da igreja.
+create table if not exists public.site_posts (
+  id           uuid primary key default gen_random_uuid(),
+  title        text not null,
+  slug         text not null unique,
+  excerpt      text default '',
+  body         text default '',            -- markdown ou html
+  cover_path   text,                        -- caminho no bucket público 'site'
+  published    boolean not null default false,
+  published_at timestamptz,
+  author_id    uuid references auth.users(id) on delete set null,
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now()
+);
+create index if not exists site_posts_published_idx
+  on public.site_posts (published, published_at desc);
+
+-- Eventos / agenda (cultos especiais, congressos, etc.).
+create table if not exists public.site_events (
+  id          uuid primary key default gen_random_uuid(),
+  title       text not null,
+  slug        text unique,
+  description text default '',
+  location    text default '',
+  starts_at   timestamptz not null,
+  ends_at     timestamptz,
+  cover_path  text,
+  published   boolean not null default false,
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+create index if not exists site_events_when_idx
+  on public.site_events (published, starts_at);
+
+-- Estudos bíblicos (tema, ministrante, passagem, link de vídeo + descrição).
+-- (Substitui o antigo 'site_sermons'; a linha abaixo remove-o se já existir.)
+drop table if exists public.site_sermons cascade;
+create table if not exists public.site_studies (
+  id          uuid primary key default gen_random_uuid(),
+  title       text not null,
+  teacher     text default '',
+  reference   text default '',            -- passagem bíblica (ex.: "João 3.16")
+  studied_on  date,
+  video_url   text,
+  description text default '',
+  cover_path  text,
+  published   boolean not null default false,
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+create index if not exists site_studies_when_idx
+  on public.site_studies (published, studied_on desc);
+
+-- Configurações do site (hero, textos "sobre", contato, redes) — pares
+-- chave/valor, separadas da tabela 'settings' da tesouraria porque estas
+-- são de leitura pública.
+create table if not exists public.site_settings (
+  key   text primary key,
+  value text
+);
+
+-- ---------- RLS do conteúdo do site ----------
+-- Padrão por tabela: anon lê só publicado; autenticado lê tudo (preview);
+-- escrita só admin/editor (can_edit_site).
+
+alter table public.site_posts    enable row level security;
+alter table public.site_events   enable row level security;
+alter table public.site_studies  enable row level security;
+alter table public.site_settings enable row level security;
+
+drop policy if exists site_posts_public   on public.site_posts;
+drop policy if exists site_posts_staff     on public.site_posts;
+drop policy if exists site_posts_write     on public.site_posts;
+create policy site_posts_public on public.site_posts for select to anon using (published);
+create policy site_posts_staff  on public.site_posts for select to authenticated using (true);
+create policy site_posts_write  on public.site_posts for all to authenticated
+  using (public.can_edit_site()) with check (public.can_edit_site());
+
+drop policy if exists site_events_public on public.site_events;
+drop policy if exists site_events_staff  on public.site_events;
+drop policy if exists site_events_write  on public.site_events;
+create policy site_events_public on public.site_events for select to anon using (published);
+create policy site_events_staff  on public.site_events for select to authenticated using (true);
+create policy site_events_write  on public.site_events for all to authenticated
+  using (public.can_edit_site()) with check (public.can_edit_site());
+
+drop policy if exists site_studies_public on public.site_studies;
+drop policy if exists site_studies_staff  on public.site_studies;
+drop policy if exists site_studies_write  on public.site_studies;
+create policy site_studies_public on public.site_studies for select to anon using (published);
+create policy site_studies_staff  on public.site_studies for select to authenticated using (true);
+create policy site_studies_write  on public.site_studies for all to authenticated
+  using (public.can_edit_site()) with check (public.can_edit_site());
+
+-- Configurações do site são públicas para leitura (o site as usa direto).
+drop policy if exists site_settings_public on public.site_settings;
+drop policy if exists site_settings_write  on public.site_settings;
+create policy site_settings_public on public.site_settings for select using (true);
+create policy site_settings_write  on public.site_settings for all to authenticated
+  using (public.can_edit_site()) with check (public.can_edit_site());
+
+-- ---------- Storage público do site (capas/imagens) ----------
+-- Bucket PÚBLICO: o site serve as imagens por URL direta, sem signed URL.
+insert into storage.buckets (id, name, public)
+  values ('site', 'site', true)
+  on conflict (id) do nothing;
+
+drop policy if exists site_storage_read   on storage.objects;
+drop policy if exists site_storage_insert on storage.objects;
+drop policy if exists site_storage_update on storage.objects;
+drop policy if exists site_storage_delete on storage.objects;
+create policy site_storage_read on storage.objects
+  for select using (bucket_id = 'site');
+create policy site_storage_insert on storage.objects
+  for insert to authenticated with check (bucket_id = 'site' and public.can_edit_site());
+create policy site_storage_update on storage.objects
+  for update to authenticated using (bucket_id = 'site' and public.can_edit_site());
+create policy site_storage_delete on storage.objects
+  for delete to authenticated using (bucket_id = 'site' and public.can_edit_site());

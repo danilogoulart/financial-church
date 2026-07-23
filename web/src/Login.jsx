@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from './supabaseClient'
+import { signIn, sendPasswordReset } from './auth'
 import { APP_NAME, LOGO_URL } from './brand'
 
 export default function Login() {
@@ -9,30 +9,36 @@ export default function Login() {
   const [msg, setMsg] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  async function signIn(e) {
+  async function doSignIn(e) {
     e.preventDefault()
     setLoading(true)
     setMsg(null)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) setMsg({ type: 'err', text: 'E-mail ou senha inválidos.' })
-    setLoading(false)
+    try {
+      await signIn(email, password)
+    } catch {
+      setMsg({ type: 'err', text: 'E-mail ou senha inválidos.' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function sendReset(e) {
     e.preventDefault()
     setLoading(true)
     setMsg(null)
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin
-    })
-    if (error) setMsg({ type: 'err', text: error.message })
-    else setMsg({ type: 'ok', text: 'Se o e-mail existir, enviamos um link para redefinir a senha. Verifique a caixa de entrada e o spam.' })
-    setLoading(false)
+    try {
+      await sendPasswordReset(email)
+      setMsg({ type: 'ok', text: 'Se o e-mail existir, enviamos um link para redefinir a senha. Verifique a caixa de entrada e o spam.' })
+    } catch (err) {
+      setMsg({ type: 'err', text: err.message })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <div className="center">
-      <form className="card login" onSubmit={mode === 'login' ? signIn : sendReset}>
+      <form className="card login" onSubmit={mode === 'login' ? doSignIn : sendReset}>
         <img
           className="logo-lg"
           src={LOGO_URL}

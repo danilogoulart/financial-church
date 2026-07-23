@@ -24,6 +24,7 @@ export default function Credentials() {
       const { rows, total } = await listMembersPage(page, SIZE, { search, activeOnly: true })
       setRows(rows)
       setTotal(total)
+      
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     }

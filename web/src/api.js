@@ -295,6 +295,125 @@ export async function setSetting(key, value) {
   if (error) throw error
 }
 
+// ---------- Site / CMS ----------
+// Conteúdo público do site (notícias, eventos, estudos). Escrita só admin/editor
+// (garantido pela RLS). Imagens vão no bucket público 'site'.
+
+function slugify(text) {
+  return String(text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // remove acentos
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80)
+}
+
+// Bucket 'site' é público: sobe e devolve o caminho; a URL é pública (sem assinar).
+export async function uploadSiteImage(file, prefix = '') {
+  if (!file) return null
+  const safe = file.name.replace(/[^\w.\-]+/g, '_')
+  const path = `${prefix}${crypto.randomUUID()}-${safe}`
+  const { error } = await supabase.storage.from('site').upload(path, file)
+  if (error) throw error
+  return path
+}
+
+export function siteImageUrl(path) {
+  if (!path) return null
+  const { data } = supabase.storage.from('site').getPublicUrl(path)
+  return data.publicUrl
+}
+
+// Notícias (site_posts)
+export async function listPosts() {
+  const { data, error } = await supabase
+    .from('site_posts')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createPost(post) {
+  const row = { ...post, slug: post.slug?.trim() || slugify(post.title) }
+  if (row.published && !row.published_at) row.published_at = new Date().toISOString()
+  const { data, error } = await supabase.from('site_posts').insert(row).select().single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function updatePost(id, fields) {
+  const patch = { ...fields, updated_at: new Date().toISOString() }
+  if (patch.published && !patch.published_at) patch.published_at = new Date().toISOString()
+  const { data, error } = await supabase.from('site_posts').update(patch).eq('id', id).select().single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function deletePost(id) {
+  const { error } = await supabase.from('site_posts').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Eventos (site_events)
+export async function listEvents() {
+  const { data, error } = await supabase
+    .from('site_events')
+    .select('*')
+    .order('starts_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createEvent(ev) {
+  const row = { ...ev, slug: ev.slug?.trim() || slugify(ev.title) }
+  const { data, error } = await supabase.from('site_events').insert(row).select().single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function updateEvent(id, fields) {
+  const patch = { ...fields, updated_at: new Date().toISOString() }
+  const { data, error } = await supabase.from('site_events').update(patch).eq('id', id).select().single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function deleteEvent(id) {
+  const { error } = await supabase.from('site_events').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Estudos bíblicos (site_studies)
+export async function listStudies() {
+  const { data, error } = await supabase
+    .from('site_studies')
+    .select('*')
+    .order('studied_on', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function createStudy(study) {
+  const { data, error } = await supabase.from('site_studies').insert(study).select().single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function updateStudy(id, fields) {
+  const patch = { ...fields, updated_at: new Date().toISOString() }
+  const { data, error } = await supabase.from('site_studies').update(patch).eq('id', id).select().single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function deleteStudy(id) {
+  const { error } = await supabase.from('site_studies').delete().eq('id', id)
+  if (error) throw error
+}
+
 // ---------- Backup ----------
 
 export async function fullBackup() {
