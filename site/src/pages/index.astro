@@ -1,22 +1,54 @@
 ---
 import Base from '../layouts/Base.astro'
+import Carousel from '../components/Carousel.astro'
 import { getPosts, getEvents } from '../lib/content'
 import { imageUrl } from '../lib/supabase'
 import { fmtDateTime } from '../lib/format'
 
 const posts = await getPosts(3)
 const events = await getEvents({ upcomingOnly: true, limit: 3 })
+
+const ADDR = 'Rua Rio de Janeiro, N°6 - Praia Linda, São Pedro Da Aldeia - Rio de Janeiro - Brasil'
+const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(ADDR)}&output=embed`
+
+// Cultos da semana. Ajuste os rótulos/horários como preferir.
+const cults = [
+  { day: 'Domingo', desc: 'Culto de celebração' },
+  { day: 'Terça', desc: 'Estudo da Palavra' },
+  { day: 'Quinta', desc: 'Culto de oração' },
+  { day: 'Consagração', desc: 'Momento de busca' }
+]
 ---
 
 <Base>
-  <section class="hero">
-    <p class="eyebrow">Bem-vindo</p>
-    <h1>Uma casa de fé, comunhão e palavra</h1>
-    <p>
-      Acompanhe as novidades, participe dos nossos eventos e aprofunde-se nos
-      estudos bíblicos da Igreja AD Alpha.
-    </p>
-    <a class="btn" href="/eventos">Ver próximos eventos</a>
+  <Carousel />
+
+  <section class="about">
+    <div>
+      <h2>Quem somos</h2>
+      <p>
+        Somos uma comunidade cristã que se reúne para adorar a Deus, cultivar
+        relacionamentos e servir a cidade. Aqui há lugar para toda a família —
+        crianças, jovens e adultos.
+      </p>
+      <p>Seja para uma visita ou para fazer parte, você será muito bem recebido.</p>
+      <a class="btn" href="/noticias">Conheça nossas atividades</a>
+    </div>
+    <div class="about-media">
+      <img src="/logo.png" alt="Igreja AD Alpha" />
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head"><h2>Nossos encontros</h2></div>
+    <div class="cults-grid">
+      {cults.map((c) => (
+        <div class="cult">
+          <div class="day">{c.day}</div>
+          <div class="desc">{c.desc}</div>
+        </div>
+      ))}
+    </div>
   </section>
 
   <section>
@@ -41,7 +73,7 @@ const events = await getEvents({ upcomingOnly: true, limit: 3 })
     )}
   </section>
 
-  <section style="margin-top:44px">
+  <section>
     <div class="section-head">
       <h2>Próximos eventos</h2>
       <a class="link-all" href="/eventos">ver todos →</a>
@@ -62,5 +94,24 @@ const events = await getEvents({ upcomingOnly: true, limit: 3 })
         ))}
       </div>
     )}
+  </section>
+
+  <section id="localizacao">
+    <div class="section-head"><h2>Onde estamos</h2></div>
+    <div class="location">
+      <div class="info">
+        <p>{ADDR}</p>
+        <a class="btn" href={`https://www.google.com/maps?q=${encodeURIComponent(ADDR)}`} target="_blank" rel="noopener">
+          Abrir no Google Maps
+        </a>
+      </div>
+      <iframe
+        class="map-embed"
+        src={mapSrc}
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+        title="Mapa da localização"
+      ></iframe>
+    </div>
   </section>
 </Base>

@@ -56,23 +56,53 @@ const year = new Date().getFullYear()
     </main>
 
     <footer class="site-footer">
+      <div class="wrap footer-grid">
+        <div>
+          <strong>{FULL}</strong>
+          <p>{ADDR}</p>
+        </div>
+        <nav class="footer-links">
+          <a href="/noticias">Notícias</a>
+          <a href="/eventos">Eventos</a>
+          <a href="/estudos">Estudos Bíblicos</a>
+          <a href="/admin">Área administrativa</a>
+        </nav>
+      </div>
       <div class="wrap">
-        <strong>{FULL}</strong>
-        <p>{ADDR}</p>
         <p class="muted">© {year} {CHURCH}. Todos os direitos reservados.</p>
       </div>
     </footer>
 
+    <script>
+      // Animação do header no scroll: encolhe/ganha blur ao rolar; esconde
+      // ao descer e reaparece ao subir.
+      const header = document.querySelector('.site-header')
+      if (header) {
+        let last = window.scrollY
+        const onScroll = () => {
+          const y = window.scrollY
+          header.classList.toggle('scrolled', y > 16)
+          if (y > 240 && y > last + 4) header.classList.add('hidden')
+          else if (y < last - 4 || y < 240) header.classList.remove('hidden')
+          last = y
+        }
+        window.addEventListener('scroll', onScroll, { passive: true })
+        onScroll()
+      }
+    </script>
+
     <style is:global>
       :root {
         --bg: #ffffff;
-        --ink: #16130f;
-        --muted: #6f675e;
-        --line: #ece7df;
-        --header: #14110d;
-        --accent: #b0873f;        /* dourado sóbrio */
-        --accent-ink: #8a6a2f;
-        --surface: #faf7f2;        /* creme quente */
+        --ink: #16181b;             /* quase-preto frio */
+        --muted: #6d7279;
+        --line: #e4e6e9;            /* cinza frio */
+        --header: #0e0f11;          /* preto do topo */
+        --accent: #23262b;          /* grafite — botões/links */
+        --accent-ink: #000000;      /* hover */
+        --steel: #8b9199;           /* prata — detalhes/eyebrow */
+        --surface: #f3f4f6;         /* cinza claro frio */
+        --chrome: linear-gradient(180deg, #f4f5f7 0%, #c7ccd2 48%, #eef0f2 52%, #aab0b7 100%);
         --radius: 16px;
         --wrap: 1080px;
         --sans: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -101,38 +131,60 @@ const year = new Date().getFullYear()
         line-height: 1.15;
       }
 
-      /* Header */
+      /* Header — animações no scroll: encolhe + blur, esconde ao descer. */
       .site-header {
         background: var(--header);
         color: #fff;
         position: sticky;
         top: 0;
-        z-index: 10;
-        border-bottom: 1px solid rgba(255,255,255,.06);
+        z-index: 30;
+        border-bottom: 1px solid rgba(255,255,255,.07);
+        will-change: transform;
+        transition: transform .4s cubic-bezier(.4,0,.2,1), background .3s ease,
+                    box-shadow .3s ease, border-color .3s ease;
       }
+      .site-header.scrolled {
+        background: rgba(14,15,17,.72);
+        backdrop-filter: saturate(150%) blur(12px);
+        -webkit-backdrop-filter: saturate(150%) blur(12px);
+        box-shadow: 0 8px 30px rgba(0,0,0,.28);
+        border-color: rgba(255,255,255,.04);
+      }
+      .site-header.hidden { transform: translateY(-100%); }
       .header-inner {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 16px;
-        min-height: 68px;
+        min-height: 84px;
         flex-wrap: wrap;
+        transition: min-height .3s ease;
       }
-      .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: #fff; }
-      .brand .logo { height: 36px; width: auto; }
-      .brand-name { font-family: var(--serif); font-weight: 600; font-size: 20px; letter-spacing: .2px; }
+      .site-header.scrolled .header-inner { min-height: 60px; }
+      .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: #fff; }
+      .brand .logo { height: 42px; width: auto; transition: height .3s ease; }
+      .site-header.scrolled .brand .logo { height: 32px; }
+      .brand-name {
+        font-family: var(--sans);
+        font-weight: 700;
+        font-size: 17px;
+        text-transform: uppercase;
+        letter-spacing: .22em;
+        color: #f2f3f5;
+      }
       .nav { display: flex; gap: 4px; flex-wrap: wrap; }
       .nav a {
         text-decoration: none;
-        color: #cfc7bb;
-        padding: 8px 13px;
+        color: #c8ccd1;
+        padding: 8px 14px;
         border-radius: 999px;
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 500;
+        letter-spacing: .02em;
         transition: background .15s ease, color .15s ease;
       }
-      .nav a:hover { color: #fff; background: rgba(255,255,255,.09); }
-      .nav a.active { color: var(--header); background: #fff; }
+      .nav a:hover { color: #fff; background: rgba(255,255,255,.1); }
+      .nav a.active { background: var(--chrome); color: #1a1c1f; font-weight: 600; }
 
       /* Sections */
       main { padding: 40px 22px 64px; }
@@ -146,20 +198,30 @@ const year = new Date().getFullYear()
       h1 { font-size: clamp(30px, 5vw, 40px); margin: 0 0 10px; }
       h2 { font-size: clamp(23px, 3.5vw, 28px); margin: 0; }
       .lead { color: var(--muted); font-size: 18px; margin: 0; }
-      .link-all { color: var(--accent-ink); text-decoration: none; font-weight: 600; font-size: 15px; white-space: nowrap; }
-      .link-all:hover { text-decoration: underline; }
+      .link-all { color: var(--ink); text-decoration: none; font-weight: 600; font-size: 15px; white-space: nowrap; border-bottom: 2px solid var(--steel); padding-bottom: 2px; }
+      .link-all:hover { border-color: var(--ink); }
 
-      /* Hero */
+      /* Hero — o url(/hero.jpg) é opcional: se o arquivo não existir, ficam
+         só os gradientes (banner escuro elegante). Para pôr uma foto, salve
+         em site/public/hero.jpg. */
       .hero {
         position: relative;
         overflow: hidden;
-        background:
-          radial-gradient(1200px 400px at 80% -10%, rgba(176,135,63,.28), transparent 60%),
-          linear-gradient(150deg, #1b1712 0%, #2a241c 55%, #17140f 100%);
+        background-color: #1b1712;
+        background-image:
+          radial-gradient(1200px 400px at 80% -10%, rgba(176,135,63,.30), transparent 60%),
+          linear-gradient(150deg, rgba(20,17,13,.86) 0%, rgba(28,24,18,.78) 55%, rgba(20,16,11,.9) 100%),
+          url('/hero.jpg');
+        background-size: cover;
+        background-position: center;
         color: #fff;
         border-radius: 24px;
-        padding: clamp(40px, 7vw, 72px) clamp(28px, 5vw, 56px);
+        padding: clamp(56px, 9vw, 104px) clamp(28px, 5vw, 56px);
       }
+      .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+      .hero-actions .btn { margin-top: 0; }
+      .btn.on-dark { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.28); }
+      .btn.on-dark:hover { background: rgba(255,255,255,.2); }
       .hero .eyebrow {
         font-family: var(--sans);
         text-transform: uppercase;
@@ -183,9 +245,9 @@ const year = new Date().getFullYear()
         font-weight: 600;
         font-size: 16px;
         margin-top: 22px;
-        transition: transform .12s ease, background .15s ease;
+        transition: transform .12s ease, background .15s ease, box-shadow .15s ease;
       }
-      .btn:hover { background: var(--accent-ink); transform: translateY(-1px); }
+      .btn:hover { background: var(--accent-ink); transform: translateY(-1px); box-shadow: 0 8px 22px rgba(0,0,0,.18); }
       .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); margin-top: 0; }
       .btn.ghost:hover { background: var(--surface); }
 
@@ -208,7 +270,7 @@ const year = new Date().getFullYear()
       .card .meta { color: var(--muted); font-size: 14px; }
       .card p { margin: 0; color: #4a443c; font-size: 15px; }
 
-      .tag { display: inline-block; font-size: 12px; color: var(--accent-ink); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+      .tag { display: inline-block; font-size: 12px; color: var(--steel); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
 
       .empty { color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); padding: 32px; text-align: center; }
 
@@ -230,7 +292,57 @@ const year = new Date().getFullYear()
       }
       .site-footer strong { font-family: var(--serif); font-size: 16px; }
       .site-footer p { margin: 6px 0; color: #4a443c; }
-      .site-footer .muted { color: var(--muted); }
+      .site-footer .muted { color: var(--muted); margin-top: 18px; }
+      .footer-grid { display: flex; justify-content: space-between; gap: 28px; flex-wrap: wrap; }
+      .footer-links { display: flex; flex-direction: column; gap: 8px; }
+      .footer-links a { color: #43474d; text-decoration: none; font-weight: 500; }
+      .footer-links a:hover { color: var(--ink); text-decoration: underline; }
+
+      /* Seção "sobre" */
+      .about { display: grid; grid-template-columns: 1.3fr 1fr; gap: 40px; align-items: center; }
+      .about h2 { margin-bottom: 12px; }
+      .about p { font-size: 17px; color: #3d382f; margin: 0 0 12px; }
+      .about .about-media {
+        aspect-ratio: 4 / 3;
+        border-radius: 18px;
+        background:
+          radial-gradient(600px 300px at 30% 20%, rgba(190,196,204,.18), transparent 60%),
+          linear-gradient(160deg, #1a1c1f, #303338);
+        display: flex; align-items: center; justify-content: center;
+      }
+      .about .about-media img { width: 42%; opacity: .95; }
+
+      /* Faixa de cultos */
+      .cults-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
+      .cult {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 22px 20px;
+        background: var(--surface);
+        text-align: center;
+      }
+      .cult .day { font-family: var(--serif); font-size: 21px; font-weight: 600; }
+      .cult .desc { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+      /* Localização + mapa */
+      .location { display: grid; grid-template-columns: 1fr 1.1fr; gap: 32px; align-items: stretch; }
+      .location .info { display: flex; flex-direction: column; justify-content: center; }
+      .location .info p { color: #3d382f; font-size: 17px; }
+      .map-embed {
+        border: 0;
+        width: 100%;
+        min-height: 320px;
+        height: 100%;
+        border-radius: 18px;
+        display: block;
+        filter: grayscale(.15);
+      }
+
+      @media (max-width: 780px) {
+        .about, .location { grid-template-columns: 1fr; }
+        .about .about-media { order: -1; }
+        .map-embed { min-height: 260px; }
+      }
     </style>
   </body>
 </html>
