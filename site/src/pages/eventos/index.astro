@@ -1,10 +1,10 @@
 ---
 import Base from '../../layouts/Base.astro'
-import { getEvents } from '../../lib/content'
+import { getUpcomingEvents } from '../../lib/content'
 import { imageUrl } from '../../lib/supabase'
-import { fmtDateTime } from '../../lib/format'
+import { scheduleLabel } from '../../lib/events'
 
-const events = await getEvents({ upcomingOnly: true })
+const events = await getUpcomingEvents()
 ---
 
 <Base title="Eventos" description="Agenda de cultos, congressos e encontros da Igreja AD Alpha.">
@@ -16,15 +16,15 @@ const events = await getEvents({ upcomingOnly: true })
   ) : (
     <div class="grid">
       {events.map((e) => (
-        <div class="card">
+        <a class="card" href={`/eventos/${e.slug}`}>
           {e.cover_path && <img class="thumb" src={imageUrl(e.cover_path)} alt={e.title} />}
           <div class="body">
             <span class="tag">Evento</span>
             <h3>{e.title}</h3>
-            <span class="meta">{fmtDateTime(e.starts_at)}{e.location ? ` · ${e.location}` : ''}</span>
+            <span class="meta">{scheduleLabel(e)}{e.location ? ` · ${e.location}` : ''}</span>
             {e.description && <p>{e.description}</p>}
           </div>
-        </div>
+        </a>
       ))}
     </div>
   )}

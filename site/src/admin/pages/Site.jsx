@@ -280,25 +280,42 @@ export function SitePosts() {
 
 // ---------- Eventos ----------
 
+const REC_LABEL = {
+  none: 'Data única',
+  daily: 'Vários dias seguidos',
+  weekly: 'Semanal',
+  monthly: 'Mensal'
+}
+const startLabel = (rec) =>
+  rec === 'daily' ? 'Primeiro dia e horário'
+  : rec === 'weekly' ? 'Primeira ocorrência (define o dia da semana e o horário)'
+  : rec === 'monthly' ? 'Primeira ocorrência (define o dia do mês e o horário)'
+  : 'Data e horário'
+
 export function SiteEvents() {
   return (
     <CrudPage
       icon="📅"
       title="Eventos"
-      head={['Evento', 'Quando', 'Local']}
+      head={['Evento', 'Quando', 'Tipo']}
       api={{ list: listEvents, create: createEvent, update: updateEvent, remove: deleteEvent }}
-      emptyForm={() => ({ title: '', description: '', location: '', starts_at: '', ends_at: '', cover_path: null, published: false, _coverFile: null, _coverPreview: null })}
+      emptyForm={() => ({ title: '', description: '', location: '', recurrence: 'none', monthly_by: 'day', starts_at: '', ends_at: '', repeat_until: '', cover_path: null, published: false, _coverFile: null, _coverPreview: null })}
       toForm={(r) => ({
         title: r.title, description: r.description || '', location: r.location || '',
+        recurrence: r.recurrence || 'none', monthly_by: r.monthly_by || 'day',
         starts_at: isoToLocalInput(r.starts_at), ends_at: isoToLocalInput(r.ends_at),
+        repeat_until: r.repeat_until || '',
         cover_path: r.cover_path, published: r.published, _coverFile: null, _coverPreview: null
       })}
       fromForm={async (f) => ({
         title: f.title.trim(),
         description: f.description || '',
         location: f.location || '',
+        recurrence: f.recurrence || 'none',
+        monthly_by: f.recurrence === 'monthly' ? (f.monthly_by || 'day') : 'day',
         starts_at: localInputToIso(f.starts_at),
-        ends_at: localInputToIso(f.ends_at),
+        ends_at: f.recurrence === 'none' ? localInputToIso(f.ends_at) : null,
+        repeat_until: f.recurrence !== 'none' ? (f.repeat_until || null) : null,
         cover_path: await resolveCover(f, 'events/'),
         published: !!f.published
       })}
@@ -306,16 +323,46 @@ export function SiteEvents() {
         <>
           <label>Título</label>
           <input value={f.title} onChange={(e) => set('title', e.target.value)} required />
+
+          <label>Tipo de evento</label>
+          <select value={f.recurrence} onChange={(e) => set('recurrence', e.target.value)}>
+            <option value="none">Data única</option>
+            <option value="daily">Vários dias seguidos (ex.: congresso)</option>
+            <option value="weekly">Semanal (ex.: campanha)</option>
+            <option value="monthly">Mensal (ex.: Santa Ceia)</option>
+          </select>
+
+          {f.recurrence === 'monthly' && (
+            <>
+              <label>Repetição mensal</label>
+              <select value={f.monthly_by} onChange={(e) => set('monthly_by', e.target.value)}>
+                <option value="weekday">No mesmo dia da semana (ex.: 1º domingo)</option>
+                <option value="day">No mesmo dia do mês (ex.: dia 5)</option>
+              </select>
+              <small style={{ display: 'block', marginTop: -8, marginBottom: 12 }}>
+                A posição (1º, 2º…) e o dia da semana vêm da data da 1ª ocorrência abaixo.
+              </small>
+            </>
+          )}
+
           <div className="row">
             <div>
-              <label>Início</label>
+              <label>{startLabel(f.recurrence)}</label>
               <input type="datetime-local" value={f.starts_at} onChange={(e) => set('starts_at', e.target.value)} required />
             </div>
-            <div>
-              <label>Fim <small>(opcional)</small></label>
-              <input type="datetime-local" value={f.ends_at} onChange={(e) => set('ends_at', e.target.value)} />
-            </div>
+            {f.recurrence === 'none' ? (
+              <div>
+                <label>Fim <small>(opcional)</small></label>
+                <input type="datetime-local" value={f.ends_at} onChange={(e) => set('ends_at', e.target.value)} />
+              </div>
+            ) : (
+              <div>
+                <label>{f.recurrence === 'daily' ? 'Último dia' : 'Repetir até'}</label>
+                <input type="date" value={f.repeat_until} onChange={(e) => set('repeat_until', e.target.value)} />
+              </div>
+            )}
           </div>
+
           <label>Local</label>
           <input value={f.location} onChange={(e) => set('location', e.target.value)} placeholder="Ex.: Templo sede" />
           <label>Descrição</label>
@@ -327,7 +374,7 @@ export function SiteEvents() {
         <>
           <td>{r.title}</td>
           <td>{fmtDateTime(r.starts_at)}</td>
-          <td>{r.location || '—'}</td>
+          <td>{REC_LABEL[r.recurrence] || 'Data única'}</td>
         </>
       )}
     />

@@ -1,18 +1,16 @@
 ---
 import Base from '../layouts/Base.astro'
 import Carousel from '../components/Carousel.astro'
-import { getPosts, getEvents, getBanners } from '../lib/content'
+import { getPosts, getUpcomingEvents } from '../lib/content'
 import { imageUrl } from '../lib/supabase'
-import { fmtDateTime } from '../lib/format'
+import { scheduleLabel } from '../lib/events'
 
 const posts = await getPosts(3)
-const events = await getEvents({ upcomingOnly: true, limit: 3 })
-const banners = await getBanners()
+const events = await getUpcomingEvents(3)
 
 const ADDR = 'Rua Rio de Janeiro, N°6 - Praia Linda, São Pedro Da Aldeia - Rio de Janeiro - Brasil'
 const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(ADDR)}&output=embed`
 
-// Cultos da semana. Ajuste os rótulos/horários como preferir.
 const cults = [
   { day: 'Domingo', desc: 'Culto de celebração' },
   { day: 'Terça', desc: 'Estudo da Palavra' },
@@ -23,6 +21,29 @@ const cults = [
 
 <Base>
   <Carousel />
+
+  <section>
+    <div class="section-head">
+      <h2>Próximos eventos</h2>
+      <a class="link-all" href="/eventos">ver todos →</a>
+    </div>
+    {events.length === 0 ? (
+      <div class="empty">Nenhum evento agendado no momento.</div>
+    ) : (
+      <div class="grid">
+        {events.map((e) => (
+          <a class="card" href={`/eventos/${e.slug}`}>
+            {e.cover_path && <img class="thumb" src={imageUrl(e.cover_path)} alt={e.title} />}
+            <div class="body">
+              <span class="tag">Evento</span>
+              <h3>{e.title}</h3>
+              <span class="meta">{scheduleLabel(e)}{e.location ? ` · ${e.location}` : ''}</span>
+            </div>
+          </a>
+        ))}
+      </div>
+    )}
+  </section>
 
   <section class="about">
     <div>
@@ -39,25 +60,6 @@ const cults = [
       <img src="/logo.png" alt="Igreja AD Alpha" />
     </div>
   </section>
-
-  {banners.length > 0 && (
-    <section>
-      <div class="section-head"><h2>Cultos</h2></div>
-      <div class="banner-grid">
-        {banners.map((b) => (
-          b.link_url ? (
-            <a class="banner" href={b.link_url}>
-              <img src={imageUrl(b.image_path)} alt={b.title || 'Banner de culto'} loading="lazy" />
-            </a>
-          ) : (
-            <div class="banner">
-              <img src={imageUrl(b.image_path)} alt={b.title || 'Banner de culto'} loading="lazy" />
-            </div>
-          )
-        ))}
-      </div>
-    </section>
-  )}
 
   <section>
     <div class="section-head"><h2>Nossos encontros</h2></div>
@@ -88,29 +90,6 @@ const cults = [
               {p.excerpt && <p>{p.excerpt}</p>}
             </div>
           </a>
-        ))}
-      </div>
-    )}
-  </section>
-
-  <section>
-    <div class="section-head">
-      <h2>Próximos eventos</h2>
-      <a class="link-all" href="/eventos">ver todos →</a>
-    </div>
-    {events.length === 0 ? (
-      <div class="empty">Nenhum evento agendado no momento.</div>
-    ) : (
-      <div class="grid">
-        {events.map((e) => (
-          <div class="card">
-            {e.cover_path && <img class="thumb" src={imageUrl(e.cover_path)} alt={e.title} />}
-            <div class="body">
-              <span class="tag">Evento</span>
-              <h3>{e.title}</h3>
-              <span class="meta">{fmtDateTime(e.starts_at)}{e.location ? ` · ${e.location}` : ''}</span>
-            </div>
-          </div>
         ))}
       </div>
     )}

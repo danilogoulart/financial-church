@@ -422,19 +422,37 @@ create index if not exists site_posts_published_idx
   on public.site_posts (published, published_at desc);
 
 -- Eventos / agenda (cultos especiais, congressos, etc.).
+-- recurrence: 'none' (data única) | 'daily' (dias seguidos, ex. congresso)
+--   | 'weekly' (semanal, ex. campanha) | 'monthly' (mensal, ex. santa ceia).
+-- starts_at define a 1ª ocorrência (data + horário; para semanal define o dia
+--   da semana; para mensal define o dia do mês). repeat_until = último dia.
 create table if not exists public.site_events (
-  id          uuid primary key default gen_random_uuid(),
-  title       text not null,
-  slug        text unique,
-  description text default '',
-  location    text default '',
-  starts_at   timestamptz not null,
-  ends_at     timestamptz,
-  cover_path  text,
-  published   boolean not null default false,
-  created_at  timestamptz default now(),
-  updated_at  timestamptz default now()
+  id           uuid primary key default gen_random_uuid(),
+  title        text not null,
+  slug         text unique,
+  description  text default '',
+  location     text default '',
+  starts_at    timestamptz not null,
+  ends_at      timestamptz,
+  recurrence   text not null default 'none',
+  repeat_until date,
+  cover_path   text,
+  published    boolean not null default false,
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now()
 );
+-- Colunas de recorrência (idempotente para bancos já criados).
+alter table public.site_events add column if not exists recurrence text not null default 'none';
+alter table public.site_events add column if not exists repeat_until date;
+alter table public.site_events drop constraint if exists site_events_recurrence_check;
+alter table public.site_events add constraint site_events_recurrence_check
+  check (recurrence in ('none', 'daily', 'weekly', 'monthly'));
+-- Recorrência mensal: 'day' = mesmo dia do mês; 'weekday' = mesmo dia da
+-- semana (ex.: 1º domingo — usado na Santa Ceia).
+alter table public.site_events add column if not exists monthly_by text not null default 'day';
+alter table public.site_events drop constraint if exists site_events_monthly_by_check;
+alter table public.site_events add constraint site_events_monthly_by_check
+  check (monthly_by in ('day', 'weekday'));
 create index if not exists site_events_when_idx
   on public.site_events (published, starts_at);
 

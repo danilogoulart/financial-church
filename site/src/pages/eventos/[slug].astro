@@ -1,0 +1,63 @@
+---
+import Base from '../../layouts/Base.astro'
+import { getEventBySlug } from '../../lib/content'
+import { imageUrl } from '../../lib/supabase'
+import { scheduleLabel, upcomingOccurrences, fmtOccurrence } from '../../lib/events'
+
+const { slug } = Astro.params
+const event = await getEventBySlug(slug)
+
+if (!event) {
+  Astro.response.status = 404
+}
+
+const dates = event ? upcomingOccurrences(event).slice(0, 8) : []
+const isRecurring = event && event.recurrence && event.recurrence !== 'none'
+---
+
+{event ? (
+  <Base
+    title={event.title}
+    description={event.description?.slice(0, 155)}
+    image={event.cover_path ? imageUrl(event.cover_path) : undefined}
+  >
+    <article class="article">
+      <a class="back" href="/eventos">← Eventos</a>
+      <h1>{event.title}</h1>
+      <p class="lead" style="margin:8px 0 0">{scheduleLabel(event)}{event.location ? ` · ${event.location}` : ''}</p>
+      {event.cover_path && <img class="cover" src={imageUrl(event.cover_path)} alt={event.title} />}
+      {event.description && <div class="content">{event.description}</div>}
+
+      {isRecurring && dates.length > 1 && (
+        <div class="dates">
+          <h2>Próximas datas</h2>
+          <ul>
+            {dates.map((d) => <li>{fmtOccurrence(d)}</li>)}
+          </ul>
+        </div>
+      )}
+    </article>
+  </Base>
+) : (
+  <Base title="Evento não encontrado">
+    <article class="article">
+      <h1>Evento não encontrado</h1>
+      <p class="lead">Este evento não existe ou não está publicado.</p>
+      <a class="btn" href="/eventos">Ver eventos</a>
+    </article>
+  </Base>
+)}
+
+<style>
+  .dates { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 20px; }
+  .dates h2 { font-size: 20px; margin-bottom: 12px; }
+  .dates ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+  .dates li {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 16px;
+    text-transform: capitalize;
+    font-size: 15px;
+  }
+</style>
