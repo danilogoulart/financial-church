@@ -33,11 +33,12 @@ const cults = [
       <div class="grid">
         {events.map((e) => (
           <a class="card" href={`/eventos/${e.slug}`}>
-            {e.cover_path && <img class="thumb" src={imageUrl(e.cover_path)} alt={e.title} />}
+            {e.cover_path && <img class="thumb-full" src={imageUrl(e.cover_path)} alt={e.title} />}
             <div class="body">
               <span class="tag">Evento</span>
               <h3>{e.title}</h3>
-              <span class="meta">{scheduleLabel(e)}{e.location ? ` · ${e.location}` : ''}</span>
+              <span class="meta">🗓️ {scheduleLabel(e)}</span>
+              {e.location && <span class="meta">📍 {e.location}</span>}
             </div>
           </a>
         ))}

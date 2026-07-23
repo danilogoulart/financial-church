@@ -368,6 +368,9 @@ const year = new Date().getFullYear()
 
       .tag { display: inline-block; font-size: 12px; color: var(--steel); font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
 
+      /* Imagem de card mostrada por completo (flyers verticais de evento). */
+      .card .thumb-full { width: 100%; aspect-ratio: 16 / 22; object-fit: cover; background: var(--surface); }
+
       /* Banners quadrados (1:1, estilo Instagram) */
       .banner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
       .banner {

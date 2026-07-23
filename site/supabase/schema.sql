@@ -600,3 +600,18 @@ values (
   E'A Igreja AD Alpha é uma comunidade cristã dedicada à adoração, à comunhão e ao ensino da Palavra.\n\nEdite este texto no painel administrativo, em Site → Páginas.',
   true, true, 1
 ) on conflict (slug) do nothing;
+
+-- ================= Destaques / carrossel =================
+-- Notícia marcada como destaque entra no carrossel automaticamente.
+alter table public.site_posts add column if not exists featured boolean not null default false;
+-- Evento ganha resumo (aparece na listagem); 'description' = descrição completa.
+alter table public.site_events add column if not exists excerpt text default '';
+-- Evento também pode ser destaque no carrossel.
+alter table public.site_events add column if not exists featured boolean not null default false;
+-- Banner do carrossel: subtítulo opcional.
+alter table public.site_banners add column if not exists subtitle text default '';
+
+-- Recorrência quinzenal (a cada 2 semanas).
+alter table public.site_events drop constraint if exists site_events_recurrence_check;
+alter table public.site_events add constraint site_events_recurrence_check
+  check (recurrence in ('none', 'daily', 'weekly', 'biweekly', 'monthly'));

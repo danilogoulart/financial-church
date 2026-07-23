@@ -1,64 +1,80 @@
 ---
-// Carrossel do topo da home. Cada slide aceita uma imagem opcional em
-// site/public (slide1.jpg, slide2.jpg, slide3.jpg); sem o arquivo, fica um
-// fundo escuro elegante com leve brilho prateado.
-const slides = [
-  {
-    img: '/slide1.jpg',
-    eyebrow: 'Bem-vindo a A.D Alpha',
-    title: 'Uma casa de fé, comunhão e palavra',
-    text: 'Faço-nos uma visita, Deus tem uma palavra pra você!',
-    cta: 'Onde estamos',
-    href: '#localizacao'
-  },
-  {
-    img: '/slide2.jpg',
-    eyebrow: 'Venha participar',
-    title: 'Cultos durante toda a semana',
-    text: 'Domingos, terças, quintas e sábados — há sempre um encontro esperando por você.',
-    cta: 'Ver programação',
-    href: '/eventos'
-  },
-  {
-    img: '/slide3.jpg',
-    eyebrow: 'Cresça na Palavra',
-    title: 'Estudos bíblicos para todas as idades',
-    text: 'Aprofunde sua caminhada com ensino sólido e acessível.',
-    cta: 'Ver estudos',
-    href: '/estudos'
-  }
-]
+// Carrossel do topo, gerado automaticamente:
+//  - banners manuais (Site → Carrossel)
+//  - notícias marcadas como destaque
+//  - 1 slide "Programação" com os 6 próximos eventos
+// Sem conteúdo, mostra um slide de boas-vindas.
+import { getCarousel } from '../lib/content'
+import { imageUrl } from '../lib/supabase'
+
+let slides = await getCarousel()
+if (!slides.length) slides = [{ type: 'welcome' }]
 ---
 
 <section class="carousel" aria-label="Destaques" aria-roledescription="carrossel">
   <div class="slides">
-    {slides.map((s, i) => (
-      <article
-        class:list={['slide', { active: i === 0 }]}
-        style={`background-image: linear-gradient(to right, rgba(10,11,13,.82), rgba(10,11,13,.35)), var(--slide-img, none); --slide-img: url('${s.img}')`}
-      >
-        <div class="slide-inner wrap">
-          <p class="c-eyebrow">{s.eyebrow}</p>
-          <h1 class="c-title">{s.title}</h1>
-          <p class="c-text">{s.text}</p>
-          <a class="btn" href={s.href}>{s.cta}</a>
-        </div>
-      </article>
-    ))}
+    {slides.map((s, i) => {
+      const active = i === 0 ? ' active' : ''
+
+      if (s.type === 'welcome') {
+        return (
+          <div class={`slide slide-plain${active}`}>
+            <div class="slide-inner wrap">
+              <p class="c-eyebrow">Bem-vindo</p>
+              <h1 class="c-title">Uma casa de fé, comunhão e palavra</h1>
+              <p class="c-text">Acompanhe as novidades, eventos e estudos da Igreja AD Alpha.</p>
+              <a class="btn" href="/eventos">Ver programação</a>
+            </div>
+          </div>
+        )
+      }
+
+      // banner | news | event — imagem mostrada por completo (contain) sobre
+      // um fundo desfocado da própria imagem (preenche as laterais).
+      const img = imageUrl(s.image)
+      const eyebrow = s.type === 'news' ? 'Notícia' : s.type === 'event' ? 'Evento' : ''
+      const cta = s.type === 'news' ? 'Ler notícia' : s.type === 'event' ? 'Ver evento' : 'Saiba mais'
+      const hasText = eyebrow || s.title || s.subtitle
+      const body = (
+        <>
+          <div class="slide-bg" style={`background-image: url('${img}')`}></div>
+          <img class="slide-img" src={img} alt={s.title || 'Banner'} />
+          {hasText && (
+            <>
+              <div class="slide-scrim"></div>
+              <div class="slide-inner wrap">
+                {eyebrow && <p class="c-eyebrow">{eyebrow}</p>}
+                {s.title && <h2 class="c-title">{s.title}</h2>}
+                {(s.subtitle || s.excerpt) && <p class="c-text">{s.subtitle || s.excerpt}</p>}
+                {s.href && <span class="btn">{cta}</span>}
+              </div>
+            </>
+          )}
+        </>
+      )
+
+      return s.href ? (
+        <a class={`slide slide-photo${active}`} href={s.href}>{body}</a>
+      ) : (
+        <div class={`slide slide-photo${active}`}>{body}</div>
+      )
+    })}
   </div>
 
-  <button class="c-arrow prev" aria-label="Slide anterior">‹</button>
-  <button class="c-arrow next" aria-label="Próximo slide">›</button>
-
-  <div class="c-dots">
-    {slides.map((_, i) => (
-      <button class:list={['c-dot', { active: i === 0 }]} data-i={i} aria-label={`Ir para o slide ${i + 1}`}></button>
-    ))}
-  </div>
+  {slides.length > 1 && (
+    <>
+      <button class="c-arrow prev" aria-label="Slide anterior">‹</button>
+      <button class="c-arrow next" aria-label="Próximo slide">›</button>
+      <div class="c-dots">
+        {slides.map((_, i) => (
+          <button class:list={['c-dot', { active: i === 0 }]} data-i={i} aria-label={`Ir para o slide ${i + 1}`}></button>
+        ))}
+      </div>
+    </>
+  )}
 </section>
 
 <style>
-  /* full-bleed: quebra o padding do <main class="wrap"> */
   .carousel {
     position: relative;
     width: 100vw;
@@ -68,7 +84,7 @@ const slides = [
     overflow: hidden;
     background: #0e0f11;
   }
-  .slides { position: relative; height: clamp(440px, 72vh, 660px); }
+  .slides { position: relative; height: clamp(460px, 74vh, 640px); }
   .slide {
     position: absolute;
     inset: 0;
@@ -77,6 +93,7 @@ const slides = [
     background-color: #14161a;
     display: flex;
     align-items: center;
+    text-decoration: none;
     opacity: 0;
     transform: scale(1.04);
     transition: opacity 1s ease, transform 6s ease;
@@ -84,7 +101,46 @@ const slides = [
   }
   .slide.active { opacity: 1; transform: scale(1); pointer-events: auto; }
 
-  .slide-inner { color: #fff; max-width: var(--wrap); }
+  /* Slides com imagem: imagem por completo (contain) + fundo desfocado */
+  .slide-photo { align-items: flex-end; }
+  .slide-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(24px) brightness(0.45);
+    transform: scale(1.2);
+    z-index: 0;
+  }
+  .slide-img {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    z-index: 1;
+  }
+  .slide-scrim {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 60%;
+    background: linear-gradient(to top, rgba(10,11,13,.92), rgba(10,11,13,0));
+    z-index: 2;
+  }
+  .slide-photo .slide-inner { position: relative; z-index: 3; padding-bottom: 40px; }
+
+  /* Fundo elegante para slides sem imagem (eventos / boas-vindas) */
+  .slide-plain {
+    background-image:
+      radial-gradient(1000px 380px at 82% -10%, rgba(190,196,204,.16), transparent 60%),
+      linear-gradient(150deg, #1a1c1f 0%, #2b2f34 55%, #17191c 100%);
+  }
+
+  .slide-inner { color: #fff; max-width: var(--wrap); width: 100%; }
   .c-eyebrow {
     text-transform: uppercase;
     letter-spacing: .22em;
@@ -92,41 +148,32 @@ const slides = [
     font-weight: 600;
     color: #cfd3d8;
     margin: 0 0 14px;
-    opacity: 0;
-    transform: translateY(14px);
   }
   .c-title {
     font-family: var(--serif);
-    font-size: clamp(34px, 6vw, 60px);
+    font-size: clamp(32px, 5.5vw, 56px);
     line-height: 1.08;
     color: #fff;
     max-width: 16ch;
     margin: 0;
-    opacity: 0;
-    transform: translateY(18px);
   }
   .c-text {
     font-size: clamp(16px, 2.2vw, 20px);
     color: #dfe2e6;
-    max-width: 540px;
+    max-width: 560px;
     margin: 16px 0 0;
-    opacity: 0;
-    transform: translateY(18px);
   }
-  .slide .btn { opacity: 0; transform: translateY(18px); }
 
-  /* entrada escalonada do conteúdo quando o slide fica ativo */
-  .slide.active .c-eyebrow,
-  .slide.active .c-title,
-  .slide.active .c-text,
-  .slide.active .btn {
+  /* entrada suave do conteúdo ao ativar */
+  .slide .slide-inner > * { opacity: 0; transform: translateY(16px); }
+  .slide.active .slide-inner > * {
     opacity: 1;
     transform: translateY(0);
     transition: opacity .7s ease, transform .7s ease;
   }
-  .slide.active .c-title { transition-delay: .12s; }
-  .slide.active .c-text { transition-delay: .22s; }
-  .slide.active .btn { transition-delay: .32s; }
+  .slide.active .c-title { transition-delay: .1s; }
+  .slide.active .c-text { transition-delay: .2s; }
+  .slide.active .btn { transition-delay: .3s; }
 
   .c-arrow {
     position: absolute;
@@ -154,7 +201,7 @@ const slides = [
 
   .c-dots {
     position: absolute;
-    bottom: 22px;
+    bottom: 18px;
     left: 0;
     right: 0;
     display: flex;
@@ -174,7 +221,7 @@ const slides = [
   }
   .c-dot.active { background: #fff; width: 26px; border-radius: 6px; }
 
-  @media (max-width: 560px) {
+  @media (max-width: 640px) {
     .c-arrow { display: none; }
   }
 </style>
@@ -184,25 +231,28 @@ const slides = [
   if (root) {
     const slides = Array.from(root.querySelectorAll('.slide'))
     const dots = Array.from(root.querySelectorAll('.c-dot'))
-    let i = 0
-    let timer
 
-    const show = (n) => {
-      i = (n + slides.length) % slides.length
-      slides.forEach((s, k) => s.classList.toggle('active', k === i))
-      dots.forEach((d, k) => d.classList.toggle('active', k === i))
+    if (slides.length > 1) {
+      let i = 0
+      let timer
+
+      const show = (n) => {
+        i = (n + slides.length) % slides.length
+        slides.forEach((s, k) => s.classList.toggle('active', k === i))
+        dots.forEach((d, k) => d.classList.toggle('active', k === i))
+      }
+      const next = () => show(i + 1)
+      const prev = () => show(i - 1)
+      const start = () => { timer = window.setInterval(next, 6500) }
+      const reset = () => { window.clearInterval(timer); start() }
+
+      root.querySelector('.next')?.addEventListener('click', () => { next(); reset() })
+      root.querySelector('.prev')?.addEventListener('click', () => { prev(); reset() })
+      dots.forEach((d) => d.addEventListener('click', () => { show(Number(d.dataset.i)); reset() }))
+      root.addEventListener('mouseenter', () => window.clearInterval(timer))
+      root.addEventListener('mouseleave', start)
+
+      start()
     }
-    const next = () => show(i + 1)
-    const prev = () => show(i - 1)
-    const start = () => { timer = window.setInterval(next, 6500) }
-    const reset = () => { window.clearInterval(timer); start() }
-
-    root.querySelector('.next')?.addEventListener('click', () => { next(); reset() })
-    root.querySelector('.prev')?.addEventListener('click', () => { prev(); reset() })
-    dots.forEach((d) => d.addEventListener('click', () => { show(Number(d.dataset.i)); reset() }))
-    root.addEventListener('mouseenter', () => window.clearInterval(timer))
-    root.addEventListener('mouseleave', start)
-
-    start()
   }
 </script>

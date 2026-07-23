@@ -24,8 +24,10 @@ const isRecurring = event && event.recurrence && event.recurrence !== 'none'
     <article class="article">
       <a class="back" href="/eventos">← Eventos</a>
       <h1>{event.title}</h1>
-      <p class="lead" style="margin:8px 0 0">{scheduleLabel(event)}{event.location ? ` · ${event.location}` : ''}</p>
+      <p class="lead" style="margin:10px 0 0">🗓️ {scheduleLabel(event)}</p>
+      {event.location && <p class="meta" style="margin:4px 0 0; color: var(--muted)">📍 {event.location}</p>}
       {event.cover_path && <img class="cover" src={imageUrl(event.cover_path)} alt={event.title} />}
+      {event.excerpt && <p class="lead" style="margin:16px 0 0">{event.excerpt}</p>}
       {event.description && <div class="content">{event.description}</div>}
 
       {isRecurring && dates.length > 1 && (

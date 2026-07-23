@@ -244,15 +244,16 @@ export function SitePosts() {
       title="Notícias"
       head={['Título']}
       api={{ list: listPosts, create: createPost, update: updatePost, remove: deletePost }}
-      emptyForm={() => ({ title: '', excerpt: '', body: '', cover_path: null, published: false, _coverFile: null, _coverPreview: null })}
+      emptyForm={() => ({ title: '', excerpt: '', body: '', featured: false, cover_path: null, published: false, _coverFile: null, _coverPreview: null })}
       toForm={(r) => ({
-        title: r.title, excerpt: r.excerpt || '', body: r.body || '',
+        title: r.title, excerpt: r.excerpt || '', body: r.body || '', featured: !!r.featured,
         cover_path: r.cover_path, published: r.published, _coverFile: null, _coverPreview: null
       })}
       fromForm={async (f) => ({
         title: f.title.trim(),
         excerpt: f.excerpt || '',
         body: f.body || '',
+        featured: !!f.featured,
         cover_path: await resolveCover(f, 'posts/'),
         published: !!f.published
       })}
@@ -265,11 +266,20 @@ export function SitePosts() {
           <label>Texto</label>
           <textarea rows={8} value={f.body} onChange={(e) => set('body', e.target.value)} />
           <CoverField form={f} setField={set} />
+          <div className="check" style={{ marginTop: 12 }}>
+            <input
+              id="featured"
+              type="checkbox"
+              checked={!!f.featured}
+              onChange={(e) => set('featured', e.target.checked)}
+            />
+            <label htmlFor="featured" style={{ margin: 0 }}>Destaque no carrossel</label>
+          </div>
         </>
       )}
       renderCells={(r) => (
         <td>
-          {r.title}
+          {r.featured ? '⭐ ' : ''}{r.title}
           <br />
           <small>/{r.slug}</small>
         </td>
@@ -284,11 +294,12 @@ const REC_LABEL = {
   none: 'Data única',
   daily: 'Vários dias seguidos',
   weekly: 'Semanal',
+  biweekly: 'Quinzenal',
   monthly: 'Mensal'
 }
 const startLabel = (rec) =>
   rec === 'daily' ? 'Primeiro dia e horário'
-  : rec === 'weekly' ? 'Primeira ocorrência (define o dia da semana e o horário)'
+  : rec === 'weekly' || rec === 'biweekly' ? 'Primeira ocorrência (define o dia da semana e o horário)'
   : rec === 'monthly' ? 'Primeira ocorrência (define o dia do mês e o horário)'
   : 'Data e horário'
 
@@ -299,16 +310,18 @@ export function SiteEvents() {
       title="Eventos"
       head={['Evento', 'Quando', 'Tipo']}
       api={{ list: listEvents, create: createEvent, update: updateEvent, remove: deleteEvent }}
-      emptyForm={() => ({ title: '', description: '', location: '', recurrence: 'none', monthly_by: 'day', starts_at: '', ends_at: '', repeat_until: '', cover_path: null, published: false, _coverFile: null, _coverPreview: null })}
+      emptyForm={() => ({ title: '', slug: '', excerpt: '', description: '', location: '', recurrence: 'none', monthly_by: 'day', starts_at: '', ends_at: '', repeat_until: '', featured: false, cover_path: null, published: false, _coverFile: null, _coverPreview: null })}
       toForm={(r) => ({
-        title: r.title, description: r.description || '', location: r.location || '',
+        title: r.title, slug: r.slug || '', excerpt: r.excerpt || '', description: r.description || '', location: r.location || '',
         recurrence: r.recurrence || 'none', monthly_by: r.monthly_by || 'day',
         starts_at: isoToLocalInput(r.starts_at), ends_at: isoToLocalInput(r.ends_at),
-        repeat_until: r.repeat_until || '',
+        repeat_until: r.repeat_until || '', featured: !!r.featured,
         cover_path: r.cover_path, published: r.published, _coverFile: null, _coverPreview: null
       })}
       fromForm={async (f) => ({
         title: f.title.trim(),
+        slug: f.slug || '',
+        excerpt: f.excerpt || '',
         description: f.description || '',
         location: f.location || '',
         recurrence: f.recurrence || 'none',
@@ -316,6 +329,7 @@ export function SiteEvents() {
         starts_at: localInputToIso(f.starts_at),
         ends_at: f.recurrence === 'none' ? localInputToIso(f.ends_at) : null,
         repeat_until: f.recurrence !== 'none' ? (f.repeat_until || null) : null,
+        featured: !!f.featured,
         cover_path: await resolveCover(f, 'events/'),
         published: !!f.published
       })}
@@ -324,11 +338,15 @@ export function SiteEvents() {
           <label>Título</label>
           <input value={f.title} onChange={(e) => set('title', e.target.value)} required />
 
+          <label>Link (slug) <small>(vazio = gerado do título)</small></label>
+          <input value={f.slug} onChange={(e) => set('slug', e.target.value)} placeholder="tarde-do-efata" />
+
           <label>Tipo de evento</label>
           <select value={f.recurrence} onChange={(e) => set('recurrence', e.target.value)}>
             <option value="none">Data única</option>
             <option value="daily">Vários dias seguidos (ex.: congresso)</option>
             <option value="weekly">Semanal (ex.: campanha)</option>
+            <option value="biweekly">Quinzenal (a cada 2 semanas)</option>
             <option value="monthly">Mensal (ex.: Santa Ceia)</option>
           </select>
 
@@ -365,14 +383,25 @@ export function SiteEvents() {
 
           <label>Local</label>
           <input value={f.location} onChange={(e) => set('location', e.target.value)} placeholder="Ex.: Templo sede" />
-          <label>Descrição</label>
-          <textarea rows={5} value={f.description} onChange={(e) => set('description', e.target.value)} />
+          <label>Resumo <small>(aparece na listagem)</small></label>
+          <textarea rows={2} value={f.excerpt} onChange={(e) => set('excerpt', e.target.value)} />
+          <label>Descrição completa <small>(aparece na página do evento)</small></label>
+          <textarea rows={6} value={f.description} onChange={(e) => set('description', e.target.value)} />
           <CoverField form={f} setField={set} />
+          <div className="check" style={{ marginTop: 12 }}>
+            <input
+              id="ev_featured"
+              type="checkbox"
+              checked={!!f.featured}
+              onChange={(e) => set('featured', e.target.checked)}
+            />
+            <label htmlFor="ev_featured" style={{ margin: 0 }}>Destaque no carrossel</label>
+          </div>
         </>
       )}
       renderCells={(r) => (
         <>
-          <td>{r.title}</td>
+          <td>{r.featured ? '⭐ ' : ''}{r.title}<br /><small>/{r.slug}</small></td>
           <td>{fmtDateTime(r.starts_at)}</td>
           <td>{REC_LABEL[r.recurrence] || 'Data única'}</td>
         </>
@@ -442,20 +471,21 @@ export function SiteStudies() {
 
 // ---------- Banners (cultos) ----------
 
-export function SiteBanners() {
+export function SiteCarousel() {
   return (
     <CrudPage
-      icon="🖼️"
-      title="Banners (cultos)"
+      icon="🎠"
+      title="Carrossel"
       head={['Banner']}
       api={{ list: listBanners, create: createBanner, update: updateBanner, remove: deleteBanner }}
-      emptyForm={() => ({ title: '', link_url: '', sort: 0, cover_path: null, published: false, _coverFile: null, _coverPreview: null })}
+      emptyForm={() => ({ title: '', subtitle: '', link_url: '', sort: 0, cover_path: null, published: false, _coverFile: null, _coverPreview: null })}
       toForm={(r) => ({
-        title: r.title || '', link_url: r.link_url || '', sort: r.sort || 0,
+        title: r.title || '', subtitle: r.subtitle || '', link_url: r.link_url || '', sort: r.sort || 0,
         cover_path: r.image_path, published: r.published, _coverFile: null, _coverPreview: null
       })}
       fromForm={async (f) => ({
         title: f.title || '',
+        subtitle: f.subtitle || '',
         link_url: f.link_url || '',
         sort: Number(f.sort) || 0,
         image_path: await resolveCover(f, 'banners/'),
@@ -463,10 +493,16 @@ export function SiteBanners() {
       })}
       renderFields={(f, set) => (
         <>
-          <label>Imagem quadrada <small>(formato Instagram, ex.: 1080×1080)</small></label>
+          <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
+            Slides manuais do carrossel. As notícias em destaque e os próximos eventos
+            entram no carrossel automaticamente.
+          </p>
+          <label>Imagem <small>(paisagem, ex.: 1600×900)</small></label>
           <CoverField form={f} setField={set} />
           <label>Título <small>(opcional)</small></label>
-          <input value={f.title} onChange={(e) => set('title', e.target.value)} placeholder="Ex.: Culto de Domingo" />
+          <input value={f.title} onChange={(e) => set('title', e.target.value)} placeholder="Ex.: Bem-vindo" />
+          <label>Subtítulo <small>(opcional)</small></label>
+          <input value={f.subtitle} onChange={(e) => set('subtitle', e.target.value)} placeholder="Texto de apoio" />
           <label>Link ao clicar <small>(opcional)</small></label>
           <input value={f.link_url} onChange={(e) => set('link_url', e.target.value)} placeholder="https://... ou /eventos" />
           <label>Ordem <small>(menor aparece primeiro)</small></label>
@@ -480,7 +516,7 @@ export function SiteBanners() {
               <img
                 src={siteImageUrl(r.image_path)}
                 alt=""
-                style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6 }}
+                style={{ width: 64, height: 40, objectFit: 'cover', borderRadius: 6 }}
               />
             )}
             <span>{r.title || '(sem título)'}</span>

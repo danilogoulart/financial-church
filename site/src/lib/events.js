@@ -1,7 +1,7 @@
 // Recorrência de eventos. Um evento tem starts_at (1ª ocorrência: data+hora),
 // recurrence ('none'|'daily'|'weekly'|'monthly') e repeat_until (último dia).
 
-const CAP = { daily: 31, weekly: 53, monthly: 24 }
+const CAP = { daily: 31, weekly: 53, biweekly: 27, monthly: 24 }
 
 function startOfDay(d) {
   const x = new Date(d)
@@ -41,12 +41,13 @@ export function occurrences(ev) {
     return out
   }
 
-  if (rec === 'weekly') {
+  if (rec === 'weekly' || rec === 'biweekly') {
+    const step = rec === 'weekly' ? 7 : 14
     let d = new Date(start)
     while (out.length < cap) {
       if (until && d > until) break
       out.push(new Date(d))
-      d.setDate(d.getDate() + 7)
+      d.setDate(d.getDate() + step)
     }
     return out
   }
@@ -139,6 +140,9 @@ export function scheduleLabel(ev) {
   }
   if (rec === 'weekly') {
     return `Toda ${dfWeekday.format(start)} · ${time}${untilLabel(ev)}`
+  }
+  if (rec === 'biweekly') {
+    return `Quinzenal · ${dfWeekday.format(start)} · ${time}${untilLabel(ev)}`
   }
   if (rec === 'monthly') {
     if ((ev.monthly_by || 'day') === 'weekday') {

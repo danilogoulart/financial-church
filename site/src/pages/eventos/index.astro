@@ -7,9 +7,9 @@ import { scheduleLabel } from '../../lib/events'
 const events = await getUpcomingEvents()
 ---
 
-<Base title="Eventos" description="Agenda de cultos, congressos e encontros da Igreja AD Alpha.">
+<Base title="Programação" description="Agenda de cultos, congressos e encontros da Igreja AD Alpha.">
   <div class="section-head">
-    <h1>Próximos eventos</h1>
+    <h1>Programação</h1>
   </div>
   {events.length === 0 ? (
     <div class="empty">Nenhum evento agendado no momento.</div>
@@ -17,12 +17,13 @@ const events = await getUpcomingEvents()
     <div class="grid">
       {events.map((e) => (
         <a class="card" href={`/eventos/${e.slug}`}>
-          {e.cover_path && <img class="thumb" src={imageUrl(e.cover_path)} alt={e.title} />}
+          {e.cover_path && <img class="thumb-full" src={imageUrl(e.cover_path)} alt={e.title} />}
           <div class="body">
             <span class="tag">Evento</span>
             <h3>{e.title}</h3>
-            <span class="meta">{scheduleLabel(e)}{e.location ? ` · ${e.location}` : ''}</span>
-            {e.description && <p>{e.description}</p>}
+            <span class="meta">🗓️ {scheduleLabel(e)}</span>
+            {e.location && <span class="meta">📍 {e.location}</span>}
+            {e.excerpt && <p>{e.excerpt}</p>}
           </div>
         </a>
       ))}
