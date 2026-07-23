@@ -37,8 +37,6 @@ export default function Home() {
 
   const lastProj = fc && fc.rows.length ? fc.rows[fc.rows.length - 1] : null
 
-  console.log('Teste Daniel');
-
   return (
     <>
       {error && <div className="card"><div className="banner err">{error}</div></div>}
