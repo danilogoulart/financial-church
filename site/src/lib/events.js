@@ -91,17 +91,27 @@ export function upcomingOccurrences(ev) {
   return occurrences(ev).filter((d) => startOfDay(d) >= today)
 }
 
+// Fuso da igreja: as datas são formatadas SEMPRE no horário do Brasil,
+// independentemente do fuso do servidor (na Vercel os servidores rodam em UTC).
+const TZ = 'America/Sao_Paulo'
+const df = (opts) => new Intl.DateTimeFormat('pt-BR', { ...opts, timeZone: TZ })
+const dfTime = df({ hour: '2-digit', minute: '2-digit', hour12: false })
+const dfWeekday = df({ weekday: 'long' })
+const dfDay = df({ day: 'numeric' })
+const dfMonth = df({ month: 'long' })
+const dfFull = df({ day: '2-digit', month: 'long', year: 'numeric' })
+const dfOcc = df({ weekday: 'long', day: '2-digit', month: 'long' })
+
 function fmtTime(d) {
-  const h = d.getHours()
-  const m = d.getMinutes()
-  return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`
+  const [h, m] = dfTime.format(d).split(':')
+  return m === '00' ? `${Number(h)}h` : `${Number(h)}h${m}`
 }
 
 function dayRange(a, b) {
-  const dA = a.getDate()
-  const dB = b.getDate()
-  const mA = a.toLocaleDateString('pt-BR', { month: 'long' })
-  const mB = b.toLocaleDateString('pt-BR', { month: 'long' })
+  const dA = dfDay.format(a)
+  const dB = dfDay.format(b)
+  const mA = dfMonth.format(a)
+  const mB = dfMonth.format(b)
   if (dA === dB && mA === mB) return `${dA} de ${mA}`
   if (mA === mB) return `${dA} a ${dB} de ${mA}`
   return `${dA} de ${mA} a ${dB} de ${mB}`
@@ -121,30 +131,27 @@ export function scheduleLabel(ev) {
   const time = fmtTime(start)
 
   if (rec === 'none') {
-    const date = start.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
-    return `${date} · ${time}`
+    return `${dfFull.format(start)} · ${time}`
   }
   if (rec === 'daily') {
     const occ = occurrences(ev)
     return `${dayRange(occ[0], occ[occ.length - 1])} · ${time}`
   }
   if (rec === 'weekly') {
-    const wd = start.toLocaleDateString('pt-BR', { weekday: 'long' })
-    return `Toda ${wd} · ${time}${untilLabel(ev)}`
+    return `Toda ${dfWeekday.format(start)} · ${time}${untilLabel(ev)}`
   }
   if (rec === 'monthly') {
     if ((ev.monthly_by || 'day') === 'weekday') {
-      const weekday = start.toLocaleDateString('pt-BR', { weekday: 'long' })
-      const nth = Math.floor((start.getDate() - 1) / 7) + 1
+      const brDay = Number(dfDay.format(start))
+      const nth = Math.floor((brDay - 1) / 7) + 1
       const ord = ['1º', '2º', '3º', '4º', '5º'][nth - 1] || `${nth}º`
-      return `Todo ${ord} ${weekday} · ${time}${untilLabel(ev)}`
+      return `Todo ${ord} ${dfWeekday.format(start)} · ${time}${untilLabel(ev)}`
     }
-    return `Todo dia ${start.getDate()} · ${time}${untilLabel(ev)}`
+    return `Todo dia ${dfDay.format(start)} · ${time}${untilLabel(ev)}`
   }
   return ''
 }
 
 export function fmtOccurrence(d) {
-  return d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }) +
-    ` · ${fmtTime(d)}`
+  return `${dfOcc.format(d)} · ${fmtTime(d)}`
 }
