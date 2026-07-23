@@ -1,0 +1,38 @@
+---
+import Base from '../../layouts/Base.astro'
+import { getStudies } from '../../lib/content'
+import { imageUrl } from '../../lib/supabase'
+import { fmtDate } from '../../lib/format'
+
+const studies = await getStudies()
+---
+
+<Base title="Estudos Bíblicos" description="Estudos e pregações da Igreja AD Alpha.">
+  <div class="section-head">
+    <h1>Estudos Bíblicos</h1>
+  </div>
+  {studies.length === 0 ? (
+    <div class="empty">Nenhum estudo publicado ainda.</div>
+  ) : (
+    <div class="grid">
+      {studies.map((s) => (
+        <div class="card">
+          {s.cover_path && <img class="thumb" src={imageUrl(s.cover_path)} alt={s.title} />}
+          <div class="body">
+            <span class="tag">Estudo</span>
+            <h3>{s.title}</h3>
+            <span class="meta">
+              {[s.teacher, s.reference, fmtDate(s.studied_on)].filter(Boolean).join(' · ')}
+            </span>
+            {s.description && <p>{s.description}</p>}
+            {s.video_url && (
+              <a class="btn ghost" style="margin-top:10px; align-self:flex-start" href={s.video_url} target="_blank" rel="noopener">
+                ▶ Assistir
+              </a>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</Base>

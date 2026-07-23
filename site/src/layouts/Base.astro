@@ -1,0 +1,236 @@
+---
+import '@fontsource-variable/inter'
+import '@fontsource-variable/fraunces'
+
+const { title, description, image } = Astro.props
+
+const CHURCH = 'Igreja AD Alpha'
+const FULL = 'Igreja Assembleia de Deus Alpha Ministério Central Praia Linda'
+const ADDR = 'Rua Rio de Janeiro, N°6 - Praia Linda, São Pedro Da Aldeia - Rio de Janeiro - Brasil'
+
+const pageTitle = title ? `${title} — ${CHURCH}` : `${CHURCH} — ${FULL}`
+const desc = description || `Site oficial da ${FULL}. Notícias, eventos e estudos bíblicos.`
+
+const nav = [
+  { href: '/', label: 'Início' },
+  { href: '/noticias', label: 'Notícias' },
+  { href: '/eventos', label: 'Eventos' },
+  { href: '/estudos', label: 'Estudos Bíblicos' }
+]
+const path = Astro.url.pathname
+const isActive = (href) => (href === '/' ? path === '/' : path.startsWith(href))
+const year = new Date().getFullYear()
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/logo.png" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={desc} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={desc} />
+    {image && <meta property="og:image" content={image} />}
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap header-inner">
+        <a class="brand" href="/">
+          <img src="/logo.png" alt={CHURCH} class="logo" />
+          <span class="brand-name">{CHURCH}</span>
+        </a>
+        <nav class="nav">
+          {nav.map((n) => (
+            <a href={n.href} class={isActive(n.href) ? 'active' : ''}>{n.label}</a>
+          ))}
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <strong>{FULL}</strong>
+        <p>{ADDR}</p>
+        <p class="muted">© {year} {CHURCH}. Todos os direitos reservados.</p>
+      </div>
+    </footer>
+
+    <style is:global>
+      :root {
+        --bg: #ffffff;
+        --ink: #16130f;
+        --muted: #6f675e;
+        --line: #ece7df;
+        --header: #14110d;
+        --accent: #b0873f;        /* dourado sóbrio */
+        --accent-ink: #8a6a2f;
+        --surface: #faf7f2;        /* creme quente */
+        --radius: 16px;
+        --wrap: 1080px;
+        --sans: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --serif: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        font-family: var(--sans);
+        color: var(--ink);
+        background: var(--bg);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+      .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 22px; }
+      a { color: inherit; }
+      img { max-width: 100%; display: block; }
+
+      h1, h2, h3 {
+        font-family: var(--serif);
+        font-optical-sizing: auto;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        line-height: 1.15;
+      }
+
+      /* Header */
+      .site-header {
+        background: var(--header);
+        color: #fff;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 1px solid rgba(255,255,255,.06);
+      }
+      .header-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 68px;
+        flex-wrap: wrap;
+      }
+      .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: #fff; }
+      .brand .logo { height: 36px; width: auto; }
+      .brand-name { font-family: var(--serif); font-weight: 600; font-size: 20px; letter-spacing: .2px; }
+      .nav { display: flex; gap: 4px; flex-wrap: wrap; }
+      .nav a {
+        text-decoration: none;
+        color: #cfc7bb;
+        padding: 8px 13px;
+        border-radius: 999px;
+        font-size: 15px;
+        font-weight: 500;
+        transition: background .15s ease, color .15s ease;
+      }
+      .nav a:hover { color: #fff; background: rgba(255,255,255,.09); }
+      .nav a.active { color: var(--header); background: #fff; }
+
+      /* Sections */
+      main { padding: 40px 22px 64px; }
+      section + section { margin-top: 56px; }
+      .section-head {
+        display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+        margin: 0 0 22px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--line);
+      }
+      h1 { font-size: clamp(30px, 5vw, 40px); margin: 0 0 10px; }
+      h2 { font-size: clamp(23px, 3.5vw, 28px); margin: 0; }
+      .lead { color: var(--muted); font-size: 18px; margin: 0; }
+      .link-all { color: var(--accent-ink); text-decoration: none; font-weight: 600; font-size: 15px; white-space: nowrap; }
+      .link-all:hover { text-decoration: underline; }
+
+      /* Hero */
+      .hero {
+        position: relative;
+        overflow: hidden;
+        background:
+          radial-gradient(1200px 400px at 80% -10%, rgba(176,135,63,.28), transparent 60%),
+          linear-gradient(150deg, #1b1712 0%, #2a241c 55%, #17140f 100%);
+        color: #fff;
+        border-radius: 24px;
+        padding: clamp(40px, 7vw, 72px) clamp(28px, 5vw, 56px);
+      }
+      .hero .eyebrow {
+        font-family: var(--sans);
+        text-transform: uppercase;
+        letter-spacing: .18em;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--accent);
+        margin: 0 0 14px;
+      }
+      .hero h1 { font-size: clamp(34px, 6vw, 56px); color: #fff; max-width: 15ch; }
+      .hero p { color: #ded7cc; font-size: clamp(17px, 2.2vw, 20px); max-width: 620px; margin: 16px 0 0; }
+
+      /* Buttons */
+      .btn {
+        display: inline-block;
+        background: var(--accent);
+        color: #fff;
+        text-decoration: none;
+        padding: 13px 26px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 16px;
+        margin-top: 22px;
+        transition: transform .12s ease, background .15s ease;
+      }
+      .btn:hover { background: var(--accent-ink); transform: translateY(-1px); }
+      .btn.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); margin-top: 0; }
+      .btn.ghost:hover { background: var(--surface); }
+
+      /* Card grid */
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 22px; }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: var(--bg);
+        display: flex;
+        flex-direction: column;
+        transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
+      }
+      a.card { text-decoration: none; color: inherit; }
+      a.card:hover { box-shadow: 0 14px 40px rgba(20,17,13,.12); transform: translateY(-3px); border-color: #e0d8cc; }
+      .card .thumb { aspect-ratio: 16 / 9; object-fit: cover; width: 100%; background: var(--surface); }
+      .card .body { padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+      .card h3 { margin: 0; font-size: 20px; }
+      .card .meta { color: var(--muted); font-size: 14px; }
+      .card p { margin: 0; color: #4a443c; font-size: 15px; }
+
+      .tag { display: inline-block; font-size: 12px; color: var(--accent-ink); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+
+      .empty { color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); padding: 32px; text-align: center; }
+
+      /* Article */
+      .article { max-width: 720px; margin: 0 auto; }
+      .article h1 { margin-top: 6px; }
+      .article .cover { border-radius: 18px; margin: 22px 0 10px; width: 100%; }
+      .article .content { font-size: 18.5px; line-height: 1.75; white-space: pre-wrap; color: #302b24; }
+      .back { display: inline-block; margin-bottom: 10px; color: var(--muted); text-decoration: none; font-size: 15px; }
+      .back:hover { color: var(--ink); }
+
+      /* Footer */
+      .site-footer {
+        border-top: 1px solid var(--line);
+        background: var(--surface);
+        padding: 36px 0;
+        margin-top: 64px;
+        font-size: 14px;
+      }
+      .site-footer strong { font-family: var(--serif); font-size: 16px; }
+      .site-footer p { margin: 6px 0; color: #4a443c; }
+      .site-footer .muted { color: var(--muted); }
+    </style>
+  </body>
+</html>

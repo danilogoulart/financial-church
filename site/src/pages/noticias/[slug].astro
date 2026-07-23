@@ -1,0 +1,24 @@
+---
+import Base from '../../layouts/Base.astro'
+import { getPost } from '../../lib/content'
+import { imageUrl } from '../../lib/supabase'
+import { fmtDateTime } from '../../lib/format'
+
+const { slug } = Astro.params
+const post = await getPost(slug)
+
+if (!post) {
+  return Astro.redirect('/noticias')
+}
+---
+
+<Base title={post.title} description={post.excerpt} image={post.cover_path ? imageUrl(post.cover_path) : undefined}>
+  <article class="article">
+    <a class="back" href="/noticias">← Notícias</a>
+    <h1>{post.title}</h1>
+    {post.published_at && <span class="meta">{fmtDateTime(post.published_at)}</span>}
+    {post.cover_path && <img class="cover" src={imageUrl(post.cover_path)} alt={post.title} />}
+    {post.excerpt && <p class="lead" style="margin:12px 0">{post.excerpt}</p>}
+    <div class="content">{post.body}</div>
+  </article>
+</Base>

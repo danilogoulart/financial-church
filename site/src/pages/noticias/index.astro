@@ -1,0 +1,28 @@
+---
+import Base from '../../layouts/Base.astro'
+import { getPosts } from '../../lib/content'
+import { imageUrl } from '../../lib/supabase'
+
+const posts = await getPosts()
+---
+
+<Base title="Notícias" description="Avisos e novidades da Igreja AD Alpha.">
+  <div class="section-head">
+    <h1>Notícias</h1>
+  </div>
+  {posts.length === 0 ? (
+    <div class="empty">Nenhuma notícia publicada ainda.</div>
+  ) : (
+    <div class="grid">
+      {posts.map((p) => (
+        <a class="card" href={`/noticias/${p.slug}`}>
+          {p.cover_path && <img class="thumb" src={imageUrl(p.cover_path)} alt={p.title} />}
+          <div class="body">
+            <h3>{p.title}</h3>
+            {p.excerpt && <p>{p.excerpt}</p>}
+          </div>
+        </a>
+      ))}
+    </div>
+  )}
+</Base>

@@ -1,0 +1,525 @@
+-- Financial Church — schema Postgres (Supabase)
+-- Rode no SQL Editor do Supabase (uma vez). É idempotente.
+
+create extension if not exists "pgcrypto";
+
+-- ---------- Tabelas ----------
+
+create table if not exists public.members (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null,
+  phone      text default '',
+  family     text default '',
+  ministry   text default '',
+  tither     boolean default false,
+  active     boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Bloqueia nomes duplicados (case-insensitive)
+create unique index if not exists members_name_unique
+  on public.members (lower(name));
+
+create table if not exists public.categories (
+  id   uuid primary key default gen_random_uuid(),
+  kind text not null check (kind in ('income','expense')),
+  name text not null
+);
+
+create unique index if not exists categories_kind_name_unique
+  on public.categories (kind, lower(name));
+
+create table if not exists public.transactions (
+  id             uuid primary key default gen_random_uuid(),
+  date           date not null default current_date,
+  competency     text,
+  member_id      uuid references public.members(id) on delete set null,
+  type           text not null check (type in ('Receita','Despesa')),
+  category       text,
+  cult           text,
+  payment_method text,
+  amount         numeric(12,2) not null check (amount > 0),
+  observation    text,
+  receipt_path   text,
+  created_at     timestamptz default now(),
+  updated_at     timestamptz default now()
+);
+
+-- Receitas de iniciativas/eventos que NÃO entram no caixa (ex.: cantina de
+-- um congresso), atribuídas a um ministério.
+alter table public.transactions
+  add column if not exists off_cash boolean not null default false;
+alter table public.transactions
+  add column if not exists ministry text;
+
+create table if not exists public.payables (
+  id           uuid primary key default gen_random_uuid(),
+  description  text not null,
+  category     text,
+  amount       numeric(12,2) not null check (amount > 0),
+  due_date     date not null,
+  payment_date date,
+  status       text not null default 'Em aberto',
+  receipt_path text,
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now()
+);
+
+-- Despesas recorrentes (fixas e parceladas) — fonte para gerar as contas do mês.
+create table if not exists public.recurring_expenses (
+  id                 uuid primary key default gen_random_uuid(),
+  description        text not null,
+  category           text,
+  amount             numeric(12,2) not null check (amount > 0),
+  due_day            int not null default 5 check (due_day between 1 and 28),
+  kind               text not null check (kind in ('fixa','parcelada')),
+  installments_total int check (installments_total is null or installments_total > 0),
+  start_competency   text not null,           -- 'YYYY-MM'
+  active             boolean default true,
+  created_at         timestamptz default now(),
+  updated_at         timestamptz default now()
+);
+
+-- Liga a conta gerada à recorrente + mês, para não duplicar na geração.
+alter table public.payables
+  add column if not exists recurring_id uuid references public.recurring_expenses(id) on delete set null;
+alter table public.payables
+  add column if not exists competency text;
+
+create index if not exists payables_recurring_competency
+  on public.payables (recurring_id, competency);
+
+-- ---------- Categorias padrão ----------
+
+insert into public.categories (kind, name) values
+  ('income','Dízimos'), ('income','Ofertas'), ('income','Cantina'), ('income','Eventos'),
+  ('expense','Conta de água'), ('expense','Conta de luz'), ('expense','Conta de internet'),
+  ('expense','Passagem de pregador'), ('expense','Limpeza'), ('expense','Descartáveis'),
+  ('expense','Parcela terreno')
+on conflict do nothing;
+
+-- ---------- Perfis e papéis ----------
+-- Papéis: admin (tudo + gerencia usuários/categorias), tesoureiro (lança
+-- e edita dados), consulta (somente leitura).
+
+create table if not exists public.profiles (
+  id    uuid primary key references auth.users(id) on delete cascade,
+  email text,
+  role  text not null default 'consulta' check (role in ('admin', 'tesoureiro', 'consulta'))
+);
+
+-- Cria o profile automaticamente quando surge um usuário (default consulta).
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, email) values (new.id, new.email)
+  on conflict (id) do nothing;
+  return new;
+end; $$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- Usuários que já existem viram admin (fundadores). Novos entram como consulta.
+insert into public.profiles (id, email, role)
+  select id, email, 'admin' from auth.users
+  on conflict (id) do nothing;
+
+create or replace function public.current_user_role()
+returns text language sql stable security definer set search_path = public as $$
+  select role from public.profiles where id = auth.uid();
+$$;
+
+create or replace function public.can_write()
+returns boolean language sql stable as $$
+  select public.current_user_role() in ('admin', 'tesoureiro');
+$$;
+
+-- ---------- Row Level Security ----------
+-- Todos autenticados leem; só admin/tesoureiro escrevem.
+
+alter table public.members            enable row level security;
+alter table public.categories         enable row level security;
+alter table public.transactions       enable row level security;
+alter table public.payables           enable row level security;
+alter table public.recurring_expenses enable row level security;
+alter table public.profiles           enable row level security;
+
+-- Uma tabela por vez: policy de leitura (todos) + policy de escrita (can_write).
+drop policy if exists members_all on public.members;
+drop policy if exists members_select on public.members;
+drop policy if exists members_write on public.members;
+create policy members_select on public.members for select to authenticated using (true);
+create policy members_write on public.members for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+
+drop policy if exists categories_read on public.categories;
+drop policy if exists categories_select on public.categories;
+drop policy if exists categories_write on public.categories;
+create policy categories_select on public.categories for select to authenticated using (true);
+create policy categories_write on public.categories for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+
+drop policy if exists transactions_all on public.transactions;
+drop policy if exists transactions_select on public.transactions;
+drop policy if exists transactions_write on public.transactions;
+create policy transactions_select on public.transactions for select to authenticated using (true);
+create policy transactions_write on public.transactions for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+
+drop policy if exists payables_all on public.payables;
+drop policy if exists payables_select on public.payables;
+drop policy if exists payables_write on public.payables;
+create policy payables_select on public.payables for select to authenticated using (true);
+create policy payables_write on public.payables for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+
+drop policy if exists recurring_all on public.recurring_expenses;
+drop policy if exists recurring_select on public.recurring_expenses;
+drop policy if exists recurring_write on public.recurring_expenses;
+create policy recurring_select on public.recurring_expenses for select to authenticated using (true);
+create policy recurring_write on public.recurring_expenses for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+
+-- Perfis: todos leem (para a tela de Usuários); só admin altera papéis.
+drop policy if exists profiles_select on public.profiles;
+drop policy if exists profiles_admin_update on public.profiles;
+create policy profiles_select on public.profiles for select to authenticated using (true);
+create policy profiles_admin_update on public.profiles for update to authenticated
+  using (public.current_user_role() = 'admin') with check (public.current_user_role() = 'admin');
+
+-- ---------- Storage (comprovantes) ----------
+
+insert into storage.buckets (id, name, public)
+  values ('receipts', 'receipts', false)
+  on conflict (id) do nothing;
+
+drop policy if exists receipts_read on storage.objects;
+create policy receipts_read on storage.objects
+  for select to authenticated using (bucket_id = 'receipts');
+
+drop policy if exists receipts_insert on storage.objects;
+create policy receipts_insert on storage.objects
+  for insert to authenticated with check (bucket_id = 'receipts');
+
+-- ---------- Cargos, Ministérios e Cultos (listas editáveis) ----------
+-- Cargo: classificação do membro (Obreiro/Membro), 1 por pessoa; is_worker
+--   define quem entra no relatório de obreiros não dizimistas.
+-- Ministério: grupo/ministério real (Jovens, Louvor); um membro pode ter vários.
+
+create table if not exists public.cargos (
+  id        uuid primary key default gen_random_uuid(),
+  name      text not null unique,
+  is_worker boolean not null default false
+);
+
+create table if not exists public.ministries (
+  id   uuid primary key default gen_random_uuid(),
+  name text not null unique
+);
+
+create table if not exists public.cults (
+  id   uuid primary key default gen_random_uuid(),
+  name text not null unique
+);
+
+-- is_worker agora vive em cargos; remove da tabela ministries se existir.
+alter table public.ministries drop column if exists is_worker;
+
+insert into public.cargos (name, is_worker) values
+  ('Obreiro de altar', true), ('Obreiro', true), ('Membro', false)
+  on conflict (name) do nothing;
+
+insert into public.cults (name) values
+  ('Domingo'), ('Quinta'), ('Terça'), ('Consagração')
+  on conflict (name) do nothing;
+
+-- Membro passa a ter cargo (1) e ministries (vários).
+alter table public.members add column if not exists cargo text;
+alter table public.members add column if not exists ministries text[] default '{}';
+alter table public.members add column if not exists photo_path text;
+alter table public.members add column if not exists matricula text;
+alter table public.members add column if not exists rg text;
+alter table public.members add column if not exists cpf text;
+alter table public.members add column if not exists birth_date date;
+alter table public.members add column if not exists joined_date date;
+-- Migra o antigo "ministry" (que guardava o cargo) para a coluna cargo.
+update public.members set cargo = ministry where cargo is null and ministry is not null;
+
+alter table public.cargos     enable row level security;
+alter table public.ministries enable row level security;
+alter table public.cults      enable row level security;
+
+drop policy if exists cargos_select on public.cargos;
+drop policy if exists cargos_write on public.cargos;
+create policy cargos_select on public.cargos for select to authenticated using (true);
+create policy cargos_write on public.cargos for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+
+drop policy if exists ministries_select on public.ministries;
+drop policy if exists ministries_write on public.ministries;
+create policy ministries_select on public.ministries for select to authenticated using (true);
+create policy ministries_write on public.ministries for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+
+drop policy if exists cults_select on public.cults;
+drop policy if exists cults_write on public.cults;
+create policy cults_select on public.cults for select to authenticated using (true);
+create policy cults_write on public.cults for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+
+-- ---------- Configurações gerais (assinaturas, nomes) ----------
+
+create table if not exists public.settings (
+  key   text primary key,
+  value text
+);
+
+alter table public.settings enable row level security;
+drop policy if exists settings_select on public.settings;
+drop policy if exists settings_write on public.settings;
+create policy settings_select on public.settings for select to authenticated using (true);
+create policy settings_write on public.settings for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+
+-- ---------- Storage de imagens (fotos de membro, assinaturas) ----------
+
+insert into storage.buckets (id, name, public)
+  values ('photos', 'photos', false)
+  on conflict (id) do nothing;
+
+drop policy if exists photos_read on storage.objects;
+create policy photos_read on storage.objects
+  for select to authenticated using (bucket_id = 'photos');
+
+drop policy if exists photos_write on storage.objects;
+create policy photos_write on storage.objects
+  for insert to authenticated with check (bucket_id = 'photos');
+
+-- ================= Portal do membro =================
+-- Papel 'membro': login próprio que vê a própria credencial, os próprios
+-- dízimos e edita os próprios dados básicos. Contas são criadas pelo admin
+-- (via Edge Function admin-create-member-user, que usa a service_role).
+
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check
+  check (role in ('admin', 'tesoureiro', 'consulta', 'membro'));
+
+alter table public.members add column if not exists email text;
+alter table public.members add column if not exists user_id uuid references auth.users(id) on delete set null;
+create index if not exists members_user_id_idx on public.members (user_id);
+
+create or replace function public.is_staff()
+returns boolean language sql stable as $$
+  select public.current_user_role() in ('admin', 'tesoureiro', 'consulta');
+$$;
+
+create or replace function public.my_member_id()
+returns uuid language sql stable security definer set search_path = public as $$
+  select id from public.members where user_id = auth.uid() limit 1;
+$$;
+
+-- Membro só altera dados básicos (nome/telefone/família/foto); trava o resto.
+create or replace function public.members_membro_guard()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if public.current_user_role() = 'membro' then
+    new.cargo := old.cargo;
+    new.tither := old.tither;
+    new.active := old.active;
+    new.ministries := old.ministries;
+    new.user_id := old.user_id;
+    new.email := old.email;
+    new.matricula := old.matricula;
+    new.rg := old.rg;
+    new.cpf := old.cpf;
+    new.birth_date := old.birth_date;
+    new.joined_date := old.joined_date;
+  end if;
+  return new;
+end; $$;
+drop trigger if exists members_membro_guard_trg on public.members;
+create trigger members_membro_guard_trg before update on public.members
+  for each row execute function public.members_membro_guard();
+
+-- Membros: staff vê todos; membro vê/edita só o próprio.
+drop policy if exists members_select on public.members;
+drop policy if exists members_write on public.members;
+drop policy if exists members_self_update on public.members;
+create policy members_select on public.members for select to authenticated
+  using (public.is_staff() or user_id = auth.uid());
+create policy members_write on public.members for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+create policy members_self_update on public.members for update to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Transações: membro vê só as próprias; escrita só staff.
+drop policy if exists transactions_select on public.transactions;
+drop policy if exists transactions_write on public.transactions;
+create policy transactions_select on public.transactions for select to authenticated
+  using (public.is_staff() or member_id = public.my_member_id());
+create policy transactions_write on public.transactions for all to authenticated
+  using (public.can_write()) with check (public.can_write());
+
+-- Tabelas de tesouraria: apenas staff lê.
+drop policy if exists payables_select on public.payables;
+create policy payables_select on public.payables for select to authenticated using (public.is_staff());
+drop policy if exists recurring_select on public.recurring_expenses;
+create policy recurring_select on public.recurring_expenses for select to authenticated using (public.is_staff());
+drop policy if exists categories_select on public.categories;
+create policy categories_select on public.categories for select to authenticated using (public.is_staff());
+-- Cargos ficam legíveis a todos autenticados (não é sensível; o portal do
+-- membro precisa saber se o próprio cargo é "obreiro" para a credencial).
+drop policy if exists cargos_select on public.cargos;
+create policy cargos_select on public.cargos for select to authenticated using (true);
+drop policy if exists ministries_select on public.ministries;
+create policy ministries_select on public.ministries for select to authenticated using (public.is_staff());
+drop policy if exists cults_select on public.cults;
+create policy cults_select on public.cults for select to authenticated using (public.is_staff());
+
+-- Perfis: staff vê todos; membro vê só o próprio.
+drop policy if exists profiles_select on public.profiles;
+create policy profiles_select on public.profiles for select to authenticated
+  using (public.is_staff() or id = auth.uid());
+
+-- ================= Site público + CMS =================
+-- Conteúdo editável do site da igreja (notícias, eventos, sermões), publicado
+-- por um editor. O site público (visitante NÃO autenticado, role 'anon') lê
+-- apenas o que está publicado; a equipe autenticada enxerga rascunhos também,
+-- para pré-visualizar antes de publicar.
+
+-- Novo papel 'editor': cuida do conteúdo do site e NÃO tem acesso à tesouraria
+-- (não entra em is_staff, então as policias financeiras já o excluem).
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check
+  check (role in ('admin', 'tesoureiro', 'consulta', 'membro', 'editor'));
+
+create or replace function public.can_edit_site()
+returns boolean language sql stable as $$
+  select public.current_user_role() in ('admin', 'editor');
+$$;
+
+-- ---------- Tabelas de conteúdo ----------
+
+-- Notícias / avisos / posts do blog da igreja.
+create table if not exists public.site_posts (
+  id           uuid primary key default gen_random_uuid(),
+  title        text not null,
+  slug         text not null unique,
+  excerpt      text default '',
+  body         text default '',            -- markdown ou html
+  cover_path   text,                        -- caminho no bucket público 'site'
+  published    boolean not null default false,
+  published_at timestamptz,
+  author_id    uuid references auth.users(id) on delete set null,
+  created_at   timestamptz default now(),
+  updated_at   timestamptz default now()
+);
+create index if not exists site_posts_published_idx
+  on public.site_posts (published, published_at desc);
+
+-- Eventos / agenda (cultos especiais, congressos, etc.).
+create table if not exists public.site_events (
+  id          uuid primary key default gen_random_uuid(),
+  title       text not null,
+  slug        text unique,
+  description text default '',
+  location    text default '',
+  starts_at   timestamptz not null,
+  ends_at     timestamptz,
+  cover_path  text,
+  published   boolean not null default false,
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+create index if not exists site_events_when_idx
+  on public.site_events (published, starts_at);
+
+-- Estudos bíblicos (tema, ministrante, passagem, link de vídeo + descrição).
+-- (Substitui o antigo 'site_sermons'; a linha abaixo remove-o se já existir.)
+drop table if exists public.site_sermons cascade;
+create table if not exists public.site_studies (
+  id          uuid primary key default gen_random_uuid(),
+  title       text not null,
+  teacher     text default '',
+  reference   text default '',            -- passagem bíblica (ex.: "João 3.16")
+  studied_on  date,
+  video_url   text,
+  description text default '',
+  cover_path  text,
+  published   boolean not null default false,
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+create index if not exists site_studies_when_idx
+  on public.site_studies (published, studied_on desc);
+
+-- Configurações do site (hero, textos "sobre", contato, redes) — pares
+-- chave/valor, separadas da tabela 'settings' da tesouraria porque estas
+-- são de leitura pública.
+create table if not exists public.site_settings (
+  key   text primary key,
+  value text
+);
+
+-- ---------- RLS do conteúdo do site ----------
+-- Padrão por tabela: anon lê só publicado; autenticado lê tudo (preview);
+-- escrita só admin/editor (can_edit_site).
+
+alter table public.site_posts    enable row level security;
+alter table public.site_events   enable row level security;
+alter table public.site_studies  enable row level security;
+alter table public.site_settings enable row level security;
+
+drop policy if exists site_posts_public   on public.site_posts;
+drop policy if exists site_posts_staff     on public.site_posts;
+drop policy if exists site_posts_write     on public.site_posts;
+create policy site_posts_public on public.site_posts for select to anon using (published);
+create policy site_posts_staff  on public.site_posts for select to authenticated using (true);
+create policy site_posts_write  on public.site_posts for all to authenticated
+  using (public.can_edit_site()) with check (public.can_edit_site());
+
+drop policy if exists site_events_public on public.site_events;
+drop policy if exists site_events_staff  on public.site_events;
+drop policy if exists site_events_write  on public.site_events;
+create policy site_events_public on public.site_events for select to anon using (published);
+create policy site_events_staff  on public.site_events for select to authenticated using (true);
+create policy site_events_write  on public.site_events for all to authenticated
+  using (public.can_edit_site()) with check (public.can_edit_site());
+
+drop policy if exists site_studies_public on public.site_studies;
+drop policy if exists site_studies_staff  on public.site_studies;
+drop policy if exists site_studies_write  on public.site_studies;
+create policy site_studies_public on public.site_studies for select to anon using (published);
+create policy site_studies_staff  on public.site_studies for select to authenticated using (true);
+create policy site_studies_write  on public.site_studies for all to authenticated
+  using (public.can_edit_site()) with check (public.can_edit_site());
+
+-- Configurações do site são públicas para leitura (o site as usa direto).
+drop policy if exists site_settings_public on public.site_settings;
+drop policy if exists site_settings_write  on public.site_settings;
+create policy site_settings_public on public.site_settings for select using (true);
+create policy site_settings_write  on public.site_settings for all to authenticated
+  using (public.can_edit_site()) with check (public.can_edit_site());
+
+-- ---------- Storage público do site (capas/imagens) ----------
+-- Bucket PÚBLICO: o site serve as imagens por URL direta, sem signed URL.
+insert into storage.buckets (id, name, public)
+  values ('site', 'site', true)
+  on conflict (id) do nothing;
+
+drop policy if exists site_storage_read   on storage.objects;
+drop policy if exists site_storage_insert on storage.objects;
+drop policy if exists site_storage_update on storage.objects;
+drop policy if exists site_storage_delete on storage.objects;
+create policy site_storage_read on storage.objects
+  for select using (bucket_id = 'site');
+create policy site_storage_insert on storage.objects
+  for insert to authenticated with check (bucket_id = 'site' and public.can_edit_site());
+create policy site_storage_update on storage.objects
+  for update to authenticated using (bucket_id = 'site' and public.can_edit_site());
+create policy site_storage_delete on storage.objects
+  for delete to authenticated using (bucket_id = 'site' and public.can_edit_site());

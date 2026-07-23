@@ -1,0 +1,22 @@
+---
+// Painel administrativo: o app React atual roda como ilha client-side.
+// É uma página isolada (chrome e CSS próprios), sem o layout público.
+import App from '../admin/App.jsx'
+import '../admin/styles.css'
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <title>Painel — Igreja AD Alpha</title>
+  </head>
+  <body>
+    <App client:only="react" />
+  </body>
+</html>
