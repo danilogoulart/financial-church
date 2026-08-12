@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import {
+  currentCompetency,
   forecast,
   formatMoney,
   incomeBreakdowns,
   monthLabel,
   nonTitherWorkers,
   offCashReport,
+  offeringsByWeek,
   tithersLast3Months
 } from '../api'
 
@@ -15,6 +17,8 @@ export default function Reports() {
   const [fc, setFc] = useState(null)
   const [income, setIncome] = useState(null)
   const [offcash, setOffcash] = useState(null)
+  const [offMonth, setOffMonth] = useState(currentCompetency())
+  const [offWeeks, setOffWeeks] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -25,9 +29,50 @@ export default function Reports() {
     offCashReport().then(setOffcash).catch((e) => setError(e.message))
   }, [])
 
+  useEffect(() => {
+    setOffWeeks(null)
+    offeringsByWeek(offMonth).then(setOffWeeks).catch((e) => setError(e.message))
+  }, [offMonth])
+
   return (
     <>
       {error && <div className="card"><div className="banner err">{error}</div></div>}
+
+      <div className="card">
+        <div className="row" style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
+          <h2 style={{ margin: 0 }}>Ofertas por semana</h2>
+          <div>
+            <label>Mês</label>
+            <input type="month" value={offMonth} onChange={(e) => setOffMonth(e.target.value)} />
+          </div>
+        </div>
+        {!offWeeks ? (
+          <span style={{ color: '#999' }}>Carregando...</span>
+        ) : (
+          <div className="table-wrap" style={{ marginTop: 12 }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Semana</th>
+                  <th style={{ textAlign: 'right' }}>Oferta</th>
+                </tr>
+              </thead>
+              <tbody>
+                {offWeeks.rows.map((r) => (
+                  <tr key={r.week}>
+                    <td>Semana {r.week}</td>
+                    <td style={{ textAlign: 'right' }}>{formatMoney(r.total)}</td>
+                  </tr>
+                ))}
+                <tr className="tot">
+                  <td style={{ fontWeight: 'bold' }}>Total do mês</td>
+                  <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{formatMoney(offWeeks.total)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       <div className="card">
         <h2>Projeção de caixa — próximos 3 meses</h2>

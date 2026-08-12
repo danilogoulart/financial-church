@@ -17,6 +17,7 @@ import { PAYMENT_METHODS } from '../constants'
 import { RoleContext } from '../role'
 
 const today = () => new Date().toISOString().slice(0, 10)
+const thisMonth = () => new Date().toISOString().slice(0, 7)
 const SIZE = 20
 
 const EMPTY = {
@@ -29,7 +30,8 @@ const EMPTY = {
   amount: '',
   observation: '',
   off_cash: false,
-  ministry: ''
+  ministry: '',
+  competency: thisMonth()
 }
 
 export default function Transactions() {
@@ -103,7 +105,8 @@ export default function Transactions() {
       amount: t.amount,
       observation: t.observation || '',
       off_cash: t.off_cash || false,
-      ministry: t.ministry || ''
+      ministry: t.ministry || '',
+      competency: t.competency || thisMonth()
     })
     if (fileRef.current) fileRef.current.value = ''
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -144,6 +147,7 @@ export default function Transactions() {
         observation: form.observation,
         off_cash: form.type === 'Receita' ? form.off_cash : false,
         ministry: form.type === 'Receita' && form.off_cash ? form.ministry : null,
+        competency: form.category === 'Dízimos' ? (form.competency || null) : null,
         receipt_path
       }
 
@@ -208,6 +212,13 @@ export default function Transactions() {
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
+
+        {form.category === 'Dízimos' && (
+          <>
+            <label>Mês de referência <small>(a que mês este dízimo se refere)</small></label>
+            <input type="month" value={form.competency} onChange={(e) => set('competency', e.target.value)} />
+          </>
+        )}
 
         {form.type === 'Receita' && (
           <div className="row">

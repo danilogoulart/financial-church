@@ -63,48 +63,78 @@ export function MyCredential() {
 
 // ---------- Minhas contribuições ----------
 
+const MONTH_NAMES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+]
+const fmtDay = (d) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—')
+
 export function MyContributions() {
   const [rows, setRows] = useState(null)
+  const [year, setYear] = useState(new Date().getFullYear())
   const [error, setError] = useState('')
 
   useEffect(() => {
     myContributions().then(setRows).catch((e) => setError(e.message))
   }, [])
 
-  const total = (rows || []).reduce((s, t) => s + (Number(t.amount) || 0), 0)
+  // Agrupa por mês de referência (competency; se não houver, usa o mês da data).
+  const byMonth = {}
+  ;(rows || []).forEach((t) => {
+    const ref = t.competency || (t.date || '').slice(0, 7)
+    const [ry, rm] = ref.split('-').map(Number)
+    if (ry !== year) return
+    const b = (byMonth[rm] = byMonth[rm] || { total: 0, dates: [] })
+    b.total += Number(t.amount) || 0
+    if (t.date) b.dates.push(t.date)
+  })
+  const yearTotal = Object.values(byMonth).reduce((s, b) => s + b.total, 0)
+  const nowY = new Date().getFullYear()
+  const years = [nowY, nowY - 1, nowY - 2]
 
   return (
     <div className="card">
-      <h2>Minhas contribuições</h2>
-      {error && <div className="banner err">{error}</div>}
-      <div className="table-wrap">
+      <div className="row" style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <h2 style={{ margin: 0 }}>Minhas contribuições</h2>
+        <div>
+          <label>Ano</label>
+          <select value={year} onChange={(e) => setYear(Number(e.target.value))}>
+            {years.map((y) => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+      </div>
+      <small>Por mês de referência — a que mês cada contribuição se refere.</small>
+      {error && <div className="banner err" style={{ marginTop: 10 }}>{error}</div>}
+      <div className="table-wrap" style={{ marginTop: 12 }}>
         <table>
           <thead>
             <tr>
-              <th>Data</th>
-              <th>Tipo</th>
-              <th>Categoria</th>
+              <th>Mês de referência</th>
               <th style={{ textAlign: 'right' }}>Valor</th>
+              <th>Data</th>
             </tr>
           </thead>
           <tbody>
-            {(rows || []).map((t, i) => (
-              <tr key={i}>
-                <td>{t.date}</td>
-                <td>{t.type}</td>
-                <td>{t.category || '—'}</td>
-                <td style={{ textAlign: 'right' }}>{formatMoney(t.amount)}</td>
-              </tr>
-            ))}
-            {rows && rows.length === 0 && (
-              <tr><td colSpan="4" style={{ color: '#999' }}>Nenhuma contribuição registrada.</td></tr>
-            )}
-            {rows && rows.length > 0 && (
-              <tr className="tot">
-                <td colSpan="3" style={{ fontWeight: 'bold' }}>Total</td>
-                <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{formatMoney(total)}</td>
-              </tr>
-            )}
+            {MONTH_NAMES.map((name, idx) => {
+              const b = byMonth[idx + 1]
+              const dates = b ? [...new Set(b.dates)].sort() : []
+              const dateLabel =
+                dates.length === 0 ? '—'
+                : dates.length === 1 ? fmtDay(dates[0])
+                : `${fmtDay(dates[dates.length - 1])} (+${dates.length - 1})`
+              return (
+                <tr key={idx} style={{ opacity: b ? 1 : 0.55 }}>
+                  <td>{name} {year}</td>
+                  <td style={{ textAlign: 'right' }}>{b ? formatMoney(b.total) : '—'}</td>
+                  <td>{dateLabel}</td>
+                </tr>
+              )
+            })}
+            <tr className="tot">
+              <td style={{ fontWeight: 'bold' }}>Total {year}</td>
+              <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{formatMoney(yearTotal)}</td>
+              <td></td>
+            </tr>
           </tbody>
         </table>
       </div>

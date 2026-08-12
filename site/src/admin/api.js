@@ -233,7 +233,7 @@ export async function getMyMember() {
 export async function myContributions() {
   const { data, error } = await supabase
     .from('transactions')
-    .select('date, type, category, amount')
+    .select('date, type, category, amount, competency')
     .order('date', { ascending: false })
   if (error) throw error
   return data
@@ -917,6 +917,39 @@ export async function offCashReport() {
     byMinistry[m] = (byMinistry[m] || 0) + amt
   })
   return { byMinistry, total, rows: data }
+}
+
+// Ofertas por semana do mês ('YYYY-MM'). Semana 1 = dias 1–7, Semana 2 = 8–14, etc.
+export async function offeringsByWeek(competency) {
+  const [y, m] = competency.split('-').map(Number)
+  const lastDay = new Date(y, m, 0).getDate()
+  const from = `${competency}-01`
+  const to = `${competency}-${String(lastDay).padStart(2, '0')}`
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('date, amount')
+    .eq('type', 'Receita')
+    .eq('category', 'Ofertas')
+    .eq('off_cash', false)
+    .gte('date', from)
+    .lte('date', to)
+  if (error) throw error
+
+  const weeks = {}
+  let total = 0
+  data.forEach((t) => {
+    const day = Number((t.date || '').slice(8, 10)) || 1
+    const w = Math.min(Math.ceil(day / 7), 5)
+    const amt = Number(t.amount) || 0
+    weeks[w] = (weeks[w] || 0) + amt
+    total += amt
+  })
+
+  const numWeeks = Math.ceil(lastDay / 7)
+  const rows = []
+  for (let w = 1; w <= numWeeks; w++) rows.push({ week: w, total: weeks[w] || 0 })
+  return { rows, total }
 }
 
 // Obreiros (altar/obreiros) que não são dizimistas.
