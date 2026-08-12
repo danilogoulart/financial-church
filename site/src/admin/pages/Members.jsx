@@ -2,6 +2,7 @@ import { useContext, useEffect, useRef, useState } from 'react'
 import {
   createMember,
   createMemberUser,
+  deleteMemberFull,
   listCargoNames,
   listMembersPage,
   listMinistryNames,
@@ -19,7 +20,7 @@ const EMPTY = {
 const SIZE = 20
 
 export default function Members() {
-  const { canWrite, isAdmin } = useContext(RoleContext)
+  const { canWriteMembers: canWrite, isAdmin } = useContext(RoleContext)
   const [form, setForm] = useState(EMPTY)
   const [editingId, setEditingId] = useState(null)
   const [banner, setBanner] = useState(null)
@@ -150,6 +151,20 @@ export default function Members() {
   async function toggleActive(m) {
     try {
       await setMemberActive(m.id, !m.active)
+      refresh()
+    } catch (err) {
+      setBanner({ type: 'err', msg: err.message })
+    }
+  }
+
+  async function removeMember(m) {
+    const msg = m.user_id
+      ? `Excluir "${m.name}"? O login/acesso dele também será removido. Não dá para desfazer.`
+      : `Excluir "${m.name}"? Não dá para desfazer.`
+    if (!window.confirm(msg)) return
+    try {
+      await deleteMemberFull(m.id)
+      setBanner({ type: 'ok', msg: 'Membro excluído.' })
       refresh()
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
@@ -337,6 +352,10 @@ export default function Members() {
                             <button className="link-btn" onClick={() => createAccess(m)}>criar acesso</button>
                           </>
                         ))}
+                        {' · '}
+                        <button className="link-btn" style={{ color: 'var(--expense)' }} onClick={() => removeMember(m)}>
+                          excluir
+                        </button>
                       </>
                     ) : '—'}
                   </td>

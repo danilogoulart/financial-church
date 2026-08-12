@@ -32,7 +32,8 @@ const cults = [
     ) : (
       <div class="grid">
         {events.map((e) => (
-          <a class="card" href={`/eventos/${e.slug}`}>
+          <a class={`card${e.featured ? ' featured' : ''}`} href={`/eventos/${e.slug}`}>
+            {e.featured && <span class="badge-featured">★ Destaque</span>}
             {e.cover_path && <img class="thumb-full" src={imageUrl(e.cover_path)} alt={e.title} />}
             <div class="body">
               <span class="tag">Evento</span>
@@ -84,7 +85,8 @@ const cults = [
     ) : (
       <div class="grid">
         {posts.map((p) => (
-          <a class="card" href={`/noticias/${p.slug}`}>
+          <a class={`card${p.featured ? ' featured' : ''}`} href={`/noticias/${p.slug}`}>
+            {p.featured && <span class="badge-featured">★ Destaque</span>}
             {p.cover_path && <img class="thumb" src={imageUrl(p.cover_path)} alt={p.title} />}
             <div class="body">
               <h3>{p.title}</h3>

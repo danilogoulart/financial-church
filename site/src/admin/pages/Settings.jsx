@@ -23,7 +23,7 @@ import {
 import { RoleContext } from '../role'
 
 export default function Settings() {
-  const { canWrite, isAdmin } = useContext(RoleContext)
+  const { canWriteFinance, canWriteMembers, isAdmin } = useContext(RoleContext)
   const [cats, setCats] = useState([])
   const [kind, setKind] = useState('income')
   const [name, setName] = useState('')
@@ -93,7 +93,7 @@ export default function Settings() {
 
   return (
     <>
-      {canWrite && (
+      {canWriteFinance && (
       <form className="card" onSubmit={add}>
         <h2>Categorias</h2>
         {banner && <div className={`banner ${banner.type}`}>{banner.msg}</div>}
@@ -118,21 +118,21 @@ export default function Settings() {
 
       <div className="card">
         <h2>Categorias de Receita</h2>
-        <CategoryList items={income} onRemove={remove} canWrite={canWrite} />
+        <CategoryList items={income} onRemove={remove} canWrite={canWriteFinance} />
       </div>
 
       <div className="card">
         <h2>Categorias de Despesa</h2>
-        <CategoryList items={expense} onRemove={remove} canWrite={canWrite} />
+        <CategoryList items={expense} onRemove={remove} canWrite={canWriteFinance} />
       </div>
 
-      <Cargos canWrite={canWrite} />
-      <Ministries canWrite={canWrite} />
-      <Cults canWrite={canWrite} />
+      <Cargos canWrite={canWriteMembers} />
+      <Ministries canWrite={canWriteMembers} />
+      <Cults canWrite={canWriteMembers} />
 
-      {canWrite && <Credential />}
+      {isAdmin && <Credential />}
 
-      {canWrite && (
+      {isAdmin && (
       <div className="card">
         <h2>Backup</h2>
         <small>Baixa todos os dados (membros, movimentações, contas, recorrentes, categorias) em um arquivo JSON.</small>
@@ -507,7 +507,7 @@ function Credential() {
   )
 }
 
-const ROLES = ['admin', 'tesoureiro', 'consulta']
+const ROLES = ['admin', 'presidencia', 'tesoureiro', 'secretaria', 'consulta', 'editor', 'membro']
 
 function Users() {
   const [rows, setRows] = useState([])
@@ -540,8 +540,9 @@ function Users() {
     <div className="card">
       <h2>Usuários</h2>
       <small>
-        Papéis: <b>admin</b> (tudo + usuários), <b>tesoureiro</b> (lança/edita), <b>consulta</b> (só leitura).
-        Novos usuários entram como consulta.
+        <b>admin</b>/<b>presidência</b> (tudo, inclusive usuários) · <b>tesoureiro</b> (financeiro) ·
+        <b>secretaria</b> (membros) · <b>consulta</b> (leitura) · <b>editor</b> (site) · <b>membro</b> (portal próprio).
+        Só admin/presidência alteram papéis.
       </small>
       {msg && <div className={`banner ${msg.type}`} style={{ marginTop: 10 }}>{msg.text}</div>}
       <div className="table-wrap" style={{ marginTop: 12 }}>

@@ -371,6 +371,33 @@ const year = new Date().getFullYear()
       /* Imagem de card mostrada por completo (flyers verticais de evento). */
       .card .thumb-full { width: 100%; aspect-ratio: 16 / 22; object-fit: cover; background: var(--surface); }
 
+      /* Destaque: card com realce + selo prateado */
+      .card { position: relative; }
+      .card.featured {
+        border-color: #c3c8ce;
+        box-shadow: 0 0 0 2px rgba(139,145,153,.4), 0 12px 32px rgba(20,17,13,.1);
+      }
+      .badge-featured {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 2;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--chrome);
+        color: #1a1c1f;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        padding: 5px 11px;
+        border-radius: 999px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.3);
+      }
+      /* Sem imagem de capa, o corpo vem logo após o selo: dá espaço pro título. */
+      .badge-featured + .body { padding-top: 42px; }
+
       /* Banners quadrados (1:1, estilo Instagram) */
       .banner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
       .banner {

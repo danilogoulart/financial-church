@@ -20,7 +20,7 @@ const EMPTY = {
 }
 
 export default function Recurring() {
-  const { canWrite } = useContext(RoleContext)
+  const { canWriteFinance: canWrite } = useContext(RoleContext)
   const [form, setForm] = useState(EMPTY)
   const [categories, setCategories] = useState([])
   const [banner, setBanner] = useState(null)

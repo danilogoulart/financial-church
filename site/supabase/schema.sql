@@ -615,3 +615,100 @@ alter table public.site_banners add column if not exists subtitle text default '
 alter table public.site_events drop constraint if exists site_events_recurrence_check;
 alter table public.site_events add constraint site_events_recurrence_check
   check (recurrence in ('none', 'daily', 'weekly', 'biweekly', 'monthly'));
+
+-- ================= Perfis e permissões (v2) =================
+-- admin/presidencia = acesso total (presidencia = admin por ora)
+-- tesoureiro = escreve financeiro; secretaria = cadastra membros;
+-- consulta = leitura; editor = edita o site; membro = portal próprio.
+
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check
+  check (role in ('admin','presidencia','tesoureiro','secretaria','consulta','editor','membro'));
+
+create or replace function public.is_admin() returns boolean language sql stable as $$
+  select public.current_user_role() in ('admin','presidencia');
+$$;
+create or replace function public.can_write_finance() returns boolean language sql stable as $$
+  select public.current_user_role() in ('admin','presidencia','tesoureiro');
+$$;
+create or replace function public.can_write_members() returns boolean language sql stable as $$
+  select public.current_user_role() in ('admin','presidencia','secretaria');
+$$;
+create or replace function public.can_read_finance() returns boolean language sql stable as $$
+  select public.current_user_role() in ('admin','presidencia','tesoureiro','consulta');
+$$;
+create or replace function public.can_edit_site() returns boolean language sql stable as $$
+  select public.current_user_role() in ('admin','presidencia','editor');
+$$;
+create or replace function public.is_staff() returns boolean language sql stable as $$
+  select public.current_user_role() in ('admin','presidencia','tesoureiro','secretaria','consulta');
+$$;
+
+-- Membros: staff vê todos; membro vê o próprio. Escrita: admin/presidencia/secretaria.
+drop policy if exists members_select on public.members;
+drop policy if exists members_write on public.members;
+create policy members_select on public.members for select to authenticated
+  using (public.is_staff() or user_id = auth.uid());
+create policy members_write on public.members for all to authenticated
+  using (public.can_write_members()) with check (public.can_write_members());
+
+-- Transações: lê quem lê financeiro; membro vê as próprias. Escrita: financeiro.
+drop policy if exists transactions_select on public.transactions;
+drop policy if exists transactions_write on public.transactions;
+create policy transactions_select on public.transactions for select to authenticated
+  using (public.can_read_finance() or member_id = public.my_member_id());
+create policy transactions_write on public.transactions for all to authenticated
+  using (public.can_write_finance()) with check (public.can_write_finance());
+
+-- Contas a pagar / recorrentes / categorias: financeiro.
+drop policy if exists payables_select on public.payables;
+drop policy if exists payables_write on public.payables;
+create policy payables_select on public.payables for select to authenticated using (public.can_read_finance());
+create policy payables_write on public.payables for all to authenticated
+  using (public.can_write_finance()) with check (public.can_write_finance());
+
+drop policy if exists recurring_select on public.recurring_expenses;
+drop policy if exists recurring_write on public.recurring_expenses;
+create policy recurring_select on public.recurring_expenses for select to authenticated using (public.can_read_finance());
+create policy recurring_write on public.recurring_expenses for all to authenticated
+  using (public.can_write_finance()) with check (public.can_write_finance());
+
+drop policy if exists categories_select on public.categories;
+drop policy if exists categories_write on public.categories;
+create policy categories_select on public.categories for select to authenticated using (public.can_read_finance());
+create policy categories_write on public.categories for all to authenticated
+  using (public.can_write_finance()) with check (public.can_write_finance());
+
+-- Cargos (legível a todos p/ credencial no portal), ministérios e cultos: config de membros.
+drop policy if exists cargos_select on public.cargos;
+drop policy if exists cargos_write on public.cargos;
+create policy cargos_select on public.cargos for select to authenticated using (true);
+create policy cargos_write on public.cargos for all to authenticated
+  using (public.can_write_members()) with check (public.can_write_members());
+
+drop policy if exists ministries_select on public.ministries;
+drop policy if exists ministries_write on public.ministries;
+create policy ministries_select on public.ministries for select to authenticated using (public.is_staff());
+create policy ministries_write on public.ministries for all to authenticated
+  using (public.can_write_members()) with check (public.can_write_members());
+
+drop policy if exists cults_select on public.cults;
+drop policy if exists cults_write on public.cults;
+create policy cults_select on public.cults for select to authenticated using (public.is_staff());
+create policy cults_write on public.cults for all to authenticated
+  using (public.can_write_members()) with check (public.can_write_members());
+
+-- Configurações (assinaturas etc.): staff lê; só admin/presidencia escreve.
+drop policy if exists settings_select on public.settings;
+drop policy if exists settings_write on public.settings;
+create policy settings_select on public.settings for select to authenticated using (public.is_staff());
+create policy settings_write on public.settings for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+-- Perfis: staff vê todos; membro vê o próprio; só admin/presidencia altera papéis.
+drop policy if exists profiles_select on public.profiles;
+drop policy if exists profiles_admin_update on public.profiles;
+create policy profiles_select on public.profiles for select to authenticated
+  using (public.is_staff() or id = auth.uid());
+create policy profiles_admin_update on public.profiles for update to authenticated
+  using (public.is_admin()) with check (public.is_admin());

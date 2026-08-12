@@ -27,7 +27,7 @@ const EMPTY = {
 const SIZE = 20
 
 export default function Payables() {
-  const { canWrite } = useContext(RoleContext)
+  const { canWriteFinance: canWrite } = useContext(RoleContext)
   const [form, setForm] = useState(EMPTY)
   const [editingId, setEditingId] = useState(null)
   const [existingReceipt, setExistingReceipt] = useState(null)

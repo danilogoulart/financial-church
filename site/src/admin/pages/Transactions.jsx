@@ -33,7 +33,7 @@ const EMPTY = {
 }
 
 export default function Transactions() {
-  const { canWrite } = useContext(RoleContext)
+  const { canWriteFinance: canWrite } = useContext(RoleContext)
   const [form, setForm] = useState(EMPTY)
   const [editingId, setEditingId] = useState(null)
   const [existingReceipt, setExistingReceipt] = useState(null)

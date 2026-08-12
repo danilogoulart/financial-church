@@ -62,7 +62,7 @@ export async function getUpcomingEvents(limit) {
   const upcoming = data
     .map((e) => ({ ...e, next: nextOccurrence(e) }))
     .filter((e) => e.next)
-    .sort((a, b) => a.next - b.next)
+    .sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || a.next - b.next)
   return limit ? upcoming.slice(0, limit) : upcoming
 }
 

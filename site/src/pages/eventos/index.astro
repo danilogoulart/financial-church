@@ -16,7 +16,8 @@ const events = await getUpcomingEvents()
   ) : (
     <div class="grid">
       {events.map((e) => (
-        <a class="card" href={`/eventos/${e.slug}`}>
+        <a class={`card${e.featured ? ' featured' : ''}`} href={`/eventos/${e.slug}`}>
+          {e.featured && <span class="badge-featured">★ Destaque</span>}
           {e.cover_path && <img class="thumb-full" src={imageUrl(e.cover_path)} alt={e.title} />}
           <div class="body">
             <span class="tag">Evento</span>

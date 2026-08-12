@@ -200,6 +200,16 @@ export async function deleteCult(id) {
 
 // ---------- Portal do membro ----------
 
+// Exclui o membro e o login vinculado (via Edge Function com service_role).
+export async function deleteMemberFull(memberId) {
+  const { data, error } = await supabase.functions.invoke('admin-delete-member-user', {
+    body: { member_id: memberId }
+  })
+  if (error) throw new Error(error.message || 'Falha ao excluir membro.')
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
 // Admin cria o login do membro (via Edge Function com service_role).
 export async function createMemberUser(memberId, email, password) {
   const { data, error } = await supabase.functions.invoke('admin-create-member-user', {

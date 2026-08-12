@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getSession, onAuthChange, signOut } from './auth'
-import { getMyRole } from './api'
+import { getMyRole, getMyMember } from './api'
 import { RoleContext } from './role'
 import { APP_NAME, LOGO_URL } from './brand'
 import Login from './Login.jsx'
@@ -30,13 +30,13 @@ const GROUPS = [
   {
     id: 'inicio',
     label: '🏠 Início',
-    roles: ['admin', 'tesoureiro', 'consulta'],
+    roles: ['admin', 'presidencia', 'tesoureiro', 'consulta'],
     tabs: [{ id: 'home', label: '🏠 Início', Component: Home }]
   },
   {
     id: 'financeiro',
     label: '📁 Financeiro',
-    roles: ['admin', 'tesoureiro', 'consulta'],
+    roles: ['admin', 'presidencia', 'tesoureiro', 'consulta'],
     tabs: [
       { id: 'transactions', label: '💰 Movimentações', Component: Transactions },
       { id: 'payables', label: '📄 Contas a Pagar', Component: Payables },
@@ -49,7 +49,7 @@ const GROUPS = [
   {
     id: 'pessoas',
     label: '👥 Pessoas',
-    roles: ['admin', 'tesoureiro', 'consulta'],
+    roles: ['admin', 'presidencia', 'secretaria', 'tesoureiro', 'consulta'],
     tabs: [
       { id: 'members', label: '👤 Membros', Component: Members },
       { id: 'credentials', label: '🪪 Credenciais', Component: Credentials }
@@ -58,7 +58,7 @@ const GROUPS = [
   {
     id: 'site',
     label: '🌐 Site',
-    roles: ['admin', 'editor'],
+    roles: ['admin', 'presidencia', 'editor'],
     tabs: [
       { id: 'site-posts', label: '📰 Notícias', Component: SitePosts },
       { id: 'site-events', label: '📅 Eventos', Component: SiteEvents },
@@ -70,7 +70,7 @@ const GROUPS = [
   {
     id: 'config',
     label: '⚙️ Configurações',
-    roles: ['admin', 'tesoureiro', 'consulta'],
+    roles: ['admin', 'presidencia', 'tesoureiro', 'secretaria', 'consulta'],
     tabs: [{ id: 'settings', label: '⚙️ Configurações', Component: Settings }]
   }
 ]
@@ -83,6 +83,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [openGroup, setOpenGroup] = useState(null)
   const [recovery, setRecovery] = useState(false)
+  const [memberBlocked, setMemberBlocked] = useState(false)
 
   useEffect(() => {
     getSession().then((s) => {
@@ -100,19 +101,46 @@ export default function App() {
     else setRole('consulta')
   }, [session])
 
+  // Membro desativado tem o acesso barrado (o login "cai" no próximo carregamento).
+  useEffect(() => {
+    if (role === 'membro') {
+      getMyMember().then((m) => setMemberBlocked(!!m && m.active === false)).catch(() => {})
+    } else {
+      setMemberBlocked(false)
+    }
+  }, [role])
+
   if (!ready) return <div className="center">Carregando...</div>
   if (recovery) return <SetPassword onDone={() => setRecovery(false)} />
   if (!session) return <Login />
+  if (memberBlocked) {
+    return (
+      <div className="center">
+        <div className="card login">
+          <h1>Acesso desativado</h1>
+          <p style={{ color: 'var(--muted)' }}>
+            Seu cadastro está desativado. Fale com a secretaria da igreja.
+          </p>
+          <button className="primary" onClick={() => signOut()}>Sair</button>
+        </div>
+      </div>
+    )
+  }
 
+  const isAdmin = role === 'admin' || role === 'presidencia'
   const ctx = {
     role,
-    canWrite: role === 'admin' || role === 'tesoureiro',
-    isAdmin: role === 'admin',
-    canEditSite: role === 'admin' || role === 'editor'
+    isAdmin,
+    canWriteFinance: isAdmin || role === 'tesoureiro',
+    canWriteMembers: isAdmin || role === 'secretaria',
+    canReadFinance: isAdmin || role === 'tesoureiro' || role === 'consulta',
+    canEditSite: isAdmin || role === 'editor'
   }
   const roleLabel = {
     admin: 'Admin',
+    presidencia: 'Presidência',
     tesoureiro: 'Tesoureiro',
+    secretaria: 'Secretaria',
     consulta: 'Consulta',
     membro: 'Membro',
     editor: 'Editor'

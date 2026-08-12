@@ -15,7 +15,8 @@ const posts = await getPosts()
   ) : (
     <div class="grid">
       {posts.map((p) => (
-        <a class="card" href={`/noticias/${p.slug}`}>
+        <a class={`card${p.featured ? ' featured' : ''}`} href={`/noticias/${p.slug}`}>
+          {p.featured && <span class="badge-featured">★ Destaque</span>}
           {p.cover_path && <img class="thumb" src={imageUrl(p.cover_path)} alt={p.title} />}
           <div class="body">
             <h3>{p.title}</h3>

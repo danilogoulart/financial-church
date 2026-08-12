@@ -1,5 +1,5 @@
-// Cria um usuário de login para um membro, com papel 'membro'.
-// Só admin pode chamar. Usa a service_role (disponível como env na Edge Function).
+// Exclui um membro e, se houver, o login (auth user) vinculado.
+// Só admin/presidencia/secretaria. Usa a service_role.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const cors = {
@@ -24,40 +24,30 @@ Deno.serve(async (req) => {
     const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const authHeader = req.headers.get('Authorization') ?? ''
 
-    // Verifica que quem chamou é admin (usando o token do chamador).
     const caller = createClient(url, anon, { global: { headers: { Authorization: authHeader } } })
     const { data: { user }, error: uerr } = await caller.auth.getUser()
     if (uerr || !user) return json({ error: 'Não autenticado.' }, 401)
 
     const { data: prof } = await caller.from('profiles').select('role').eq('id', user.id).single()
-    const allowed = ['admin', 'presidencia', 'secretaria']
-    if (!allowed.includes(prof?.role)) {
-      return json({ error: 'Sem permissão para criar acessos.' }, 403)
+    if (!['admin', 'presidencia', 'secretaria'].includes(prof?.role)) {
+      return json({ error: 'Sem permissão para excluir membros.' }, 403)
     }
 
-    const { member_id, email, password } = await req.json()
-    if (!member_id || !email) return json({ error: 'member_id e email são obrigatórios.' }, 400)
-
-    const pass = password && String(password).length >= 6
-      ? String(password)
-      : Math.random().toString(36).slice(2, 10) + 'A1!'
+    const { member_id } = await req.json()
+    if (!member_id) return json({ error: 'member_id é obrigatório.' }, 400)
 
     const admin = createClient(url, service, { auth: { persistSession: false } })
 
-    const { data: created, error: cerr } = await admin.auth.admin.createUser({
-      email,
-      password: pass,
-      email_confirm: true
-    })
-    if (cerr) return json({ error: cerr.message }, 400)
-    const newId = created.user!.id
+    // Busca o login vinculado e o remove (cascata: apaga o profile também).
+    const { data: member } = await admin.from('members').select('user_id').eq('id', member_id).single()
+    if (member?.user_id) {
+      await admin.auth.admin.deleteUser(member.user_id)
+    }
 
-    await admin.from('profiles').upsert({ id: newId, email, role: 'membro' }, { onConflict: 'id' })
+    const { error: derr } = await admin.from('members').delete().eq('id', member_id)
+    if (derr) return json({ error: derr.message }, 400)
 
-    const { error: merr } = await admin.from('members').update({ user_id: newId, email }).eq('id', member_id)
-    if (merr) return json({ error: merr.message }, 400)
-
-    return json({ ok: true, email, password: pass })
+    return json({ ok: true })
   } catch (e) {
     return json({ error: String((e as Error)?.message || e) }, 500)
   }
