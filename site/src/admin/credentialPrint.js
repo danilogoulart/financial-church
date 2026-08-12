@@ -14,7 +14,7 @@ function validity() {
 }
 
 // Abre uma janela de impressão com a credencial (imprime/salva como PDF).
-export function printCredential({ member, settings, logoUrl, photoUrl, presSigUrl, secSigUrl }) {
+export function printCredential({ member, settings, logoUrl, photoUrl, presSigUrl, secSigUrl, qr }) {
   const registro = member.matricula || String(member.id || '').slice(0, 8).toUpperCase()
   const desde = fmtDate(member.joined_date || member.created_at)
   const { issued, until } = validity()
@@ -45,7 +45,10 @@ export function printCredential({ member, settings, logoUrl, photoUrl, presSigUr
   .flag .g { background: #009c3b; }
   .flag .y { background: #ffdf00; }
   .fullname { text-align: center; font-size: 10px; color: #333; padding: 6px 14px 0; }
-  .body { display: flex; gap: 14px; padding: 12px 14px; }
+  .body { display: flex; gap: 14px; padding: 12px 14px; align-items: flex-start; }
+  .qr { margin-left: auto; text-align: center; }
+  .qr img { width: 78px; height: 78px; display: block; }
+  .qr span { font-size: 8px; color: #888; }
   .photo { width: 84px; height: 108px; object-fit: cover; border: 1px solid #ccc; border-radius: 6px; }
   .photo.ph { display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 11px; }
   .fields { font-size: 12px; }
@@ -86,6 +89,7 @@ export function printCredential({ member, settings, logoUrl, photoUrl, presSigUr
         <div><b>CPF:</b> ${esc(member.cpf || '—')}</div>
         <div><b>Nascimento:</b> ${esc(fmtDate(member.birth_date) || '—')}</div>
       </div>
+      ${qr ? `<div class="qr"><img src="${qr}"><span>Validar</span></div>` : ''}
     </div>
 
     <div class="docs">

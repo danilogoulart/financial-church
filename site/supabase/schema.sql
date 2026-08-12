@@ -712,3 +712,15 @@ create policy profiles_select on public.profiles for select to authenticated
   using (public.is_staff() or id = auth.uid());
 create policy profiles_admin_update on public.profiles for update to authenticated
   using (public.is_admin()) with check (public.is_admin());
+
+-- ================= Validação pública de credencial (QR) =================
+-- O QR da credencial aponta para /validar/:id no site. A página (anon) chama
+-- esta função, que devolve só o mínimo (nome, cargo, ativo) para aquele id —
+-- sem expor a tabela de membros. UUID é aleatório (não dá pra enumerar).
+create or replace function public.validate_credential(member_id uuid)
+returns table (name text, cargo text, active boolean)
+language sql stable security definer set search_path = public as $$
+  select m.name, m.cargo, m.active from public.members m where m.id = member_id;
+$$;
+revoke all on function public.validate_credential(uuid) from public;
+grant execute on function public.validate_credential(uuid) to anon, authenticated;

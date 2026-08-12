@@ -76,7 +76,7 @@ function sigGroup(cx, dataUrl, name, role, y = 292) {
     <text x="${cx}" y="${y + 64}" text-anchor="middle" font-size="10" fill="#666">${role}</text>`
 }
 
-function buildSvg({ member, settings, logo, photo, presSig, secSig }) {
+function buildSvg({ member, settings, logo, photo, presSig, secSig, qr }) {
   const registro = member.matricula || String(member.id || '').slice(0, 8).toUpperCase()
   const desde = fmtDate(member.joined_date || member.created_at)
   const { issued, until } = validity()
@@ -99,8 +99,11 @@ function buildSvg({ member, settings, logo, photo, presSig, secSig }) {
 
     ${photoEl}
 
-    <text x="112" y="88" font-size="15" font-weight="bold" fill="#111">${esc(clip(member.name, 28))}</text>
-    ${kv(112, 108, 'Cargo:', member.cargo, 28)}
+    ${qr ? `<image x="309" y="58" width="54" height="54" href="${qr}"/>
+       <text x="336" y="122" text-anchor="middle" font-size="7" fill="#888">Validar</text>` : ''}
+
+    <text x="112" y="88" font-size="15" font-weight="bold" fill="#111">${esc(clip(member.name, 20))}</text>
+    ${kv(112, 108, 'Cargo:', member.cargo, 16)}
     ${kv(112, 126, 'Matrícula:', registro, 18)}
     ${kv(112, 144, 'Membro desde:', desde, 16)}
     ${kv(112, 162, 'RG:', member.rg, 18)}
@@ -118,7 +121,7 @@ function buildSvg({ member, settings, logo, photo, presSig, secSig }) {
   </svg>`
 }
 
-export async function downloadCredentialPng({ member, settings, logoUrl, photoUrl, presSigUrl, secSigUrl }) {
+export async function downloadCredentialPng({ member, settings, logoUrl, photoUrl, presSigUrl, secSigUrl, qr }) {
   const [logo, photo, presSig, secSig] = await Promise.all([
     toDataUrl(logoUrl),
     toDataUrl(photoUrl),
@@ -126,7 +129,7 @@ export async function downloadCredentialPng({ member, settings, logoUrl, photoUr
     toDataUrl(secSigUrl)
   ])
 
-  const svg = buildSvg({ member, settings: settings || {}, logo, photo, presSig, secSig })
+  const svg = buildSvg({ member, settings: settings || {}, logo, photo, presSig, secSig, qr })
   const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
 
   await new Promise((resolve, reject) => {

@@ -10,28 +10,35 @@ import {
 } from '../api'
 import { printCredential } from '../credentialPrint'
 import { downloadCredentialPng } from '../credentialImage'
+import { credentialQr } from '../qr'
 
 // ---------- Minha credencial ----------
 
 export function MyCredential() {
   const [banner, setBanner] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [member, setMember] = useState(null)
+
+  useEffect(() => {
+    getMyMember().then(setMember).catch(() => {})
+  }, [])
 
   async function build() {
-    const [member, settings] = await Promise.all([getMyMember(), getSettings()])
-    if (!member) throw new Error('Seu cadastro de membro não foi encontrado.')
+    const [m, settings] = await Promise.all([getMyMember(), getSettings()])
+    if (!m) throw new Error('Seu cadastro de membro não foi encontrado.')
     const [photoUrl, presSigUrl, secSigUrl] = await Promise.all([
-      assetUrl(member.photo_path),
+      assetUrl(m.photo_path),
       assetUrl(settings.president_sig),
       assetUrl(settings.secretary_sig)
     ])
     return {
-      member,
+      member: m,
       settings,
       logoUrl: window.location.origin + '/logo.png',
       photoUrl,
       presSigUrl,
-      secSigUrl
+      secSigUrl,
+      qr: await credentialQr(m.id)
     }
   }
 
@@ -47,16 +54,26 @@ export function MyCredential() {
     }
   }
 
+  const isCongregado = member?.cargo === 'Congregado'
+
   return (
     <div className="card">
       <h2>Minha credencial</h2>
       {banner && <div className={`banner ${banner.type}`}>{banner.msg}</div>}
-      <button className="primary" disabled={busy} onClick={() => run((d) => printCredential(d))}>
-        {busy ? '...' : 'Gerar PDF'}
-      </button>
-      <button className="link-btn" style={{ marginTop: 10 }} disabled={busy} onClick={() => run((d) => downloadCredentialPng(d))}>
-        Baixar PNG
-      </button>
+      {isCongregado ? (
+        <p style={{ color: 'var(--muted)', margin: 0 }}>
+          Seu cargo (Congregado) não possui credencial.
+        </p>
+      ) : (
+        <>
+          <button className="primary" disabled={busy} onClick={() => run((d) => printCredential(d))}>
+            {busy ? '...' : 'Gerar PDF'}
+          </button>
+          <button className="link-btn" style={{ marginTop: 10 }} disabled={busy} onClick={() => run((d) => downloadCredentialPng(d))}>
+            Baixar PNG
+          </button>
+        </>
+      )}
     </div>
   )
 }

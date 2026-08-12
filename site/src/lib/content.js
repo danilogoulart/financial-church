@@ -156,6 +156,17 @@ export async function getPage(slug) {
   return data
 }
 
+// Valida uma credencial pelo id do membro (via RPC pública). Retorna
+// { name, cargo, active } ou null se não encontrado.
+export async function validateCredential(id) {
+  const { data, error } = await supabase.rpc('validate_credential', { member_id: id })
+  if (error) {
+    console.error(error)
+    return null
+  }
+  return Array.isArray(data) && data.length ? data[0] : null
+}
+
 // Monta os slides do carrossel a partir de 3 fontes:
 //  1. Banners manuais (site_banners)
 //  2. Eventos marcados como destaque

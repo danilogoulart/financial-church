@@ -3,6 +3,7 @@ import { assetUrl, getSettings, listMembersPage } from '../api'
 import Pagination from '../components/Pagination.jsx'
 import { printCredential } from '../credentialPrint'
 import { downloadCredentialPng } from '../credentialImage'
+import { credentialQr } from '../qr'
 
 const SIZE = 20
 const logoUrl = () => window.location.origin + '/logo.png'
@@ -47,7 +48,8 @@ export default function Credentials() {
       logoUrl: logoUrl(),
       photoUrl,
       presSigUrl,
-      secSigUrl
+      secSigUrl,
+      qr: await credentialQr(member.id)
     }
   }
 
@@ -100,9 +102,15 @@ export default function Credentials() {
                 <td>{m.name}</td>
                 <td>{m.cargo || '—'}</td>
                 <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  <button className="link-btn" onClick={() => generatePdf(m)}>PDF</button>
-                  {' · '}
-                  <button className="link-btn" onClick={() => generatePng(m)}>PNG</button>
+                  {m.cargo === 'Congregado' ? (
+                    <span style={{ color: '#999' }}>sem credencial</span>
+                  ) : (
+                    <>
+                      <button className="link-btn" onClick={() => generatePdf(m)}>PDF</button>
+                      {' · '}
+                      <button className="link-btn" onClick={() => generatePng(m)}>PNG</button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}

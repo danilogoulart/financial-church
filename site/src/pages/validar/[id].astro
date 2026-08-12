@@ -1,0 +1,69 @@
+---
+// Validação pública de credencial. O QR da credencial aponta para cá.
+// Válida = membro ativo.
+import Base from '../../layouts/Base.astro'
+import { validateCredential } from '../../lib/content'
+
+const { id } = Astro.params
+const isUuid = /^[0-9a-fA-F-]{36}$/.test(id || '')
+const result = isUuid ? await validateCredential(id) : null
+const valid = !!result && result.active === true
+
+if (!result) Astro.response.status = 404
+---
+
+<Base title="Validação de credencial" description="Verificação de credencial de membro.">
+  <div class="validate">
+    {valid ? (
+      <div class="v-box ok">
+        <div class="v-icon">✓</div>
+        <p class="v-eyebrow">Credencial válida</p>
+        <h1>{result.name}</h1>
+        {result.cargo && <p class="v-cargo">{result.cargo}</p>}
+        <p class="v-sub">Membro ativo da Igreja AD Alpha.</p>
+      </div>
+    ) : (
+      <div class="v-box bad">
+        <div class="v-icon">✕</div>
+        <p class="v-eyebrow">Credencial inválida</p>
+        <h1>Não verificada</h1>
+        <p class="v-sub">
+          {result ? 'Este cadastro não está ativo.' : 'Credencial não encontrada.'}
+        </p>
+      </div>
+    )}
+    <a class="btn ghost" href="/">Ir para o site</a>
+  </div>
+</Base>
+
+<style>
+  .validate { max-width: 460px; margin: 24px auto; text-align: center; }
+  .v-box {
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 40px 28px;
+    background: var(--surface);
+  }
+  .v-box.ok { border-color: #b7e0c4; background: #f2fbf5; }
+  .v-box.bad { border-color: #eecbcb; background: #fdf3f2; }
+  .v-icon {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    margin: 0 auto 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 42px;
+    color: #fff;
+  }
+  .ok .v-icon { background: #1e9e57; }
+  .bad .v-icon { background: #c0392b; }
+  .v-eyebrow { text-transform: uppercase; letter-spacing: .16em; font-size: 13px; font-weight: 700; margin: 0 0 8px; }
+  .ok .v-eyebrow { color: #1e7e45; }
+  .bad .v-eyebrow { color: #a33227; }
+  .v-box h1 { font-size: 28px; margin: 0; }
+  .v-cargo { color: var(--muted); margin: 4px 0 0; font-size: 16px; }
+  .v-sub { color: var(--muted); margin: 14px 0 0; font-size: 15px; }
+  .validate .btn { margin-top: 22px; }
+</style>
