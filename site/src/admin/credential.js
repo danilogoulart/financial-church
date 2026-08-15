@@ -9,6 +9,8 @@ const fmtDate = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/'
 // então não vaza para o resto do painel.
 export const CREDENTIAL_CSS = `
   * { box-sizing: border-box; }
+  /* Força a impressão dos fundos/cores (senão o header e a faixa saem em branco). */
+  .card, .card * { -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
   .card {
     width: 100%; max-width: 380px; margin: 0 auto;
     font-family: Arial, Helvetica, sans-serif; color: #111;
