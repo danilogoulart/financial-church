@@ -29,8 +29,8 @@ export function printCredential({ member, settings, logoUrl, photoUrl, presSigUr
   .card {
     width: 380px; border: 1px solid #222; border-radius: 12px; overflow: hidden;
     background:
-      linear-gradient(200deg, transparent 46%, rgba(226,59,52,.16) 48%, rgba(226,59,52,.16) 55%,
-        rgba(244,180,0,.18) 55%, rgba(244,180,0,.18) 62%, transparent 64%),
+      linear-gradient(200deg, transparent 46%, rgba(0,156,59,.16) 48%, rgba(0,156,59,.16) 55%,
+        rgba(255,223,0,.24) 55%, rgba(255,223,0,.24) 62%, transparent 64%),
       #fff;
   }
   .card-h { background: #000; color: #fff; display: flex; align-items: center; gap: 10px; padding: 10px 14px; }

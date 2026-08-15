@@ -59,10 +59,11 @@ if (!slides.length) slides = [{ type: 'welcome' }]
       )
 
       const bw = s.type === 'banner' ? ' slide-bw' : ''
+      const hm = imgM ? ' has-mobile' : ''
       return s.href ? (
-        <a class={`slide slide-photo${bw}${active}`} href={s.href}>{body}</a>
+        <a class={`slide slide-photo${bw}${hm}${active}`} href={s.href}>{body}</a>
       ) : (
-        <div class={`slide slide-photo${bw}${active}`}>{body}</div>
+        <div class={`slide slide-photo${bw}${hm}${active}`}>{body}</div>
       )
     })}
   </div>
@@ -236,6 +237,14 @@ if (!slides.length) slides = [{ type: 'welcome' }]
   @media (max-width: 640px) {
     .c-arrow { display: none; }
     .slide-bg-m { display: block; z-index: 0; }
+    /* Banner com versão mobile preenche o slide inteiro (100%). */
+    .slide.has-mobile .slide-img {
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      max-height: none;
+      object-fit: cover;
+    }
   }
 </style>
 

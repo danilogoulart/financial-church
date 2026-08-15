@@ -15,6 +15,7 @@ import {
   listCults,
   listMinistries,
   listProfiles,
+  renameCargo,
   setCargoWorker,
   setProfileRole,
   setSetting,
@@ -219,6 +220,21 @@ function Cargos({ canWrite }) {
     }
   }
 
+  async function rename(c) {
+    const nn = window.prompt(`Renomear "${c.name}" para:`, c.name)
+    if (nn === null) return
+    const trimmed = nn.trim()
+    if (!trimmed || trimmed === c.name) return
+    setMsg(null)
+    try {
+      await renameCargo(c.id, c.name, trimmed)
+      setMsg({ type: 'ok', text: 'Cargo renomeado (membros atualizados).' })
+      load()
+    } catch (err) {
+      setMsg({ type: 'err', text: err.message })
+    }
+  }
+
   return (
     <div className="card">
       <h2>Cargos</h2>
@@ -253,6 +269,8 @@ function Cargos({ canWrite }) {
                 <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                   {canWrite && (
                     <>
+                      <button className="link-btn" onClick={() => rename(c)}>renomear</button>
+                      {' · '}
                       <button className="link-btn" onClick={() => toggle(c)}>
                         {c.is_worker ? 'não obreiro' : 'marcar obreiro'}
                       </button>

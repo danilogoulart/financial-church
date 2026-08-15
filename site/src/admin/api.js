@@ -135,6 +135,16 @@ export async function setCargoWorker(id, isWorker) {
   if (error) throw error
 }
 
+// Renomeia o cargo e atualiza (cascata) os membros que usam o nome antigo.
+export async function renameCargo(id, oldName, newName) {
+  const nn = String(newName || '').trim()
+  if (!nn) throw new Error('Informe o novo nome.')
+  const { error } = await supabase.from('cargos').update({ name: nn }).eq('id', id)
+  if (error) throw mapError(error)
+  const { error: e2 } = await supabase.from('members').update({ cargo: nn }).eq('cargo', oldName)
+  if (e2) throw e2
+}
+
 export async function deleteCargo(id) {
   const { error } = await supabase.from('cargos').delete().eq('id', id)
   if (error) throw error

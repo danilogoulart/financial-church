@@ -82,8 +82,8 @@ function buildSvg({ member, settings, logo, photo, presSig, secSig, qr }) {
     <rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="12" fill="#fff" stroke="#222"/>
     <defs><clipPath id="cc"><rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="12"/></clipPath></defs>
     <g clip-path="url(#cc)">
-      <rect x="-160" y="212" width="720" height="60" fill="#e23b34" opacity="0.16" transform="rotate(-20 190 230)"/>
-      <rect x="-160" y="272" width="720" height="42" fill="#f4b400" opacity="0.18" transform="rotate(-20 190 230)"/>
+      <rect x="-160" y="212" width="720" height="60" fill="#009c3b" opacity="0.16" transform="rotate(-20 190 230)"/>
+      <rect x="-160" y="272" width="720" height="42" fill="#ffdf00" opacity="0.22" transform="rotate(-20 190 230)"/>
     </g>
     <path d="M0 12 A12 12 0 0 1 12 0 H368 A12 12 0 0 1 380 12 V48 H0 Z" fill="#000"/>
     ${logo ? `<image x="14" y="12" width="40" height="26" href="${logo}" preserveAspectRatio="xMidYMid meet"/>` : ''}

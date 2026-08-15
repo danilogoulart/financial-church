@@ -1,0 +1,59 @@
+---
+import Base from '../../layouts/Base.astro'
+---
+
+<Base title="Validar credencial" description="Verifique a validade de uma credencial de membro da Igreja AD Alpha.">
+  <div class="validate">
+    <div class="v-box">
+      <div class="v-icon">🔎</div>
+      <h1>Validar credencial</h1>
+      <p class="v-sub">
+        Aponte a câmera do celular para o <strong>QR code</strong> da credencial —
+        a verificação abre automaticamente.
+      </p>
+      <form id="vform" class="v-form">
+        <label for="vcode">Ou informe o código da credencial</label>
+        <input id="vcode" type="text" placeholder="Cole o link ou o código do QR" autocomplete="off" />
+        <button class="btn" type="submit">Validar</button>
+        <p id="verr" class="v-err" hidden>Código inválido. Verifique e tente de novo.</p>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('vform')
+    const err = document.getElementById('verr')
+    form?.addEventListener('submit', (e) => {
+      e.preventDefault()
+      const val = (document.getElementById('vcode')).value.trim()
+      const m = val.match(/[0-9a-fA-F-]{36}/)
+      if (m) window.location.href = '/validar/' + m[0]
+      else if (err) err.hidden = false
+    })
+  </script>
+</Base>
+
+<style>
+  .validate { max-width: 460px; margin: 24px auto; text-align: center; }
+  .v-box {
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 40px 28px;
+    background: var(--surface);
+  }
+  .v-icon {
+    width: 76px; height: 76px; border-radius: 50%;
+    margin: 0 auto 18px; display: flex; align-items: center; justify-content: center;
+    font-size: 38px; background: var(--ink); color: #fff;
+  }
+  .v-box h1 { font-size: 26px; margin: 0; }
+  .v-sub { color: var(--muted); margin: 14px 0 0; font-size: 15px; }
+  .v-form { margin-top: 22px; text-align: left; }
+  .v-form label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  .v-form input {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--line);
+    border-radius: 10px; font-size: 15px;
+  }
+  .v-form .btn { margin-top: 14px; width: 100%; text-align: center; }
+  .v-err { color: #c0392b; font-size: 14px; margin: 10px 0 0; }
+</style>
