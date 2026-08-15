@@ -9,50 +9,56 @@ import {
   uploadAsset
 } from '../api'
 import { printCredential } from '../credentialPrint'
-import { downloadCredentialPng } from '../credentialImage'
+import { credentialCardHtml, CREDENTIAL_CSS } from '../credential'
 import { credentialQr } from '../qr'
+
+// Prévia isolada (shadow DOM) da credencial no mesmo layout do PDF.
+function CredentialPreview({ data }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!ref.current || !data) return
+    const host = ref.current
+    const shadow = host.shadowRoot || host.attachShadow({ mode: 'open' })
+    shadow.innerHTML = `<style>${CREDENTIAL_CSS}</style>${credentialCardHtml(data)}`
+  }, [data])
+  return <div ref={ref} style={{ maxWidth: 380, margin: '4px auto 0' }} />
+}
+
+async function buildCredentialData(m) {
+  const settings = await getSettings()
+  const [photoUrl, presSigUrl, secSigUrl] = await Promise.all([
+    assetUrl(m.photo_path),
+    assetUrl(settings.president_sig),
+    assetUrl(settings.secretary_sig)
+  ])
+  return {
+    member: m,
+    settings,
+    logoUrl: window.location.origin + '/logo.png',
+    photoUrl,
+    presSigUrl,
+    secSigUrl,
+    qr: await credentialQr(m.id)
+  }
+}
 
 // ---------- Minha credencial ----------
 
 export function MyCredential() {
   const [banner, setBanner] = useState(null)
-  const [busy, setBusy] = useState(false)
   const [member, setMember] = useState(null)
+  const [data, setData] = useState(null)
 
   useEffect(() => {
-    getMyMember().then(setMember).catch(() => {})
+    getMyMember()
+      .then((m) => {
+        setMember(m)
+        if (m && m.cargo !== 'Congregado') {
+          buildCredentialData(m).then(setData).catch((e) => setBanner({ type: 'err', msg: e.message }))
+        }
+      })
+      .catch(() => {})
   }, [])
-
-  async function build() {
-    const [m, settings] = await Promise.all([getMyMember(), getSettings()])
-    if (!m) throw new Error('Seu cadastro de membro não foi encontrado.')
-    const [photoUrl, presSigUrl, secSigUrl] = await Promise.all([
-      assetUrl(m.photo_path),
-      assetUrl(settings.president_sig),
-      assetUrl(settings.secretary_sig)
-    ])
-    return {
-      member: m,
-      settings,
-      logoUrl: window.location.origin + '/logo.png',
-      photoUrl,
-      presSigUrl,
-      secSigUrl,
-      qr: await credentialQr(m.id)
-    }
-  }
-
-  async function run(fn) {
-    setBanner(null)
-    setBusy(true)
-    try {
-      await fn(await build())
-    } catch (err) {
-      setBanner({ type: 'err', msg: err.message })
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const isCongregado = member?.cargo === 'Congregado'
 
@@ -66,11 +72,14 @@ export function MyCredential() {
         </p>
       ) : (
         <>
-          <button className="primary" disabled={busy} onClick={() => run((d) => printCredential(d))}>
-            {busy ? '...' : 'Gerar PDF'}
-          </button>
-          <button className="link-btn" style={{ marginTop: 10 }} disabled={busy} onClick={() => run((d) => downloadCredentialPng(d))}>
-            Baixar PNG
+          <CredentialPreview data={data} />
+          <button
+            className="primary"
+            style={{ marginTop: 14 }}
+            disabled={!data}
+            onClick={() => data && printCredential(data)}
+          >
+            {data ? 'Gerar PDF' : 'Preparando...'}
           </button>
         </>
       )}

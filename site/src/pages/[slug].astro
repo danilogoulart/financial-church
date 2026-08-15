@@ -13,10 +13,10 @@ if (!page) {
 ---
 
 {page ? (
-  <Base title={page.title} description={(page.content || '').slice(0, 155)}>
+  <Base title={page.title} description={(page.content || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 155)}>
     <article class="article">
       <h1>{page.title}</h1>
-      <div class="content">{page.content}</div>
+      <div class="rich" set:html={page.content}></div>
     </article>
   </Base>
 ) : (

@@ -139,7 +139,9 @@ export function scheduleLabel(ev) {
     return `${dayRange(occ[0], occ[occ.length - 1])} · ${time}`
   }
   if (rec === 'weekly') {
-    return `Toda ${dfWeekday.format(start)} · ${time}${untilLabel(ev)}`
+    const wd = dfWeekday.format(start)
+    const art = wd === 'domingo' || wd === 'sábado' ? 'Todo' : 'Toda'
+    return `${art} ${wd} · ${time}${untilLabel(ev)}`
   }
   if (rec === 'biweekly') {
     return `Quinzenal · ${dfWeekday.format(start)} · ${time}${untilLabel(ev)}`

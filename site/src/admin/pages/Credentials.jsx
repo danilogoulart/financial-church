@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { assetUrl, getSettings, listMembersPage } from '../api'
 import Pagination from '../components/Pagination.jsx'
 import { printCredential } from '../credentialPrint'
-import { downloadCredentialPng } from '../credentialImage'
 import { credentialQr } from '../qr'
 
 const SIZE = 20
@@ -62,15 +61,6 @@ export default function Credentials() {
     }
   }
 
-  async function generatePng(member) {
-    setBanner(null)
-    try {
-      await downloadCredentialPng(await buildData(member))
-    } catch (err) {
-      setBanner({ type: 'err', msg: err.message })
-    }
-  }
-
   return (
     <div className="card">
       <h2>Credenciais</h2>
@@ -105,11 +95,7 @@ export default function Credentials() {
                   {m.cargo === 'Congregado' ? (
                     <span style={{ color: '#999' }}>sem credencial</span>
                   ) : (
-                    <>
-                      <button className="link-btn" onClick={() => generatePdf(m)}>PDF</button>
-                      {' · '}
-                      <button className="link-btn" onClick={() => generatePng(m)}>PNG</button>
-                    </>
+                    <button className="link-btn" onClick={() => generatePdf(m)}>Gerar credencial (PDF)</button>
                   )}
                 </td>
               </tr>

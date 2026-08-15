@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { RoleContext } from '../role'
 import {
   createBanner,
@@ -82,6 +82,82 @@ function CoverField({
 async function resolveCover(form, prefix, fileKey = '_coverFile', pathKey = 'cover_path') {
   if (form[fileKey]) return uploadSiteImage(form[fileKey], prefix)
   return form[pathKey] || null
+}
+
+// Editor de texto rico (negrito, itálico, título, tamanho, lista, link) com
+// alternância para editar o HTML direto. Guarda o conteúdo como HTML.
+const RT_BTN = {
+  border: '1px solid var(--border)', background: '#fff', borderRadius: 4,
+  minWidth: 30, height: 30, cursor: 'pointer', fontSize: 14, padding: '0 8px'
+}
+function RichText({ value, onChange }) {
+  const ref = useRef(null)
+  const [htmlMode, setHtmlMode] = useState(false)
+
+  useEffect(() => {
+    if (htmlMode) return
+    const el = ref.current
+    if (el && document.activeElement !== el && el.innerHTML !== (value || '')) {
+      el.innerHTML = value || ''
+    }
+  }, [value, htmlMode])
+
+  const exec = (cmd, arg) => {
+    ref.current?.focus()
+    document.execCommand(cmd, false, arg)
+    onChange(ref.current.innerHTML)
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
+        <button type="button" style={{ ...RT_BTN, fontWeight: 'bold' }} onClick={() => exec('bold')}>B</button>
+        <button type="button" style={{ ...RT_BTN, fontStyle: 'italic' }} onClick={() => exec('italic')}>I</button>
+        <button type="button" style={{ ...RT_BTN, textDecoration: 'underline' }} onClick={() => exec('underline')}>U</button>
+        <select style={{ ...RT_BTN, width: 'auto', margin: 0 }} value="" onChange={(e) => { exec('formatBlock', e.target.value); e.target.value = '' }}>
+          <option value="" disabled>Estilo</option>
+          <option value="p">Parágrafo</option>
+          <option value="h2">Título</option>
+          <option value="h3">Subtítulo</option>
+        </select>
+        <select style={{ ...RT_BTN, width: 'auto', margin: 0 }} value="" onChange={(e) => { exec('fontSize', e.target.value); e.target.value = '' }}>
+          <option value="" disabled>Tamanho</option>
+          <option value="2">Pequeno</option>
+          <option value="4">Normal</option>
+          <option value="6">Grande</option>
+        </select>
+        <button type="button" style={RT_BTN} onClick={() => exec('insertUnorderedList')}>• Lista</button>
+        <button type="button" style={RT_BTN} onClick={() => { const u = window.prompt('URL do link:'); if (u) exec('createLink', u) }}>🔗</button>
+        <button
+          type="button"
+          style={{ ...RT_BTN, marginLeft: 'auto', fontFamily: 'monospace', background: htmlMode ? 'var(--primary)' : '#fff', color: htmlMode ? '#fff' : 'inherit' }}
+          title="Editar HTML"
+          onClick={() => setHtmlMode((h) => !h)}
+        >
+          &lt;/&gt;
+        </button>
+      </div>
+      {htmlMode ? (
+        <textarea
+          rows={12}
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          style={{ fontFamily: 'monospace', fontSize: 13 }}
+        />
+      ) : (
+        <div
+          ref={ref}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={(e) => onChange(e.currentTarget.innerHTML)}
+          style={{
+            border: '1px solid var(--border)', borderRadius: 4, padding: '10px 12px',
+            minHeight: 200, background: '#fff', fontSize: 14, lineHeight: 1.6, marginBottom: 14
+          }}
+        />
+      )}
+    </div>
+  )
 }
 
 // ---------- CRUD genérico ----------
@@ -573,7 +649,7 @@ export function SitePages() {
           <label>Link (slug) <small>(vazio = gerado do título)</small></label>
           <input value={f.slug} onChange={(e) => set('slug', e.target.value)} placeholder="quem-somos" />
           <label>Conteúdo</label>
-          <textarea rows={10} value={f.content} onChange={(e) => set('content', e.target.value)} />
+          <RichText value={f.content} onChange={(v) => set('content', v)} />
           <label>Ordem no menu</label>
           <input type="number" value={f.sort} onChange={(e) => set('sort', e.target.value)} />
           <div className="check">
