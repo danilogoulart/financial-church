@@ -5,19 +5,10 @@ const esc = (s) =>
 
 const fmtDate = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '—')
 
-function validity() {
-  const now = new Date()
-  const until = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate())
-  const f = (dt) =>
-    `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`
-  return { issued: f(now), until: f(until) }
-}
-
 // Abre uma janela de impressão com a credencial (imprime/salva como PDF).
 export function printCredential({ member, settings, logoUrl, photoUrl, presSigUrl, secSigUrl, qr }) {
   const registro = member.matricula || String(member.id || '').slice(0, 8).toUpperCase()
   const desde = fmtDate(member.joined_date || member.created_at)
-  const { issued, until } = validity()
 
   const field = (label, value) => `<div><b>${label}</b> ${esc(value || '—')}</div>`
 
@@ -35,15 +26,17 @@ export function printCredential({ member, settings, logoUrl, photoUrl, presSigUr
 <style>
   * { box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; margin: 0; display: flex; justify-content: center; padding: 24px; }
-  .card { width: 380px; border: 1px solid #222; border-radius: 12px; overflow: hidden; }
+  .card {
+    width: 380px; border: 1px solid #222; border-radius: 12px; overflow: hidden;
+    background:
+      linear-gradient(200deg, transparent 46%, rgba(226,59,52,.16) 48%, rgba(226,59,52,.16) 55%,
+        rgba(244,180,0,.18) 55%, rgba(244,180,0,.18) 62%, transparent 64%),
+      #fff;
+  }
   .card-h { background: #000; color: #fff; display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
   .card-h img { height: 28px; }
   .card-h .n { font-size: 15px; font-weight: bold; letter-spacing: .3px; }
   .card-h .t { font-size: 11px; opacity: .85; }
-  .flag { height: 6px; display: flex; }
-  .flag i { flex: 1; }
-  .flag .g { background: #009c3b; }
-  .flag .y { background: #ffdf00; }
   .fullname { text-align: center; font-size: 10px; color: #333; padding: 6px 14px 0; }
   .body { display: flex; gap: 14px; padding: 12px 14px; align-items: flex-start; }
   .qr { margin-left: auto; text-align: center; }
@@ -56,7 +49,6 @@ export function printCredential({ member, settings, logoUrl, photoUrl, presSigUr
   .fields b { color: #666; font-weight: normal; }
   .docs { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; padding: 0 14px; font-size: 12px; }
   .docs b { color: #666; font-weight: normal; }
-  .validity { padding: 8px 14px 0; font-size: 11px; color: #111; font-weight: bold; }
   .obs { padding: 4px 14px; font-size: 10px; color: #666; font-style: italic; }
   .addr { padding: 2px 14px 8px; font-size: 9px; color: #888; text-align: center; }
   .sigs { display: flex; gap: 18px; padding: 4px 14px 16px; }
@@ -76,7 +68,6 @@ export function printCredential({ member, settings, logoUrl, photoUrl, presSigUr
         <div class="t">Credencial</div>
       </div>
     </div>
-    <div class="flag"><i class="g"></i><i class="y"></i></div>
 
     <div class="body">
       ${photoUrl ? `<img class="photo" src="${photoUrl}">` : '<div class="photo ph">sem foto</div>'}
@@ -96,7 +87,6 @@ export function printCredential({ member, settings, logoUrl, photoUrl, presSigUr
       
     </div>
 
-    <div class="validity">Emitida em ${issued} · Válida até ${until}</div>
     <div class="obs">Válida em todo o território nacional.</div>
 
     <div class="sigs">

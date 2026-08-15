@@ -44,12 +44,20 @@ function fmtDate(d) {
   return new Date(d + 'T00:00:00').toLocaleDateString('pt-BR')
 }
 
-// Campo de capa (upload para o bucket público 'site' com pré-visualização).
-function CoverField({ form, setField }) {
-  const url = form._coverPreview || siteImageUrl(form.cover_path)
+// Campo de imagem (upload para o bucket público 'site' com pré-visualização).
+// Parametrizável para permitir mais de uma imagem no mesmo formulário.
+function CoverField({
+  form,
+  setField,
+  label = 'Imagem de capa',
+  pathKey = 'cover_path',
+  fileKey = '_coverFile',
+  previewKey = '_coverPreview'
+}) {
+  const url = form[previewKey] || siteImageUrl(form[pathKey])
   return (
     <div>
-      <label>Imagem de capa</label>
+      <label>{label}</label>
       {url && (
         <img
           src={url}
@@ -62,18 +70,18 @@ function CoverField({ form, setField }) {
         accept="image/*"
         onChange={(e) => {
           const file = e.target.files?.[0] || null
-          setField('_coverFile', file)
-          setField('_coverPreview', file ? URL.createObjectURL(file) : null)
+          setField(fileKey, file)
+          setField(previewKey, file ? URL.createObjectURL(file) : null)
         }}
       />
     </div>
   )
 }
 
-// Sobe a capa (se houver arquivo novo) e devolve o caminho a gravar.
-async function resolveCover(form, prefix) {
-  if (form._coverFile) return uploadSiteImage(form._coverFile, prefix)
-  return form.cover_path || null
+// Sobe a imagem (se houver arquivo novo) e devolve o caminho a gravar.
+async function resolveCover(form, prefix, fileKey = '_coverFile', pathKey = 'cover_path') {
+  if (form[fileKey]) return uploadSiteImage(form[fileKey], prefix)
+  return form[pathKey] || null
 }
 
 // ---------- CRUD genérico ----------
@@ -478,10 +486,11 @@ export function SiteCarousel() {
       title="Carrossel"
       head={['Banner']}
       api={{ list: listBanners, create: createBanner, update: updateBanner, remove: deleteBanner }}
-      emptyForm={() => ({ title: '', subtitle: '', link_url: '', sort: 0, cover_path: null, published: false, _coverFile: null, _coverPreview: null })}
+      emptyForm={() => ({ title: '', subtitle: '', link_url: '', sort: 0, cover_path: null, mobile_cover_path: null, published: false, _coverFile: null, _coverPreview: null, _mobileFile: null, _mobilePreview: null })}
       toForm={(r) => ({
         title: r.title || '', subtitle: r.subtitle || '', link_url: r.link_url || '', sort: r.sort || 0,
-        cover_path: r.image_path, published: r.published, _coverFile: null, _coverPreview: null
+        cover_path: r.image_path, mobile_cover_path: r.image_mobile_path,
+        published: r.published, _coverFile: null, _coverPreview: null, _mobileFile: null, _mobilePreview: null
       })}
       fromForm={async (f) => ({
         title: f.title || '',
@@ -489,6 +498,7 @@ export function SiteCarousel() {
         link_url: f.link_url || '',
         sort: Number(f.sort) || 0,
         image_path: await resolveCover(f, 'banners/'),
+        image_mobile_path: await resolveCover(f, 'banners/', '_mobileFile', 'mobile_cover_path'),
         published: !!f.published
       })}
       renderFields={(f, set) => (
@@ -497,8 +507,15 @@ export function SiteCarousel() {
             Slides manuais do carrossel. As notícias em destaque e os próximos eventos
             entram no carrossel automaticamente.
           </p>
-          <label>Imagem <small>(paisagem, ex.: 1600×900)</small></label>
-          <CoverField form={f} setField={set} />
+          <CoverField form={f} setField={set} label="Imagem — desktop (paisagem, ~1600×900)" />
+          <CoverField
+            form={f}
+            setField={set}
+            label="Imagem — mobile (vertical/quadrada, opcional)"
+            pathKey="mobile_cover_path"
+            fileKey="_mobileFile"
+            previewKey="_mobilePreview"
+          />
           <label>Título <small>(opcional)</small></label>
           <input value={f.title} onChange={(e) => set('title', e.target.value)} placeholder="Ex.: Bem-vindo" />
           <label>Subtítulo <small>(opcional)</small></label>

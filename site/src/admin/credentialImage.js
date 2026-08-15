@@ -8,14 +8,6 @@ const esc = (s) =>
 
 const fmtDate = (d) => (d ? String(d).slice(0, 10).split('-').reverse().join('/') : '—')
 
-function validity() {
-  const now = new Date()
-  const until = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate())
-  const f = (dt) =>
-    `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()}`
-  return { issued: f(now), until: f(until) }
-}
-
 function clip(s, max) {
   s = String(s ?? '')
   return s.length > max ? s.slice(0, max - 1) + '…' : s
@@ -79,7 +71,6 @@ function sigGroup(cx, dataUrl, name, role, y = 292) {
 function buildSvg({ member, settings, logo, photo, presSig, secSig, qr }) {
   const registro = member.matricula || String(member.id || '').slice(0, 8).toUpperCase()
   const desde = fmtDate(member.joined_date || member.created_at)
-  const { issued, until } = validity()
 
   const photoEl = photo
     ? `<image x="14" y="70" width="84" height="108" href="${photo}" preserveAspectRatio="xMidYMid slice"/>
@@ -89,13 +80,15 @@ function buildSvg({ member, settings, logo, photo, presSig, secSig, qr }) {
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="Arial, Helvetica, sans-serif">
     <rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="12" fill="#fff" stroke="#222"/>
+    <defs><clipPath id="cc"><rect x="0.5" y="0.5" width="${W - 1}" height="${H - 1}" rx="12"/></clipPath></defs>
+    <g clip-path="url(#cc)">
+      <rect x="-160" y="212" width="720" height="60" fill="#e23b34" opacity="0.16" transform="rotate(-20 190 230)"/>
+      <rect x="-160" y="272" width="720" height="42" fill="#f4b400" opacity="0.18" transform="rotate(-20 190 230)"/>
+    </g>
     <path d="M0 12 A12 12 0 0 1 12 0 H368 A12 12 0 0 1 380 12 V48 H0 Z" fill="#000"/>
     ${logo ? `<image x="14" y="12" width="40" height="26" href="${logo}" preserveAspectRatio="xMidYMid meet"/>` : ''}
     <text x="68" y="26" font-size="15" font-weight="bold" fill="#fff">${esc(APP_NAME)}</text>
     <text x="68" y="40" font-size="10" fill="#fff">Credencial</text>
-
-    <rect x="0" y="48" width="190" height="6" fill="#009c3b"/>
-    <rect x="190" y="48" width="190" height="6" fill="#ffdf00"/>
 
     ${photoEl}
 
@@ -110,8 +103,7 @@ function buildSvg({ member, settings, logo, photo, presSig, secSig, qr }) {
     ${kv(112, 180, 'CPF:', member.cpf, 18)}
     ${kv(112, 198, 'Nascimento:', fmtDate(member.birth_date), 14)}
 
-    <text x="14" y="232" font-size="11" font-weight="bold" fill="#111">Emitida em ${issued} · Válida até ${until}</text>
-    <text x="14" y="248" font-size="10" font-style="italic" fill="#666">Válida em todo o território nacional.</text>
+    <text x="14" y="240" font-size="10" font-style="italic" fill="#666">Válida em todo o território nacional.</text>
 
     ${sigGroup(104, presSig, settings.president_name, 'Presidente', 274)}
     ${sigGroup(276, secSig, settings.secretary_name, 'Secretário(a)', 274)}

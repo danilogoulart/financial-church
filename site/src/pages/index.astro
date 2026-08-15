@@ -12,10 +12,10 @@ const ADDR = 'Rua Rio de Janeiro, N°6 - Praia Linda, São Pedro Da Aldeia - Rio
 const mapSrc = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3676.868579716404!2d-42.1670715!3d-22.8443512!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x97139de411598f%3A0x5794f89b05ef838d!2sAssembleia%20de%20Deus%20Alpha%20minist%C3%A9rio%20central%20praia%20linda!5e0!3m2!1spt-BR!2sbr!4v1784787546643!5m2!1spt-BR!2sbr'
 
 const cults = [
-  { day: 'Domingo', desc: 'Culto de Louvor e Adoração' },
-  { day: 'Terça', desc: 'Culto da Palavra Viva' },
-  { day: 'Quinta', desc: 'Quinta Fire' },
-  { day: 'Consagração', desc: 'Momento de busca' }
+  { day: 'Domingo', desc: 'Culto de Louvor e Adoração', time: '19h30' },
+  { day: 'Terça', desc: 'Culto da Palavra Viva', time: '19h30' },
+  { day: 'Quinta', desc: 'Quinta Fire', time: '19h30' },
+  { day: 'Consagração', desc: 'Momento de busca', time: '9h' }
 ]
 ---
 
@@ -30,7 +30,7 @@ const cults = [
     {events.length === 0 ? (
       <div class="empty">Nenhum evento agendado no momento.</div>
     ) : (
-      <div class="grid">
+      <div class="grid cols2-m">
         {events.map((e) => (
           <a class={`card${e.featured ? ' featured' : ''}`} href={`/eventos/${e.slug}`}>
             {e.featured && <span class="badge-featured">★ Destaque</span>}
@@ -69,6 +69,7 @@ const cults = [
       {cults.map((c) => (
         <div class="cult">
           <div class="day">{c.day}</div>
+          <div class="time">{c.time}</div>
           <div class="desc">{c.desc}</div>
         </div>
       ))}

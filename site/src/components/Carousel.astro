@@ -32,13 +32,18 @@ if (!slides.length) slides = [{ type: 'welcome' }]
       // banner | news | event — imagem mostrada por completo (contain) sobre
       // um fundo desfocado da própria imagem (preenche as laterais).
       const img = imageUrl(s.image)
+      const imgM = s.imageMobile ? imageUrl(s.imageMobile) : null
       const eyebrow = s.type === 'news' ? 'Notícia' : s.type === 'event' ? 'Evento' : ''
       const cta = s.type === 'news' ? 'Ler notícia' : s.type === 'event' ? 'Ver evento' : 'Saiba mais'
       const hasText = eyebrow || s.title || s.subtitle
       const body = (
         <>
           <div class="slide-bg" style={`background-image: url('${img}')`}></div>
-          <img class="slide-img" src={img} alt={s.title || 'Banner'} />
+          {imgM && <div class="slide-bg slide-bg-m" style={`background-image: url('${imgM}')`}></div>}
+          <picture>
+            {imgM && <source media="(max-width: 640px)" srcset={imgM} />}
+            <img class="slide-img" src={img} alt={s.title || 'Banner'} />
+          </picture>
           {hasText && (
             <>
               <div class="slide-scrim"></div>
@@ -53,10 +58,11 @@ if (!slides.length) slides = [{ type: 'welcome' }]
         </>
       )
 
+      const bw = s.type === 'banner' ? ' slide-bw' : ''
       return s.href ? (
-        <a class={`slide slide-photo${active}`} href={s.href}>{body}</a>
+        <a class={`slide slide-photo${bw}${active}`} href={s.href}>{body}</a>
       ) : (
-        <div class={`slide slide-photo${active}`}>{body}</div>
+        <div class={`slide slide-photo${bw}${active}`}>{body}</div>
       )
     })}
   </div>
@@ -122,6 +128,12 @@ if (!slides.length) slides = [{ type: 'welcome' }]
     height: auto;
     z-index: 1;
   }
+  /* Fundo desfocado da versão mobile (fica por cima do desktop no celular). */
+  .slide-bg-m { display: none; }
+  /* Banners em preto e branco, para não fugir do padrão do site. */
+  .slide-bw .slide-img { filter: grayscale(1) contrast(1.03); }
+  .slide-bw .slide-bg,
+  .slide-bw .slide-bg-m { filter: grayscale(1) blur(24px) brightness(0.4); }
   .slide-scrim {
     position: absolute;
     left: 0;
@@ -223,6 +235,7 @@ if (!slides.length) slides = [{ type: 'welcome' }]
 
   @media (max-width: 640px) {
     .c-arrow { display: none; }
+    .slide-bg-m { display: block; z-index: 0; }
   }
 </style>
 

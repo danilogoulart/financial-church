@@ -350,6 +350,12 @@ const year = new Date().getFullYear()
 
       /* Card grid */
       .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 22px; }
+      /* Duas colunas no mobile (usado na Programação). */
+      @media (max-width: 640px) {
+        .grid.cols2-m { grid-template-columns: 1fr 1fr; gap: 12px; }
+        .grid.cols2-m .card h3 { font-size: 16px; }
+        .grid.cols2-m .card .body { padding: 12px 14px; }
+      }
       .card {
         border: 1px solid var(--line);
         border-radius: var(--radius);
@@ -463,6 +469,7 @@ const year = new Date().getFullYear()
         text-align: center;
       }
       .cult .day { font-family: var(--serif); font-size: 21px; font-weight: 600; }
+      .cult .time { font-size: 15px; font-weight: 700; color: var(--ink); margin-top: 2px; }
       .cult .desc { color: var(--muted); font-size: 14px; margin-top: 4px; }
 
       /* Localização + mapa */

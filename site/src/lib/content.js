@@ -184,6 +184,7 @@ export async function getCarousel() {
     slides.push({
       type: 'banner',
       image: b.image_path,
+      imageMobile: b.image_mobile_path || null,
       title: b.title || '',
       subtitle: b.subtitle || '',
       href: b.link_url || ''

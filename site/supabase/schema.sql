@@ -608,8 +608,9 @@ alter table public.site_posts add column if not exists featured boolean not null
 alter table public.site_events add column if not exists excerpt text default '';
 -- Evento também pode ser destaque no carrossel.
 alter table public.site_events add column if not exists featured boolean not null default false;
--- Banner do carrossel: subtítulo opcional.
+-- Banner do carrossel: subtítulo opcional + imagem separada para mobile.
 alter table public.site_banners add column if not exists subtitle text default '';
+alter table public.site_banners add column if not exists image_mobile_path text;
 
 -- Recorrência quinzenal (a cada 2 semanas).
 alter table public.site_events drop constraint if exists site_events_recurrence_check;
