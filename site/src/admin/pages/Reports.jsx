@@ -118,8 +118,8 @@ export default function Reports() {
         ) : (
           <>
             <small>
-              Meses considerados: {tithers.months.map(monthLabel).join(', ')}.
-              Destaque para quem dizimou em menos de 3 meses.
+              Quem deu dízimo nos meses: {tithers.months.map(monthLabel).join(', ')}.
+              O selo mostra em quantos dos 3 meses a pessoa dizimou.
             </small>
             <div className="table-wrap" style={{ marginTop: 12 }}>
               <table>
@@ -151,7 +151,7 @@ export default function Reports() {
                   {tithers.rows.length === 0 && (
                     <tr>
                       <td colSpan={3 + tithers.months.length} style={{ color: '#999' }}>
-                        Nenhum dizimista cadastrado.
+                        Nenhum dízimo registrado no período.
                       </td>
                     </tr>
                   )}
@@ -167,7 +167,8 @@ export default function Reports() {
         {!workers ? (
           <span style={{ color: '#999' }}>Carregando...</span>
         ) : (
-          <div className="table-wrap">
+          <><small>Obreiros ativos que não deram dízimo nos últimos 3 meses.</small>
+          <div className="table-wrap" style={{ marginTop: 8 }}>
             <table>
               <thead>
                 <tr>
@@ -193,7 +194,7 @@ export default function Reports() {
                 )}
               </tbody>
             </table>
-          </div>
+          </div></>
         )}
       </div>
 

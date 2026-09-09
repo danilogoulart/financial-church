@@ -77,7 +77,7 @@ export default function Home() {
           <div className="kpi">Obreiros<div className="value">{mrep?.summary.obreiro ?? '—'}</div></div>
           <div className="kpi">Membros<div className="value">{mrep?.summary.membro ?? '—'}</div></div>
           <div className="kpi">Congregados<div className="value">{mrep?.summary.congregado ?? '—'}</div></div>
-          <div className="kpi">Dizimistas<div className="value">{counts?.tithers ?? '—'}</div></div>
+          <div className="kpi">Dizimistas (3m)<div className="value">{counts?.tithers ?? '—'}</div></div>
           <div className="kpi">Novos em {curYear}<div className="value">{novosAno ?? '—'}</div></div>
         </div>
       </div>

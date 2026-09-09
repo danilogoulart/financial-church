@@ -24,14 +24,32 @@ export async function listMembersPage(page = 0, size = 20, filters = {}) {
   return { rows: data, total: count || 0 }
 }
 
+// Dízimos (reais) dos últimos 3 meses, por member_id. "Dizimista" = quem deu
+// dízimo nesse período (a flag antiga foi aposentada).
+async function fetchTither3m() {
+  const months = lastNMonths(3) // atual + 2 anteriores
+  const today = new Date().toISOString().slice(0, 10)
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('member_id, date, amount')
+    .eq('type', 'Receita')
+    .eq('category', 'Dízimos')
+    .eq('off_cash', false)
+    .gte('date', months[0] + '-01')
+    .lte('date', today)
+  if (error) throw error
+  return { months, tithes: (data || []).filter((t) => t.member_id) }
+}
+
 export async function memberCounts() {
   const base = () => supabase.from('members').select('id', { count: 'exact', head: true })
-  const [{ count: total }, { count: active }, { count: tithers }] = await Promise.all([
+  const [{ count: total }, { count: active }, { tithes }] = await Promise.all([
     base(),
     base().eq('active', true),
-    base().eq('tither', true)
+    fetchTither3m()
   ])
-  return { total: total || 0, active: active || 0, tithers: tithers || 0 }
+  const titherIds = new Set(tithes.map((t) => t.member_id))
+  return { total: total || 0, active: active || 0, tithers: titherIds.size }
 }
 
 export async function createMember(member) {
@@ -1112,45 +1130,39 @@ export async function generateMonthPayables(competency) {
 
 // Dizimistas: em quantos dos 3 meses anteriores ao mês atual houve dízimo.
 export async function tithersLast3Months() {
-  const months = previousMonths(3)
-
-  const [{ data: tithers, error: e1 }, { data: tithes, error: e2 }] = await Promise.all([
-    supabase.from('members').select('id, name').eq('tither', true).order('name'),
-    supabase
-      .from('transactions')
-      .select('member_id, date, amount')
-      .eq('type', 'Receita')
-      .eq('category', 'Dízimos')
-      .eq('off_cash', false)
-      .gte('date', months[0] + '-01')
-      .lt('date', currentCompetency() + '-01')
-  ])
-  if (e1) throw e1
-  if (e2) throw e2
+  const { months, tithes } = await fetchTither3m()
 
   // member_id -> { 'YYYY-MM': soma dos dízimos no mês }
   const byMember = {}
   tithes.forEach((t) => {
-    if (!t.member_id) return
     const mm = (t.date || '').slice(0, 7)
     const map = (byMember[t.member_id] = byMember[t.member_id] || {})
     map[mm] = (map[mm] || 0) + (Number(t.amount) || 0)
   })
 
-  const rows = tithers.map((m) => {
-    const map = byMember[m.id] || {}
+  const ids = Object.keys(byMember)
+  const { data: members, error } = await supabase
+    .from('members')
+    .select('id, name')
+    .in('id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000'])
+  if (error) throw error
+  const nameById = {}
+  ;(members || []).forEach((m) => { nameById[m.id] = m.name })
+
+  const rows = ids.map((id) => {
+    const map = byMember[id]
     const perMonth = months.map((mm) => map[mm] || 0)
     return {
-      id: m.id,
-      name: m.name,
+      id,
+      name: nameById[id] || '—',
       perMonth,
       total: perMonth.reduce((s, v) => s + v, 0),
       monthsTithed: perMonth.filter((v) => v > 0).length
     }
   })
 
-  // Quem tithou em menos meses primeiro (destaca quem está faltando).
-  rows.sort((a, b) => a.monthsTithed - b.monthsTithed || a.name.localeCompare(b.name))
+  // Maiores dizimistas primeiro.
+  rows.sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
 
   return { months, rows }
 }
@@ -1230,18 +1242,22 @@ export async function offeringsByWeek(competency) {
   return { rows, total }
 }
 
-// Obreiros (altar/obreiros) que não são dizimistas.
+// Obreiros que NÃO deram dízimo nos últimos 3 meses (derivado das movimentações).
 export async function nonTitherWorkers() {
   const workers = await workerCargoNames()
   if (workers.length === 0) return []
-  const { data, error } = await supabase
-    .from('members')
-    .select('id, name, cargo, phone')
-    .eq('tither', false)
-    .in('cargo', workers)
-    .order('name')
+  const [{ data, error }, { tithes }] = await Promise.all([
+    supabase
+      .from('members')
+      .select('id, name, cargo, phone')
+      .eq('active', true)
+      .in('cargo', workers)
+      .order('name'),
+    fetchTither3m()
+  ])
   if (error) throw error
-  return data
+  const titherIds = new Set(tithes.map((t) => t.member_id))
+  return (data || []).filter((m) => !titherIds.has(m.id))
 }
 
 // ---------- Série mensal (gráfico receitas x despesas) ----------

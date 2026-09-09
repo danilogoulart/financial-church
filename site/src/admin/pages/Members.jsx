@@ -17,7 +17,7 @@ import Pagination from '../components/Pagination.jsx'
 import { RoleContext } from '../role'
 
 const EMPTY = {
-  name: '', phone: '', email: '', family: '', cargo: '', ministries: [], tither: true, active: true,
+  name: '', phone: '', email: '', family: '', cargo: '', ministries: [], active: true,
   matricula: '', rg: '', cpf: '', birth_date: '', joined_date: '',
   note: '', entry_type: '', previous_pastor: '', previous_church: '',
   role: '', _userId: null, _role0: ''
@@ -114,7 +114,6 @@ export default function Members() {
       family: m.family || '',
       cargo: m.cargo || '',
       ministries: m.ministries || [],
-      tither: m.tither,
       active: m.active,
       matricula: m.matricula || '',
       rg: m.rg || '',
@@ -162,7 +161,6 @@ export default function Members() {
         family: form.family,
         cargo: form.cargo || null,
         ministries: form.ministries,
-        tither: form.tither,
         matricula: form.matricula || null,
         rg: form.rg || null,
         cpf: form.cpf || null,
@@ -366,11 +364,6 @@ export default function Members() {
         </label>
         <input ref={photoRef} type="file" accept="image/*" />
 
-        <div className="check">
-          <input id="tither" type="checkbox" checked={form.tither} onChange={(e) => set('tither', e.target.checked)} />
-          <label htmlFor="tither" style={{ margin: 0 }}>É dizimista</label>
-        </div>
-
         {editingId && (
           <div className="check">
             <input id="active" type="checkbox" checked={form.active} onChange={(e) => set('active', e.target.checked)} />
@@ -424,7 +417,6 @@ export default function Members() {
                 <th>Nome</th>
                 <th>Cargo</th>
                 <th>Ministérios</th>
-                <th>Dizimista</th>
                 <th>Ativo</th>
                 <th></th>
               </tr>
@@ -435,7 +427,6 @@ export default function Members() {
                   <td>{m.name}</td>
                   <td>{m.cargo || '—'}</td>
                   <td>{(m.ministries || []).join(', ') || '—'}</td>
-                  <td>{m.tither ? 'Sim' : 'Não'}</td>
                   <td>{m.active ? 'Sim' : 'Não'}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     {canWrite ? (
@@ -464,7 +455,7 @@ export default function Members() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan="6" style={{ color: '#999' }}>Nenhum membro ainda.</td>
+                  <td colSpan="5" style={{ color: '#999' }}>Nenhum membro ainda.</td>
                 </tr>
               )}
             </tbody>
