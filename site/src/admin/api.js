@@ -256,6 +256,22 @@ export async function updateMyProfile(fields) {
   if (error) throw error
 }
 
+// Troca o e-mail de login (o próprio membro, ou staff passando memberId).
+// Atualiza o Auth + members.email via Edge Function (service_role).
+export async function changeEmail(email, memberId = null) {
+  const body = memberId ? { email, member_id: memberId } : { email }
+  const { data, error } = await supabase.functions.invoke('admin-update-member-email', { body })
+  if (error) throw new Error(error.message || 'Falha ao alterar e-mail.')
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
+// Troca a própria senha (o membro logado).
+export async function changeMyPassword(newPassword) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword })
+  if (error) throw new Error(error.message || 'Falha ao alterar a senha.')
+}
+
 // ---------- Papéis / usuários ----------
 
 export async function getMyRole() {

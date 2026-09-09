@@ -84,6 +84,7 @@ export default function App() {
   const [openGroup, setOpenGroup] = useState(null)
   const [recovery, setRecovery] = useState(false)
   const [memberBlocked, setMemberBlocked] = useState(false)
+  const [memberIsCongregado, setMemberIsCongregado] = useState(false)
 
   useEffect(() => {
     getSession().then((s) => {
@@ -104,9 +105,13 @@ export default function App() {
   // Membro desativado tem o acesso barrado (o login "cai" no próximo carregamento).
   useEffect(() => {
     if (role === 'membro') {
-      getMyMember().then((m) => setMemberBlocked(!!m && m.active === false)).catch(() => {})
+      getMyMember().then((m) => {
+        setMemberBlocked(!!m && m.active === false)
+        setMemberIsCongregado(!!m && m.cargo === 'Congregado')
+      }).catch(() => {})
     } else {
       setMemberBlocked(false)
+      setMemberIsCongregado(false)
     }
   }, [role])
 
@@ -148,8 +153,12 @@ export default function App() {
 
   // Membro usa um menu simples (portal); demais papéis usam grupos filtrados.
   const isMember = role === 'membro'
+  // Congregado não tem credencial — some com a aba.
+  const memberTabs = memberIsCongregado
+    ? TABS_MEMBER.filter((t) => t.id !== 'my-credential')
+    : TABS_MEMBER
   const groups = isMember
-    ? [{ id: 'portal', label: 'Portal', tabs: TABS_MEMBER }]
+    ? [{ id: 'portal', label: 'Portal', tabs: memberTabs }]
     : GROUPS.filter((g) => g.roles.includes(role))
   const allTabs = groups.flatMap((g) => g.tabs)
 

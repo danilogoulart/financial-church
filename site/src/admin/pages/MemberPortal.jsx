@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   assetUrl,
+  changeEmail,
+  changeMyPassword,
   formatMoney,
   getMyMember,
   getSettings,
   myContributions,
-  updateMyProfile,
-  uploadAsset
+  updateMyProfile
 } from '../api'
 import { printCredential } from '../credentialPrint'
 import { credentialCardHtml, CREDENTIAL_CSS } from '../credential'
@@ -172,16 +173,27 @@ export function MyContributions() {
 
 export function MyProfile() {
   const [member, setMember] = useState(null)
-  const [form, setForm] = useState({ name: '', phone: '', family: '' })
+  const [phone, setPhone] = useState('')
   const [banner, setBanner] = useState(null)
   const [saving, setSaving] = useState(false)
-  const photoRef = useRef(null)
+
+  // E-mail e senha (seções próprias).
+  const [email, setEmail] = useState('')
+  const [emailBanner, setEmailBanner] = useState(null)
+  const [emailSaving, setEmailSaving] = useState(false)
+  const [pass, setPass] = useState('')
+  const [pass2, setPass2] = useState('')
+  const [passBanner, setPassBanner] = useState(null)
+  const [passSaving, setPassSaving] = useState(false)
 
   async function load() {
     try {
       const m = await getMyMember()
       setMember(m)
-      if (m) setForm({ name: m.name || '', phone: m.phone || '', family: m.family || '' })
+      if (m) {
+        setPhone(m.phone || '')
+        setEmail(m.email || '')
+      }
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     }
@@ -191,22 +203,56 @@ export function MyProfile() {
     load()
   }, [])
 
-  async function save(e) {
+  async function savePhone(e) {
     e.preventDefault()
     setSaving(true)
     setBanner(null)
     try {
-      const file = photoRef.current?.files?.[0]
-      const fields = { name: form.name.trim(), phone: form.phone, family: form.family }
-      if (file) fields.photo_path = await uploadAsset(file, 'members/')
-      await updateMyProfile(fields)
-      setBanner({ type: 'ok', msg: 'Dados atualizados.' })
-      if (photoRef.current) photoRef.current.value = ''
-      load()
+      await updateMyProfile({ phone })
+      setBanner({ type: 'ok', msg: 'Telefone atualizado.' })
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function saveEmail(e) {
+    e.preventDefault()
+    setEmailSaving(true)
+    setEmailBanner(null)
+    try {
+      await changeEmail(email.trim())
+      setEmailBanner({ type: 'ok', msg: 'E-mail de acesso atualizado. Use o novo e-mail no próximo login.' })
+      load()
+    } catch (err) {
+      setEmailBanner({ type: 'err', msg: err.message })
+    } finally {
+      setEmailSaving(false)
+    }
+  }
+
+  async function savePass(e) {
+    e.preventDefault()
+    if (pass.length < 6) {
+      setPassBanner({ type: 'err', msg: 'A senha precisa ter ao menos 6 caracteres.' })
+      return
+    }
+    if (pass !== pass2) {
+      setPassBanner({ type: 'err', msg: 'As senhas não conferem.' })
+      return
+    }
+    setPassSaving(true)
+    setPassBanner(null)
+    try {
+      await changeMyPassword(pass)
+      setPass('')
+      setPass2('')
+      setPassBanner({ type: 'ok', msg: 'Senha alterada.' })
+    } catch (err) {
+      setPassBanner({ type: 'err', msg: err.message })
+    } finally {
+      setPassSaving(false)
     }
   }
 
@@ -220,28 +266,43 @@ export function MyProfile() {
   }
 
   return (
-    <form className="card" onSubmit={save}>
-      <h2>Meus dados</h2>
-      {banner && <div className={`banner ${banner.type}`}>{banner.msg}</div>}
+    <>
+      <form className="card" onSubmit={savePhone}>
+        <h2>Meus dados</h2>
+        {banner && <div className={`banner ${banner.type}`}>{banner.msg}</div>}
 
-      <label>Nome</label>
-      <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
+        <div style={{ fontSize: 14, lineHeight: 1.9 }}>
+          <div>Nome: <b>{member.name}</b></div>
+          <div>Família: <b>{member.family || '—'}</b></div>
+          <div>Cargo: <b>{member.cargo || '—'}</b></div>
+          <div>Ministérios: <b>{(member.ministries || []).join(', ') || '—'}</b></div>
+        </div>
+        <small>Esses dados são mantidos pela secretaria.</small>
 
-      <label>Telefone</label>
-      <input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+        <label style={{ marginTop: 12 }}>Telefone</label>
+        <input value={phone} onChange={(e) => setPhone(e.target.value)} />
 
-      <label>Família</label>
-      <input value={form.family} onChange={(e) => setForm((f) => ({ ...f, family: e.target.value }))} />
+        <button className="primary" disabled={saving}>{saving ? 'Salvando...' : 'Salvar telefone'}</button>
+      </form>
 
-      <label>Foto <small>(envie para substituir)</small></label>
-      <input ref={photoRef} type="file" accept="image/*" />
+      <form className="card" onSubmit={saveEmail}>
+        <h2>E-mail de acesso</h2>
+        <small>Ao alterar, o e-mail de login também muda.</small>
+        {emailBanner && <div className={`banner ${emailBanner.type}`} style={{ marginTop: 10 }}>{emailBanner.msg}</div>}
+        <label style={{ marginTop: 10 }}>E-mail</label>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <button className="primary" disabled={emailSaving}>{emailSaving ? 'Alterando...' : 'Alterar e-mail'}</button>
+      </form>
 
-      <div style={{ margin: '10px 0', fontSize: 13, color: 'var(--muted)' }}>
-        Cargo: <b>{member.cargo || '—'}</b> · Ministérios: <b>{(member.ministries || []).join(', ') || '—'}</b>
-        <br /><small>(cargo e ministérios são definidos pela secretaria)</small>
-      </div>
-
-      <button className="primary" disabled={saving}>{saving ? 'Salvando...' : 'Salvar'}</button>
-    </form>
+      <form className="card" onSubmit={savePass}>
+        <h2>Senha</h2>
+        {passBanner && <div className={`banner ${passBanner.type}`} style={{ marginTop: 10 }}>{passBanner.msg}</div>}
+        <label style={{ marginTop: 10 }}>Nova senha</label>
+        <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} autoComplete="new-password" />
+        <label>Confirmar nova senha</label>
+        <input type="password" value={pass2} onChange={(e) => setPass2(e.target.value)} autoComplete="new-password" />
+        <button className="primary" disabled={passSaving}>{passSaving ? 'Alterando...' : 'Alterar senha'}</button>
+      </form>
+    </>
   )
 }

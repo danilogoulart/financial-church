@@ -734,11 +734,16 @@ alter table public.members add column if not exists entry_type text
 alter table public.members add column if not exists previous_pastor text;
 alter table public.members add column if not exists previous_church text;
 
--- O membro (portal) não pode alterar esses campos; trava no guard.
+-- Portal do membro: ele só pode alterar o próprio TELEFONE por escrita direta.
+-- (E-mail é trocado pela Edge Function admin-update-member-email, que sincroniza
+-- o login; senha pelo Auth.) Todo o resto é travado aqui.
 create or replace function public.members_membro_guard()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
   if public.current_user_role() = 'membro' then
+    new.name := old.name;
+    new.family := old.family;
+    new.photo_path := old.photo_path;
     new.cargo := old.cargo;
     new.tither := old.tither;
     new.active := old.active;
