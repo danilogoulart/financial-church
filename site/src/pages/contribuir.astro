@@ -26,14 +26,12 @@ if (payload) {
     <p class="lead">{intro}</p>
 
     {payload ? (
-      <div class="pix-card" id="pix" data-key={key} data-cnpj={cnpj} data-name={name}>
+      <div class="pix-card" id="pix" data-key={key} data-cnpj={cnpj} data-name={name} data-payload={payload}>
         <img id="qrImg" class="pix-qr" src={qr} alt="QR Code Pix" width="280" height="280" />
         <p class="pix-hint">Abra o app do seu banco, escolha <b>Pix</b> → <b>Ler QR Code</b> e aponte a câmera.</p>
 
         <div class="pix-actions">
           <a id="waBtn" class="btn wa" href="#" target="_blank" rel="noopener">🟢 Compartilhar no WhatsApp</a>
-          <button id="dlQr" class="btn ghost" type="button">⬇️ Baixar QR (alta definição)</button>
-          <button id="dlCard" class="btn ghost" type="button">🖼️ Baixar imagem com instruções</button>
         </div>
 
         <div class="pix-block">
@@ -63,7 +61,7 @@ if (payload) {
 </Base>
 
 <script>
-  import { composePixCard, downloadDataUrl, whatsappShareUrl } from '../lib/pixImage.js'
+  import { whatsappShareUrl } from '../lib/pixImage.js'
 
   // Copiar (código Pix / chave)
   document.querySelectorAll('button[data-copy]').forEach((btn) => {
@@ -90,37 +88,11 @@ if (payload) {
 
   const root = document.getElementById('pix')
   if (root) {
-    const qrEl = document.getElementById('qrImg')
     const key = root.dataset.key || ''
-    const cnpj = root.dataset.cnpj || ''
     const name = root.dataset.name || 'Igreja AD Alpha'
-
+    const payload = root.dataset.payload || ''
     const wa = document.getElementById('waBtn')
-    if (wa) wa.href = whatsappShareUrl({ url: window.location.href, name, key })
-
-    document.getElementById('dlQr')?.addEventListener('click', () => {
-      downloadDataUrl(qrEl.src, 'pix-alpha-qrcode.png')
-    })
-
-    document.getElementById('dlCard')?.addEventListener('click', async (e) => {
-      const btn = e.currentTarget
-      const orig = btn.textContent
-      btn.textContent = 'Gerando...'
-      btn.disabled = true
-      try {
-        const card = await composePixCard({
-          qrDataUrl: qrEl.src,
-          logoUrl: '/logo.png',
-          subtitle: name,
-          keyLabel: cnpj ? 'CNPJ: ' + cnpj : (key ? 'Chave Pix: ' + key : ''),
-          footer: name
-        })
-        downloadDataUrl(card, 'pix-alpha-contribuicao.png')
-      } finally {
-        btn.textContent = orig
-        btn.disabled = false
-      }
-    })
+    if (wa) wa.href = whatsappShareUrl({ url: window.location.href, name, key, payload })
   }
 </script>
 
@@ -135,6 +107,7 @@ if (payload) {
     text-align: center;
   }
   .pix-qr {
+    display: block; margin: 0 auto;
     width: 280px; max-width: 100%; height: auto;
     border: 1px solid var(--line); border-radius: 12px; background: #fff; padding: 8px;
   }

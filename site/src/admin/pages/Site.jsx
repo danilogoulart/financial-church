@@ -730,10 +730,7 @@ export function SiteContribute() {
     if (!qr) return
     const card = await composePixCard({
       qrDataUrl: qr,
-      logoUrl: '/logo.png',
-      subtitle: form.pix_name || 'Igreja AD Alpha',
-      keyLabel: form.pix_cnpj ? `CNPJ: ${form.pix_cnpj}` : (form.pix_key ? `Chave Pix: ${form.pix_key}` : ''),
-      footer: form.pix_name || 'Igreja AD Alpha'
+      keyLabel: form.pix_cnpj ? `CNPJ: ${form.pix_cnpj}` : (form.pix_key ? `Chave Pix: ${form.pix_key}` : '')
     })
     downloadDataUrl(card, 'pix-alpha-contribuicao.png')
   }
@@ -791,7 +788,7 @@ export function SiteContribute() {
         <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           <a
             className="btn"
-            href={whatsappShareUrl({ url: pageUrl, name: form.pix_name || 'Igreja AD Alpha', key: form.pix_key })}
+            href={whatsappShareUrl({ url: pageUrl, name: form.pix_name || 'Igreja AD Alpha', key: form.pix_key, payload: preview })}
             target="_blank"
             rel="noopener"
             style={{ background: '#25d366', color: '#062e12', border: '1px solid #25d366' }}
