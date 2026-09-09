@@ -18,7 +18,7 @@ const isRecurring = event && event.recurrence && event.recurrence !== 'none'
 {event ? (
   <Base
     title={event.title}
-    description={event.description?.slice(0, 155)}
+    description={event.description?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 155)}
     image={event.cover_path ? imageUrl(event.cover_path) : undefined}
   >
     <article class="article">
@@ -28,7 +28,7 @@ const isRecurring = event && event.recurrence && event.recurrence !== 'none'
       {event.location && <p class="meta" style="margin:4px 0 0; color: var(--muted)">📍 {event.location}</p>}
       {event.cover_path && <img class="cover" src={imageUrl(event.cover_path)} alt={event.title} />}
       {event.excerpt && <p class="lead" style="margin:16px 0 0">{event.excerpt}</p>}
-      {event.description && <div class="content">{event.description}</div>}
+      {event.description && <div class="content rich" set:html={event.description}></div>}
 
       {isRecurring && dates.length > 1 && (
         <div class="dates">

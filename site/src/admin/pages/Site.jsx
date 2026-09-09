@@ -348,7 +348,7 @@ export function SitePosts() {
           <label>Resumo <small>(aparece na listagem do site)</small></label>
           <textarea rows={2} value={f.excerpt} onChange={(e) => set('excerpt', e.target.value)} />
           <label>Texto</label>
-          <textarea rows={8} value={f.body} onChange={(e) => set('body', e.target.value)} />
+          <RichText value={f.body} onChange={(v) => set('body', v)} />
           <CoverField form={f} setField={set} />
           <div className="check" style={{ marginTop: 12 }}>
             <input
@@ -470,7 +470,7 @@ export function SiteEvents() {
           <label>Resumo <small>(aparece na listagem)</small></label>
           <textarea rows={2} value={f.excerpt} onChange={(e) => set('excerpt', e.target.value)} />
           <label>Descrição completa <small>(aparece na página do evento)</small></label>
-          <textarea rows={6} value={f.description} onChange={(e) => set('description', e.target.value)} />
+          <RichText value={f.description} onChange={(v) => set('description', v)} />
           <CoverField form={f} setField={set} />
           <div className="check" style={{ marginTop: 12 }}>
             <input
@@ -538,7 +538,7 @@ export function SiteStudies() {
           <label>Link do vídeo <small>(YouTube/Vimeo)</small></label>
           <input value={f.video_url} onChange={(e) => set('video_url', e.target.value)} placeholder="https://..." />
           <label>Descrição</label>
-          <textarea rows={5} value={f.description} onChange={(e) => set('description', e.target.value)} />
+          <RichText value={f.description} onChange={(v) => set('description', v)} />
           <CoverField form={f} setField={set} />
         </>
       )}

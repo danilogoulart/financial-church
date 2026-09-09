@@ -24,7 +24,7 @@ const studies = await getStudies()
             <span class="meta">
               {[s.teacher, s.reference, fmtDate(s.studied_on)].filter(Boolean).join(' · ')}
             </span>
-            {s.description && <p>{s.description}</p>}
+            {s.description && <p>{s.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 180)}</p>}
             {s.video_url && (
               <a class="btn ghost" style="margin-top:10px; align-self:flex-start" href={s.video_url} target="_blank" rel="noopener">
                 ▶ Assistir
