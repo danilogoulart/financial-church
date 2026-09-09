@@ -5,6 +5,7 @@ import {
   forecast,
   formatMoney,
   memberCounts,
+  memberReport,
   monthLabel,
   monthlySeries
 } from '../api'
@@ -19,11 +20,13 @@ export default function Home() {
   const [fc, setFc] = useState(null)
   const [chart, setChart] = useState(null)
   const [counts, setCounts] = useState(null)
+  const [mrep, setMrep] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     dashboardTotals(firstOfMonth(), today()).then(setMonth).catch((e) => setError(e.message))
     memberCounts().then(setCounts).catch((e) => setError(e.message))
+    memberReport().then(setMrep).catch((e) => setError(e.message))
     Promise.all([monthlySeries(6), forecast(3)])
       .then(([s, f]) => {
         setFc(f)
@@ -36,6 +39,8 @@ export default function Home() {
   }, [])
 
   const lastProj = fc && fc.rows.length ? fc.rows[fc.rows.length - 1] : null
+  const curYear = new Date().getFullYear()
+  const novosAno = mrep ? (mrep.byYear.find((y) => y.year === String(curYear))?.count ?? 0) : null
 
   return (
     <>
@@ -68,9 +73,12 @@ export default function Home() {
       <div className="card">
         <h2>Membros</h2>
         <div className="kpis">
-          <div className="kpi">Total<div className="value">{counts?.total ?? '—'}</div></div>
           <div className="kpi">Ativos<div className="value">{counts?.active ?? '—'}</div></div>
+          <div className="kpi">Obreiros<div className="value">{mrep?.summary.obreiro ?? '—'}</div></div>
+          <div className="kpi">Membros<div className="value">{mrep?.summary.membro ?? '—'}</div></div>
+          <div className="kpi">Congregados<div className="value">{mrep?.summary.congregado ?? '—'}</div></div>
           <div className="kpi">Dizimistas<div className="value">{counts?.tithers ?? '—'}</div></div>
+          <div className="kpi">Novos em {curYear}<div className="value">{novosAno ?? '—'}</div></div>
         </div>
       </div>
 
