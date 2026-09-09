@@ -888,7 +888,7 @@ begin
   if not public.can_write_members() then raise exception 'sem permissao'; end if;
   select value into v from public.settings where key = 'attendance_checkin_token';
   if v is null then
-    v := encode(gen_random_bytes(8), 'hex');
+    v := md5(random()::text || clock_timestamp()::text);
     insert into public.settings (key, value) values ('attendance_checkin_token', v)
       on conflict (key) do update set value = excluded.value;
   end if;
@@ -899,7 +899,7 @@ grant execute on function public.get_checkin_token() to authenticated;
 
 create or replace function public.regenerate_checkin_token()
 returns text language plpgsql security definer set search_path = public as $$
-declare v text := encode(gen_random_bytes(8), 'hex');
+declare v text := md5(random()::text || clock_timestamp()::text);
 begin
   if not public.can_write_members() then raise exception 'sem permissao'; end if;
   insert into public.settings (key, value) values ('attendance_checkin_token', v)
@@ -935,7 +935,7 @@ begin
     raise exception 'QR de presença desatualizado. Use o QR atual da secretaria.';
   end if;
 
-  -- 1) Culto da agenda cuja janela contém o horário atual.
+  -- Culto da agenda cuja janela (dia + horário) contém o momento atual.
   select c.name into v_cult
     from public.cults c
     where c.weekday = v_wd
@@ -944,23 +944,14 @@ begin
     order by c.start_time desc
     limit 1;
 
-  if v_cult is not null then
-    insert into public.attendance_sessions (cult, session_date, active)
-      values (v_cult, v_date, true)
-      on conflict (cult, session_date) do update set active = true
-      returning id into v_id;
-  else
-    -- 2) Fallback: culto avulso aberto manualmente para hoje.
-    select s.id, s.cult into v_id, v_cult
-      from public.attendance_sessions s
-      where s.active = true and s.session_date = v_date
-      order by s.created_at desc
-      limit 1;
+  if v_cult is null then
+    raise exception 'Nenhum culto está acontecendo agora (verifique o dia/horário do culto).';
   end if;
 
-  if v_id is null then
-    raise exception 'Nenhum culto está acontecendo agora. Fale com a secretaria.';
-  end if;
+  insert into public.attendance_sessions (cult, session_date, active)
+    values (v_cult, v_date, true)
+    on conflict (cult, session_date) do update set active = true
+    returning id into v_id;
 
   insert into public.attendance (session_id, member_id)
     values (v_id, v_member)

@@ -1,28 +1,21 @@
 import { useContext, useEffect, useState } from 'react'
 import {
   attendanceReport,
-  createAttendanceSession,
   deleteAttendanceSession,
   getCheckinToken,
   listAttendanceSessions,
-  listCultNames,
-  regenerateCheckinToken,
-  setAttendanceSessionActive
+  regenerateCheckinToken
 } from '../api'
 import { attendanceQr, checkinUrl } from '../qr'
 import { downloadDataUrl } from '../../lib/pixImage'
 import { RoleContext } from '../role'
 
-const today = () => new Date().toISOString().slice(0, 10)
 const fmtDate = (d) => (d ? new Date(d + 'T00:00:00').toLocaleDateString('pt-BR') : '—')
 
 export default function Attendance() {
   const { canWriteMembers: canWrite } = useContext(RoleContext)
-  const [cults, setCults] = useState([])
   const [sessions, setSessions] = useState([])
-  const [form, setForm] = useState({ cult: '', date: today() })
   const [banner, setBanner] = useState(null)
-  const [saving, setSaving] = useState(false)
   const [selected, setSelected] = useState(null) // session
   const [report, setReport] = useState(null)
   const [filter, setFilter] = useState('all') // all | obreiros | membros
@@ -39,11 +32,15 @@ export default function Attendance() {
     }
   }
 
+  async function load() {
+    try {
+      setSessions(await listAttendanceSessions())
+    } catch (err) {
+      setBanner({ type: 'err', msg: err.message })
+    }
+  }
+
   useEffect(() => {
-    listCultNames().then((c) => {
-      setCults(c)
-      setForm((f) => ({ ...f, cult: f.cult || c[0] || '' }))
-    }).catch(() => {})
     loadQr()
     load()
   }, [])
@@ -61,46 +58,12 @@ export default function Attendance() {
     }
   }
 
-  async function load() {
-    try {
-      setSessions(await listAttendanceSessions())
-    } catch (err) {
-      setBanner({ type: 'err', msg: err.message })
-    }
-  }
-
-  async function createAvulso(e) {
-    e.preventDefault()
-    if (!form.cult) return
-    setSaving(true)
-    setBanner(null)
-    try {
-      await createAttendanceSession(form.cult, form.date)
-      setBanner({ type: 'ok', msg: 'Culto avulso aberto para presença.' })
-      await load()
-    } catch (err) {
-      setBanner({ type: 'err', msg: err.message })
-    } finally {
-      setSaving(false)
-    }
-  }
-
   async function openReport(s) {
     setSelected(s)
     setReport(null)
     setFilter('all')
     try {
       setReport(await attendanceReport(s.id))
-    } catch (err) {
-      setBanner({ type: 'err', msg: err.message })
-    }
-  }
-
-  async function toggle(s) {
-    try {
-      await setAttendanceSessionActive(s.id, !s.active)
-      await load()
-      if (selected?.id === s.id) setSelected({ ...s, active: !s.active })
     } catch (err) {
       setBanner({ type: 'err', msg: err.message })
     }
@@ -123,11 +86,11 @@ export default function Attendance() {
   return (
     <>
       <div className="card">
-        <h2>QR fixo de presença</h2>
+        <h2>QR de presença</h2>
         <small>
-          Imprima ou projete este QR — ele é <b>sempre o mesmo</b>. O membro escaneia,
-          faz login e o sistema registra a presença no <b>culto que estiver acontecendo</b>
-          {' '}naquele horário (conforme a agenda em Configurações → Cultos).
+          Imprima ou projete este QR. O membro escaneia, faz login e o sistema registra a
+          presença no <b>culto que estiver acontecendo</b> naquele horário — conforme o
+          <b> dia e horário</b> cadastrados em <b>Configurações → Cultos</b>.
         </small>
         {banner && <div className={`banner ${banner.type}`} style={{ marginTop: 10 }}>{banner.msg}</div>}
         <div style={{ textAlign: 'center', marginTop: 12 }}>
@@ -151,32 +114,6 @@ export default function Attendance() {
           )}
         </div>
       </div>
-
-      {canWrite && (
-        <form className="card" onSubmit={createAvulso}>
-          <h2>Abrir culto avulso</h2>
-          <small>
-            Só para cultos <b>fora da agenda</b> (ex.: congresso, vigília). Cultos regulares
-            são detectados automaticamente pelo horário — não precisa abrir nada.
-          </small>
-          <div className="row" style={{ marginTop: 10 }}>
-            <div style={{ flex: 2 }}>
-              <label>Culto</label>
-              <select value={form.cult} onChange={(e) => setForm((f) => ({ ...f, cult: e.target.value }))}>
-                {cults.length === 0 && <option value="">(cadastre cultos em Configurações)</option>}
-                {cults.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label>Data</label>
-              <input type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
-            </div>
-          </div>
-          <button className="primary" disabled={saving || !form.cult}>
-            {saving ? 'Abrindo...' : 'Abrir culto avulso'}
-          </button>
-        </form>
-      )}
 
       {selected && report && (
         <div className="card">
@@ -221,29 +158,26 @@ export default function Attendance() {
       )}
 
       <div className="card">
-        <h2>Cultos com presença</h2>
+        <h2>Relatórios de presença</h2>
+        <small>Cada culto registrado aparece aqui. Clique em <b>relatório</b> para ver presentes × faltantes.</small>
         <div className="table-wrap" style={{ marginTop: 12 }}>
           <table>
             <thead>
               <tr>
                 <th>Culto</th>
                 <th>Data</th>
-                <th>Situação</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {sessions.map((s) => (
-                <tr key={s.id} style={{ opacity: s.active ? 1 : 0.6 }}>
+                <tr key={s.id}>
                   <td>{s.cult}</td>
                   <td>{fmtDate(s.session_date)}</td>
-                  <td><span className={`pill ${s.active ? 'ok' : 'warn'}`}>{s.active ? 'Aberto' : 'Fechado'}</span></td>
                   <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
                     <button className="link-btn" onClick={() => openReport(s)}>relatório</button>
                     {canWrite && (
                       <>
-                        {' · '}
-                        <button className="link-btn" onClick={() => toggle(s)}>{s.active ? 'fechar' : 'reabrir'}</button>
                         {' · '}
                         <button className="link-btn" style={{ color: 'var(--expense)' }} onClick={() => remove(s)}>excluir</button>
                       </>
@@ -252,7 +186,12 @@ export default function Attendance() {
                 </tr>
               ))}
               {sessions.length === 0 && (
-                <tr><td colSpan="4" style={{ color: '#999' }}>Nenhuma presença registrada ainda.</td></tr>
+                <tr>
+                  <td colSpan="3" style={{ color: '#999' }}>
+                    Nenhuma presença registrada ainda. Os cultos aparecem aqui automaticamente
+                    quando os membros registram presença pelo QR, dentro do horário do culto.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
