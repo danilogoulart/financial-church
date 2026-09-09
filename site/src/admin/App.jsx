@@ -56,7 +56,7 @@ const GROUPS = [
     tabs: [
       { id: 'members', label: '👤 Membros', Component: Members },
       { id: 'credentials', label: '🪪 Credenciais', Component: Credentials },
-      { id: 'attendance', label: '✅ Presença', Component: Attendance, roles: ['admin', 'presidencia', 'secretaria'] },
+      { id: 'attendance', label: '✅ QR de Presença', Component: Attendance, roles: ['admin', 'presidencia', 'secretaria'] },
       { id: 'member-reports', label: '📊 Relatórios de Membros', Component: MemberReports }
     ]
   },

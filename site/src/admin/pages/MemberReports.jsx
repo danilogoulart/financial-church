@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { memberReport } from '../api'
+import AttendanceReport from './AttendanceReport.jsx'
 
 export default function MemberReports() {
   const [rep, setRep] = useState(null)
@@ -102,6 +103,8 @@ export default function MemberReports() {
           </table>
         </div>
       </div>
+
+      <AttendanceReport />
     </>
   )
 }
