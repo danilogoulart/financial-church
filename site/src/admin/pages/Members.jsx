@@ -31,21 +31,22 @@ const ENTRY_TYPES = [
   { value: 'aclamacao', label: 'Por aclamação' }
 ]
 
-// Papéis que a secretaria pode atribuir no cadastro (sem admin/presidencia).
+// Papéis que a secretaria pode atribuir (sem os protegidos: admin/presidencia/tesoureiro).
 const ACCESS_ROLES = [
   { value: 'membro', label: 'Membro (portal)' },
   { value: 'secretaria', label: 'Secretaria' },
-  { value: 'tesoureiro', label: 'Tesoureiro' },
   { value: 'consulta', label: 'Consulta' },
   { value: 'editor', label: 'Editor (site/mídia)' }
 ]
-// Admin/presidencia pode atribuir qualquer papel (inclui admin/presidencia).
+// Admin/presidencia pode atribuir qualquer papel.
 const ALL_ROLES = [
   { value: 'admin', label: 'Administrador' },
   { value: 'presidencia', label: 'Presidência' },
+  { value: 'tesoureiro', label: 'Tesoureiro' },
   ...ACCESS_ROLES
 ]
-const ROLE_LABELS = { admin: 'Administrador', presidencia: 'Presidência' }
+// Papéis protegidos: só admin/presidencia mexe. Para a secretaria aparecem como leitura.
+const PROTECTED_LABELS = { admin: 'Administrador', presidencia: 'Presidência', tesoureiro: 'Tesoureiro' }
 
 export default function Members() {
   const { canWriteMembers: canWrite, isAdmin } = useContext(RoleContext)
@@ -334,10 +335,10 @@ export default function Members() {
         <textarea rows={3} value={form.note} onChange={(e) => set('note', e.target.value)} />
 
         {editingId && form._userId && (
-          !isAdmin && ROLE_LABELS[form._role0] ? (
+          !isAdmin && PROTECTED_LABELS[form._role0] ? (
             <>
               <label>Tipo de acesso</label>
-              <small>{ROLE_LABELS[form._role0]} — altere pela tela de Perfis.</small>
+              <small>{PROTECTED_LABELS[form._role0]} — somente admin/presidência altera este papel.</small>
             </>
           ) : (
             <>
