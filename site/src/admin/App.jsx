@@ -56,7 +56,7 @@ const GROUPS = [
     tabs: [
       { id: 'members', label: '👤 Membros', Component: Members },
       { id: 'credentials', label: '🪪 Credenciais', Component: Credentials },
-      { id: 'attendance', label: '✅ Presença', Component: Attendance },
+      { id: 'attendance', label: '✅ Presença', Component: Attendance, roles: ['admin', 'presidencia', 'secretaria'] },
       { id: 'member-reports', label: '📊 Relatórios de Membros', Component: MemberReports }
     ]
   },
@@ -191,6 +191,9 @@ export default function App() {
   const groups = isMember
     ? [{ id: 'portal', label: 'Portal', tabs: memberTabs }]
     : GROUPS.filter((g) => g.roles.includes(role))
+        // Filtra abas que têm restrição própria de papel (ex.: Presença).
+        .map((g) => ({ ...g, tabs: g.tabs.filter((t) => !t.roles || t.roles.includes(role)) }))
+        .filter((g) => g.tabs.length > 0)
   const allTabs = groups.flatMap((g) => g.tabs)
 
   // Mantém a aba escolhida se ainda visível; senão cai na primeira disponível.

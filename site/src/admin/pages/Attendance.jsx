@@ -3,8 +3,10 @@ import {
   attendanceReport,
   createAttendanceSession,
   deleteAttendanceSession,
+  getCheckinToken,
   listAttendanceSessions,
   listCultNames,
+  regenerateCheckinToken,
   setAttendanceSessionActive
 } from '../api'
 import { attendanceQr, checkinUrl } from '../qr'
@@ -24,16 +26,40 @@ export default function Attendance() {
   const [selected, setSelected] = useState(null) // session
   const [report, setReport] = useState(null)
   const [filter, setFilter] = useState('all') // all | obreiros | membros
+  const [token, setToken] = useState(null)
   const [fixedQr, setFixedQr] = useState(null)
+
+  async function loadQr() {
+    try {
+      const t = await getCheckinToken()
+      setToken(t)
+      setFixedQr(await attendanceQr(t))
+    } catch (err) {
+      setBanner({ type: 'err', msg: err.message })
+    }
+  }
 
   useEffect(() => {
     listCultNames().then((c) => {
       setCults(c)
       setForm((f) => ({ ...f, cult: f.cult || c[0] || '' }))
     }).catch(() => {})
-    attendanceQr().then(setFixedQr).catch(() => {})
+    loadQr()
     load()
   }, [])
+
+  async function regenerate() {
+    if (!window.confirm('Regenerar o QR? Os QRs já impressos/compartilhados deixarão de funcionar.')) return
+    setBanner(null)
+    try {
+      const t = await regenerateCheckinToken()
+      setToken(t)
+      setFixedQr(await attendanceQr(t))
+      setBanner({ type: 'ok', msg: 'QR regenerado. Compartilhe/imprima o novo.' })
+    } catch (err) {
+      setBanner({ type: 'err', msg: err.message })
+    }
+  }
 
   async function load() {
     try {
@@ -103,20 +129,22 @@ export default function Attendance() {
           faz login e o sistema registra a presença no <b>culto que estiver acontecendo</b>
           {' '}naquele horário (conforme a agenda em Configurações → Cultos).
         </small>
+        {banner && <div className={`banner ${banner.type}`} style={{ marginTop: 10 }}>{banner.msg}</div>}
         <div style={{ textAlign: 'center', marginTop: 12 }}>
           {fixedQr ? (
             <>
               <img src={fixedQr} alt="QR de presença" style={{ width: 260, maxWidth: '100%' }} />
               <div style={{ fontSize: 12, color: 'var(--muted)', wordBreak: 'break-all', marginTop: 6 }}>
-                {checkinUrl()}
+                {token ? checkinUrl(token) : ''}
               </div>
-              <button
-                className="link-btn"
-                style={{ marginTop: 8 }}
-                onClick={() => downloadDataUrl(fixedQr, 'presenca-alpha-qrcode.png')}
-              >
-                ⬇️ Baixar QR (alta definição)
-              </button>
+              <div style={{ marginTop: 8, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button className="link-btn" onClick={() => downloadDataUrl(fixedQr, 'presenca-alpha-qrcode.png')}>
+                  ⬇️ Baixar QR (alta definição)
+                </button>
+                {canWrite && (
+                  <button className="link-btn" onClick={regenerate}>🔄 Regenerar QR</button>
+                )}
+              </div>
             </>
           ) : (
             <span style={{ color: '#999' }}>Gerando QR...</span>
@@ -131,7 +159,6 @@ export default function Attendance() {
             Só para cultos <b>fora da agenda</b> (ex.: congresso, vigília). Cultos regulares
             são detectados automaticamente pelo horário — não precisa abrir nada.
           </small>
-          {banner && <div className={`banner ${banner.type}`} style={{ marginTop: 10 }}>{banner.msg}</div>}
           <div className="row" style={{ marginTop: 10 }}>
             <div style={{ flex: 2 }}>
               <label>Culto</label>

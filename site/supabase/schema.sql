@@ -879,15 +879,45 @@ alter table public.cults add column if not exists end_time time;
 create unique index if not exists attendance_sessions_cult_date
   on public.attendance_sessions (cult, session_date);
 
--- QR FIXO: o membro lê o mesmo QR sempre; identificamos data/hora (fuso BR) e
--- registramos no culto CUJA JANELA contém o horário atual. Se nenhum culto da
--- agenda casar, usamos um culto avulso aberto manualmente (active) para hoje.
-create or replace function public.record_attendance_open()
+-- Token do QR de presença: guardado em settings; regenerar invalida QRs antigos.
+-- Só quem gerencia membros (admin/presidencia/secretaria) obtém/regenera.
+create or replace function public.get_checkin_token()
+returns text language plpgsql security definer set search_path = public as $$
+declare v text;
+begin
+  if not public.can_write_members() then raise exception 'sem permissao'; end if;
+  select value into v from public.settings where key = 'attendance_checkin_token';
+  if v is null then
+    v := encode(gen_random_bytes(8), 'hex');
+    insert into public.settings (key, value) values ('attendance_checkin_token', v)
+      on conflict (key) do update set value = excluded.value;
+  end if;
+  return v;
+end; $$;
+revoke all on function public.get_checkin_token() from public;
+grant execute on function public.get_checkin_token() to authenticated;
+
+create or replace function public.regenerate_checkin_token()
+returns text language plpgsql security definer set search_path = public as $$
+declare v text := encode(gen_random_bytes(8), 'hex');
+begin
+  if not public.can_write_members() then raise exception 'sem permissao'; end if;
+  insert into public.settings (key, value) values ('attendance_checkin_token', v)
+    on conflict (key) do update set value = excluded.value;
+  return v;
+end; $$;
+revoke all on function public.regenerate_checkin_token() from public;
+grant execute on function public.regenerate_checkin_token() to authenticated;
+
+-- QR FIXO: o membro lê o mesmo QR (com token) sempre; identificamos data/hora
+-- (fuso BR) e registramos no culto CUJA JANELA contém o horário atual. Se nenhum
+-- culto da agenda casar, usamos um culto avulso aberto manualmente para hoje.
+create or replace function public.record_attendance_open(p_token text)
 returns table (cult text, session_date date)
 language plpgsql security definer set search_path = public as $$
 declare
   v_member uuid;
-  v_now timestamptz := now() at time zone 'America/Sao_Paulo';
+  v_token text;
   v_date date := (now() at time zone 'America/Sao_Paulo')::date;
   v_wd int := extract(dow from (now() at time zone 'America/Sao_Paulo'));
   v_time time := (now() at time zone 'America/Sao_Paulo')::time;
@@ -897,6 +927,12 @@ begin
   v_member := public.my_member_id();
   if v_member is null then
     raise exception 'Seu login não está vinculado a um cadastro de membro.';
+  end if;
+
+  -- Valida o token do QR (regenerar invalida QRs antigos).
+  select value into v_token from public.settings where key = 'attendance_checkin_token';
+  if v_token is null or p_token is null or p_token <> v_token then
+    raise exception 'QR de presença desatualizado. Use o QR atual da secretaria.';
   end if;
 
   -- 1) Culto da agenda cuja janela contém o horário atual.
@@ -934,5 +970,7 @@ begin
   session_date := v_date;
   return next;
 end; $$;
-revoke all on function public.record_attendance_open() from public;
-grant execute on function public.record_attendance_open() to authenticated;
+revoke all on function public.record_attendance_open(text) from public;
+grant execute on function public.record_attendance_open(text) to authenticated;
+-- Remove a versão antiga sem token, se existir.
+drop function if exists public.record_attendance_open();

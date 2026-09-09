@@ -29,16 +29,17 @@ export async function hiResQr(text, width = 1024) {
   }
 }
 
-// QR FIXO de presença: sempre o mesmo. Ao ler e logar, o app identifica o culto
-// em andamento pela agenda (dia/horário) e registra a presença.
-export function checkinUrl() {
-  return `${window.location.origin}/admin?checkin=aberto`
+// QR de presença: carrega um token (regenerável). Ao ler e logar, o app
+// identifica o culto em andamento pela agenda (dia/horário) e registra.
+export function checkinUrl(token) {
+  return `${window.location.origin}/admin?checkin=${token}`
 }
 
-// Data URL (PNG) do QR fixo de presença — a secretaria imprime/projeta uma vez.
-export async function attendanceQr(width = 640) {
+// Data URL (PNG) do QR de presença — a secretaria imprime/projeta.
+export async function attendanceQr(token, width = 640) {
+  if (!token) return null
   try {
-    return await QRCode.toDataURL(checkinUrl(), {
+    return await QRCode.toDataURL(checkinUrl(token), {
       margin: 1,
       width,
       errorCorrectionLevel: 'M'

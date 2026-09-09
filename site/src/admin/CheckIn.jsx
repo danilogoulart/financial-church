@@ -14,8 +14,9 @@ export default function CheckIn({ sessionId, onDone }) {
   useEffect(() => {
     if (done.current) return
     done.current = true
-    // 'aberto' = QR fixo (culto pela agenda); UUID = QR antigo de sessão específica.
-    const p = sessionId === 'aberto' ? recordAttendanceOpen() : recordAttendance(sessionId)
+    // UUID = QR antigo de sessão específica; caso contrário é o token do QR fixo.
+    const isUuid = /^[0-9a-fA-F-]{36}$/.test(sessionId || '')
+    const p = isUuid ? recordAttendance(sessionId) : recordAttendanceOpen(sessionId)
     Promise.resolve(p)
       .then((r) => {
         if (r && r.cult) setCult(`${r.cult} — ${fmtDate(r.session_date)}`)

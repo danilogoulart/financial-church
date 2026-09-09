@@ -325,10 +325,23 @@ export async function recordAttendance(sessionId) {
 }
 
 // QR fixo: registra no culto que estiver acontecendo agora. Retorna {cult, session_date}.
-export async function recordAttendanceOpen() {
-  const { data, error } = await supabase.rpc('record_attendance_open')
+export async function recordAttendanceOpen(token) {
+  const { data, error } = await supabase.rpc('record_attendance_open', { p_token: token })
   if (error) throw new Error(error.message || 'Falha ao registrar presença.')
   return Array.isArray(data) ? data[0] : data
+}
+
+// Token do QR de presença (só admin/presidencia/secretaria).
+export async function getCheckinToken() {
+  const { data, error } = await supabase.rpc('get_checkin_token')
+  if (error) throw new Error(error.message || 'Falha ao obter o QR.')
+  return data
+}
+
+export async function regenerateCheckinToken() {
+  const { data, error } = await supabase.rpc('regenerate_checkin_token')
+  if (error) throw new Error(error.message || 'Falha ao regenerar o QR.')
+  return data
 }
 
 // Relatório de uma sessão: presentes x faltantes (ativos), marcando obreiros.
