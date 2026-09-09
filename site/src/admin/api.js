@@ -232,9 +232,17 @@ export async function deleteMinistry(id) {
 // ---------- Cultos ----------
 
 export async function listCults() {
-  const { data, error } = await supabase.from('cults').select('id, name').order('name')
+  const { data, error } = await supabase
+    .from('cults')
+    .select('id, name, weekday, start_time, end_time')
+    .order('name')
   if (error) throw error
   return data
+}
+
+export async function updateCult(id, fields) {
+  const { error } = await supabase.from('cults').update(fields).eq('id', id)
+  if (error) throw mapError(error)
 }
 
 export async function listCultNames() {
@@ -280,7 +288,10 @@ export async function createAttendanceSession(cult, sessionDate) {
   const { data: { user } } = await supabase.auth.getUser()
   const { data, error } = await supabase
     .from('attendance_sessions')
-    .insert({ cult, session_date: sessionDate, active: true, created_by: user?.id || null })
+    .upsert(
+      { cult, session_date: sessionDate, active: true, created_by: user?.id || null },
+      { onConflict: 'cult,session_date' }
+    )
     .select()
     .single()
   if (error) throw mapError(error)
@@ -311,6 +322,13 @@ export async function deleteAttendanceSession(id) {
 export async function recordAttendance(sessionId) {
   const { error } = await supabase.rpc('record_attendance', { p_session: sessionId })
   if (error) throw new Error(error.message || 'Falha ao registrar presença.')
+}
+
+// QR fixo: registra no culto que estiver acontecendo agora. Retorna {cult, session_date}.
+export async function recordAttendanceOpen() {
+  const { data, error } = await supabase.rpc('record_attendance_open')
+  if (error) throw new Error(error.message || 'Falha ao registrar presença.')
+  return Array.isArray(data) ? data[0] : data
 }
 
 // Relatório de uma sessão: presentes x faltantes (ativos), marcando obreiros.

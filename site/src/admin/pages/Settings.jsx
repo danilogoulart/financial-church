@@ -21,6 +21,7 @@ import {
   setProfileRole,
   setSetting,
   setUserActive,
+  updateCult,
   uploadAsset
 } from '../api'
 import { RoleContext } from '../role'
@@ -427,21 +428,85 @@ function Cults({ canWrite }) {
         </form>
       )}
 
-      <div className="table-wrap">
+      <small style={{ display: 'block', marginTop: 12, color: 'var(--muted)' }}>
+        Defina o <b>dia e o horário</b> de cada culto — é o que o QR fixo de presença usa
+        para identificar o culto do momento. Deixe em branco para cultos sem agenda fixa.
+      </small>
+      <div className="table-wrap" style={{ marginTop: 8 }}>
         <table>
+          <thead>
+            <tr>
+              <th>Culto</th>
+              <th>Dia</th>
+              <th>Início</th>
+              <th>Fim</th>
+              <th></th>
+            </tr>
+          </thead>
           <tbody>
             {rows.map((c) => (
-              <tr key={c.id}>
-                <td>{c.name}</td>
-                <td style={{ textAlign: 'right' }}>
-                  {canWrite && <button className="link-btn" onClick={() => remove(c)}>remover</button>}
-                </td>
-              </tr>
+              <CultRow key={c.id} cult={c} canWrite={canWrite} onSaved={load} onRemove={remove} setMsg={setMsg} />
             ))}
           </tbody>
         </table>
       </div>
     </div>
+  )
+}
+
+const WEEKDAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
+const hhmm = (t) => (t ? String(t).slice(0, 5) : '') // '19:30:00' -> '19:30'
+
+function CultRow({ cult, canWrite, onSaved, onRemove, setMsg }) {
+  const [wd, setWd] = useState(cult.weekday ?? '')
+  const [start, setStart] = useState(hhmm(cult.start_time))
+  const [end, setEnd] = useState(hhmm(cult.end_time))
+  const [saving, setSaving] = useState(false)
+
+  const dirty =
+    String(wd) !== String(cult.weekday ?? '') ||
+    start !== hhmm(cult.start_time) ||
+    end !== hhmm(cult.end_time)
+
+  async function save() {
+    setSaving(true)
+    setMsg(null)
+    try {
+      await updateCult(cult.id, {
+        weekday: wd === '' ? null : Number(wd),
+        start_time: start || null,
+        end_time: end || null
+      })
+      setMsg({ type: 'ok', text: `Agenda de "${cult.name}" salva.` })
+      onSaved()
+    } catch (err) {
+      setMsg({ type: 'err', text: err.message })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <tr>
+      <td>{cult.name}</td>
+      <td>
+        <select value={wd} onChange={(e) => setWd(e.target.value)} disabled={!canWrite}>
+          <option value="">—</option>
+          {WEEKDAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
+        </select>
+      </td>
+      <td><input type="time" value={start} onChange={(e) => setStart(e.target.value)} disabled={!canWrite} style={{ width: 110 }} /></td>
+      <td><input type="time" value={end} onChange={(e) => setEnd(e.target.value)} disabled={!canWrite} style={{ width: 110 }} /></td>
+      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+        {canWrite && (
+          <>
+            {dirty && <button className="link-btn" onClick={save} disabled={saving}>salvar</button>}
+            {dirty && ' · '}
+            <button className="link-btn" onClick={() => onRemove(cult)}>remover</button>
+          </>
+        )}
+      </td>
+    </tr>
   )
 }
 

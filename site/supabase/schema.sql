@@ -868,3 +868,71 @@ begin
 end; $$;
 revoke all on function public.record_attendance(uuid) from public;
 grant execute on function public.record_attendance(uuid) to authenticated;
+
+-- Agenda dos cultos: dia da semana (0=domingo..6=sábado) e janela de presença.
+alter table public.cults add column if not exists weekday int
+  check (weekday is null or (weekday >= 0 and weekday <= 6));
+alter table public.cults add column if not exists start_time time;
+alter table public.cults add column if not exists end_time time;
+
+-- Uma sessão por culto+data (para auto-criar no check-in e evitar duplicidade).
+create unique index if not exists attendance_sessions_cult_date
+  on public.attendance_sessions (cult, session_date);
+
+-- QR FIXO: o membro lê o mesmo QR sempre; identificamos data/hora (fuso BR) e
+-- registramos no culto CUJA JANELA contém o horário atual. Se nenhum culto da
+-- agenda casar, usamos um culto avulso aberto manualmente (active) para hoje.
+create or replace function public.record_attendance_open()
+returns table (cult text, session_date date)
+language plpgsql security definer set search_path = public as $$
+declare
+  v_member uuid;
+  v_now timestamptz := now() at time zone 'America/Sao_Paulo';
+  v_date date := (now() at time zone 'America/Sao_Paulo')::date;
+  v_wd int := extract(dow from (now() at time zone 'America/Sao_Paulo'));
+  v_time time := (now() at time zone 'America/Sao_Paulo')::time;
+  v_id uuid;
+  v_cult text;
+begin
+  v_member := public.my_member_id();
+  if v_member is null then
+    raise exception 'Seu login não está vinculado a um cadastro de membro.';
+  end if;
+
+  -- 1) Culto da agenda cuja janela contém o horário atual.
+  select c.name into v_cult
+    from public.cults c
+    where c.weekday = v_wd
+      and c.start_time is not null and c.end_time is not null
+      and v_time between c.start_time and c.end_time
+    order by c.start_time desc
+    limit 1;
+
+  if v_cult is not null then
+    insert into public.attendance_sessions (cult, session_date, active)
+      values (v_cult, v_date, true)
+      on conflict (cult, session_date) do update set active = true
+      returning id into v_id;
+  else
+    -- 2) Fallback: culto avulso aberto manualmente para hoje.
+    select s.id, s.cult into v_id, v_cult
+      from public.attendance_sessions s
+      where s.active = true and s.session_date = v_date
+      order by s.created_at desc
+      limit 1;
+  end if;
+
+  if v_id is null then
+    raise exception 'Nenhum culto está acontecendo agora. Fale com a secretaria.';
+  end if;
+
+  insert into public.attendance (session_id, member_id)
+    values (v_id, v_member)
+    on conflict (session_id, member_id) do nothing;
+
+  cult := v_cult;
+  session_date := v_date;
+  return next;
+end; $$;
+revoke all on function public.record_attendance_open() from public;
+grant execute on function public.record_attendance_open() to authenticated;

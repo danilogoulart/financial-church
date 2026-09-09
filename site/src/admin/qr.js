@@ -29,16 +29,16 @@ export async function hiResQr(text, width = 1024) {
   }
 }
 
-// URL de check-in de presença (abre o /admin já no registro da sessão).
-export function checkinUrl(sessionId) {
-  return `${window.location.origin}/admin?checkin=${sessionId}`
+// QR FIXO de presença: sempre o mesmo. Ao ler e logar, o app identifica o culto
+// em andamento pela agenda (dia/horário) e registra a presença.
+export function checkinUrl() {
+  return `${window.location.origin}/admin?checkin=aberto`
 }
 
-// Data URL (PNG) do QR de presença — exibido/projetado pela secretaria.
-export async function attendanceQr(sessionId, width = 320) {
-  if (!sessionId) return null
+// Data URL (PNG) do QR fixo de presença — a secretaria imprime/projeta uma vez.
+export async function attendanceQr(width = 640) {
   try {
-    return await QRCode.toDataURL(checkinUrl(sessionId), {
+    return await QRCode.toDataURL(checkinUrl(), {
       margin: 1,
       width,
       errorCorrectionLevel: 'M'
