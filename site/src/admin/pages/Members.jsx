@@ -9,6 +9,7 @@ import {
   listMinistryNames,
   setMemberActive,
   setMemberRole,
+  setProfileRole,
   updateMember,
   uploadAsset
 } from '../api'
@@ -37,6 +38,12 @@ const ACCESS_ROLES = [
   { value: 'tesoureiro', label: 'Tesoureiro' },
   { value: 'consulta', label: 'Consulta' },
   { value: 'editor', label: 'Editor (site/mídia)' }
+]
+// Admin/presidencia pode atribuir qualquer papel (inclui admin/presidencia).
+const ALL_ROLES = [
+  { value: 'admin', label: 'Administrador' },
+  { value: 'presidencia', label: 'Presidência' },
+  ...ACCESS_ROLES
 ]
 const ROLE_LABELS = { admin: 'Administrador', presidencia: 'Presidência' }
 
@@ -169,8 +176,10 @@ export default function Members() {
       if (editingId) {
         await updateMember(editingId, { ...payload, active: form.active })
         // Papel de acesso (só se o membro tem login e o papel mudou).
+        // Admin/presidencia edita direto (RLS); secretaria via RPC restrito.
         if (form._userId && form.role && form.role !== form._role0) {
-          await setMemberRole(editingId, form.role)
+          if (isAdmin) await setProfileRole(form._userId, form.role)
+          else await setMemberRole(editingId, form.role)
         }
         setBanner({ type: 'ok', msg: 'Membro atualizado.' })
         setEditingId(null)
@@ -325,7 +334,7 @@ export default function Members() {
         <textarea rows={3} value={form.note} onChange={(e) => set('note', e.target.value)} />
 
         {editingId && form._userId && (
-          ROLE_LABELS[form._role0] ? (
+          !isAdmin && ROLE_LABELS[form._role0] ? (
             <>
               <label>Tipo de acesso</label>
               <small>{ROLE_LABELS[form._role0]} — altere pela tela de Perfis.</small>
@@ -334,7 +343,7 @@ export default function Members() {
             <>
               <label>Tipo de acesso <small>(papel de login do membro)</small></label>
               <select value={form.role} onChange={(e) => set('role', e.target.value)}>
-                {ACCESS_ROLES.map((r) => (
+                {(isAdmin ? ALL_ROLES : ACCESS_ROLES).map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
               </select>
