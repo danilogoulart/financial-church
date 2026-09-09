@@ -5,10 +5,12 @@ import { RoleContext } from './role'
 import { APP_NAME, LOGO_URL } from './brand'
 import Login from './Login.jsx'
 import SetPassword from './SetPassword.jsx'
+import CheckIn from './CheckIn.jsx'
 import Home from './pages/Home.jsx'
 import Members from './pages/Members.jsx'
 import Credentials from './pages/Credentials.jsx'
 import MemberReports from './pages/MemberReports.jsx'
+import Attendance from './pages/Attendance.jsx'
 import Transactions from './pages/Transactions.jsx'
 import Payables from './pages/Payables.jsx'
 import Recurring from './pages/Recurring.jsx'
@@ -54,6 +56,7 @@ const GROUPS = [
     tabs: [
       { id: 'members', label: '👤 Membros', Component: Members },
       { id: 'credentials', label: '🪪 Credenciais', Component: Credentials },
+      { id: 'attendance', label: '✅ Presença', Component: Attendance },
       { id: 'member-reports', label: '📊 Relatórios de Membros', Component: MemberReports }
     ]
   },
@@ -85,6 +88,10 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [openGroup, setOpenGroup] = useState(null)
   const [recovery, setRecovery] = useState(false)
+  const [checkinId, setCheckinId] = useState(() => {
+    if (typeof window === 'undefined') return null
+    return new URLSearchParams(window.location.search).get('checkin')
+  })
   const [memberBlocked, setMemberBlocked] = useState(false)
   const [memberIsCongregado, setMemberIsCongregado] = useState(false)
   const [accessBlocked, setAccessBlocked] = useState(false)
@@ -130,6 +137,17 @@ export default function App() {
   if (!ready) return <div className="center">Carregando...</div>
   if (recovery) return <SetPassword onDone={() => setRecovery(false)} />
   if (!session) return <Login />
+  if (checkinId && !memberBlocked && !accessBlocked) {
+    return (
+      <CheckIn
+        sessionId={checkinId}
+        onDone={() => {
+          window.history.replaceState({}, '', '/admin')
+          setCheckinId(null)
+        }}
+      />
+    )
+  }
   if (memberBlocked || accessBlocked) {
     return (
       <div className="center">

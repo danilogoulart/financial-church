@@ -258,6 +258,90 @@ export async function deleteCult(id) {
   if (error) throw error
 }
 
+// ---------- Presença nos cultos (QR) ----------
+
+export async function createAttendanceSession(cult, sessionDate) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('attendance_sessions')
+    .insert({ cult, session_date: sessionDate, active: true, created_by: user?.id || null })
+    .select()
+    .single()
+  if (error) throw mapError(error)
+  return data
+}
+
+export async function listAttendanceSessions() {
+  const { data, error } = await supabase
+    .from('attendance_sessions')
+    .select('*')
+    .order('session_date', { ascending: false })
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+export async function setAttendanceSessionActive(id, active) {
+  const { error } = await supabase.from('attendance_sessions').update({ active }).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteAttendanceSession(id) {
+  const { error } = await supabase.from('attendance_sessions').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Membro registra a própria presença (RPC valida sessão aberta).
+export async function recordAttendance(sessionId) {
+  const { error } = await supabase.rpc('record_attendance', { p_session: sessionId })
+  if (error) throw new Error(error.message || 'Falha ao registrar presença.')
+}
+
+// Relatório de uma sessão: presentes x faltantes (ativos), marcando obreiros.
+export async function attendanceReport(sessionId) {
+  const [sessionRes, attRes, membersRes, cargos] = await Promise.all([
+    supabase.from('attendance_sessions').select('*').eq('id', sessionId).single(),
+    supabase.from('attendance').select('member_id, checked_at').eq('session_id', sessionId),
+    supabase.from('members').select('id, name, cargo, active'),
+    listCargos()
+  ])
+  if (sessionRes.error) throw sessionRes.error
+  if (attRes.error) throw attRes.error
+  if (membersRes.error) throw membersRes.error
+
+  const workerSet = new Set(cargos.filter((c) => c.is_worker).map((c) => c.name))
+  const byId = {}
+  ;(membersRes.data || []).forEach((m) => { byId[m.id] = m })
+  const withWorker = (m) => ({ ...m, worker: workerSet.has(m.cargo) })
+
+  const presentIds = new Set()
+  const present = (attRes.data || [])
+    .map((a) => {
+      presentIds.add(a.member_id)
+      const m = byId[a.member_id] || { id: a.member_id, name: '(membro removido)', cargo: null }
+      return { ...withWorker(m), checked_at: a.checked_at }
+    })
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  const absent = (membersRes.data || [])
+    .filter((m) => m.active && !presentIds.has(m.id))
+    .map(withWorker)
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  const count = (list) => ({
+    total: list.length,
+    obreiros: list.filter((m) => m.worker).length,
+    membros: list.filter((m) => !m.worker).length
+  })
+
+  return {
+    session: sessionRes.data,
+    present,
+    absent,
+    counts: { present: count(present), absent: count(absent) }
+  }
+}
+
 // ---------- Portal do membro ----------
 
 // Exclui o membro e o login vinculado (via Edge Function com service_role).

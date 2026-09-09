@@ -18,3 +18,22 @@ export async function credentialQr(memberId) {
     return null
   }
 }
+
+// URL de check-in de presença (abre o /admin já no registro da sessão).
+export function checkinUrl(sessionId) {
+  return `${window.location.origin}/admin?checkin=${sessionId}`
+}
+
+// Data URL (PNG) do QR de presença — exibido/projetado pela secretaria.
+export async function attendanceQr(sessionId, width = 320) {
+  if (!sessionId) return null
+  try {
+    return await QRCode.toDataURL(checkinUrl(sessionId), {
+      margin: 1,
+      width,
+      errorCorrectionLevel: 'M'
+    })
+  } catch {
+    return null
+  }
+}

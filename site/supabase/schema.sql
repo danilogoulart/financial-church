@@ -802,3 +802,69 @@ grant execute on function public.set_member_role(uuid, text) to authenticated;
 -- Flag de acesso do usuário. Desativar = bane no Auth (Edge Function) e marca
 -- active=false aqui, para o app barrar imediatamente quem já está logado.
 alter table public.profiles add column if not exists active boolean not null default true;
+
+-- ================= Presença nos cultos (QR) =================
+-- A secretaria abre uma sessão de presença (culto + data), exibe o QR e os
+-- membros escaneiam/logam/registram. Relatório: presentes x faltantes.
+create table if not exists public.attendance_sessions (
+  id           uuid primary key default gen_random_uuid(),
+  cult         text not null,
+  session_date date not null default current_date,
+  active       boolean not null default true,
+  created_by   uuid references auth.users(id) on delete set null,
+  created_at   timestamptz default now()
+);
+
+create table if not exists public.attendance (
+  id         uuid primary key default gen_random_uuid(),
+  session_id uuid not null references public.attendance_sessions(id) on delete cascade,
+  member_id  uuid not null references public.members(id) on delete cascade,
+  checked_at timestamptz default now(),
+  unique (session_id, member_id)
+);
+create index if not exists attendance_session_idx on public.attendance (session_id);
+
+alter table public.attendance_sessions enable row level security;
+alter table public.attendance          enable row level security;
+
+-- Sessões: staff lê; secretaria (can_write_members) gerencia.
+drop policy if exists att_sessions_select on public.attendance_sessions;
+drop policy if exists att_sessions_write on public.attendance_sessions;
+create policy att_sessions_select on public.attendance_sessions for select to authenticated
+  using (public.is_staff());
+create policy att_sessions_write on public.attendance_sessions for all to authenticated
+  using (public.can_write_members()) with check (public.can_write_members());
+
+-- Presenças: staff lê (relatório); inserção só via RPC (security definer).
+drop policy if exists attendance_select on public.attendance;
+drop policy if exists attendance_write on public.attendance;
+create policy attendance_select on public.attendance for select to authenticated
+  using (public.is_staff());
+create policy attendance_write on public.attendance for all to authenticated
+  using (public.can_write_members()) with check (public.can_write_members());
+
+-- Membro registra a própria presença (só com a sessão aberta).
+create or replace function public.record_attendance(p_session uuid)
+returns text language plpgsql security definer set search_path = public as $$
+declare
+  v_member uuid;
+  v_active boolean;
+begin
+  v_member := public.my_member_id();
+  if v_member is null then
+    raise exception 'Seu login não está vinculado a um cadastro de membro.';
+  end if;
+  select active into v_active from public.attendance_sessions where id = p_session;
+  if v_active is null then
+    raise exception 'Culto não encontrado.';
+  end if;
+  if not v_active then
+    raise exception 'Este culto não está aberto para registro de presença.';
+  end if;
+  insert into public.attendance (session_id, member_id)
+    values (p_session, v_member)
+    on conflict (session_id, member_id) do nothing;
+  return 'ok';
+end; $$;
+revoke all on function public.record_attendance(uuid) from public;
+grant execute on function public.record_attendance(uuid) to authenticated;
