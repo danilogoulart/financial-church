@@ -108,6 +108,56 @@ export async function listCargos() {
   return data
 }
 
+// Relatório de membros: contagem por cargo (marca ministerial), resumo
+// obreiro/membro/congregado (só ativos) e novos membros por ano (por data de entrada).
+export async function memberReport() {
+  const [membersRes, cargos] = await Promise.all([
+    supabase.from('members').select('cargo, active, joined_date'),
+    listCargos()
+  ])
+  if (membersRes.error) throw membersRes.error
+  const members = membersRes.data || []
+  const workerSet = new Set(cargos.filter((c) => c.is_worker).map((c) => c.name))
+
+  const actives = members.filter((m) => m.active)
+
+  // Contagem por cargo (ativos), marcando os ministeriais.
+  const byCargoMap = {}
+  actives.forEach((m) => {
+    const key = m.cargo || 'Sem cargo'
+    byCargoMap[key] = (byCargoMap[key] || 0) + 1
+  })
+  const byCargo = Object.entries(byCargoMap)
+    .map(([cargo, count]) => ({ cargo, count, worker: workerSet.has(cargo) }))
+    .sort((a, b) => b.count - a.count || a.cargo.localeCompare(b.cargo))
+
+  // Resumo: obreiro (cargo ministerial) / congregado / membro (demais).
+  let obreiro = 0, congregado = 0, membro = 0
+  actives.forEach((m) => {
+    if (workerSet.has(m.cargo)) obreiro++
+    else if (m.cargo === 'Congregado') congregado++
+    else membro++
+  })
+
+  // Novos membros por ano (todos, pela data de entrada).
+  const byYearMap = {}
+  members.forEach((m) => {
+    const y = (m.joined_date || '').slice(0, 4) || 'Sem data'
+    byYearMap[y] = (byYearMap[y] || 0) + 1
+  })
+  const byYear = Object.entries(byYearMap)
+    .map(([year, count]) => ({ year, count }))
+    .sort((a, b) => (a.year === 'Sem data' ? 1 : b.year === 'Sem data' ? -1 : b.year.localeCompare(a.year)))
+
+  return {
+    activeTotal: actives.length,
+    total: members.length,
+    byCargo,
+    summary: { obreiro, membro, congregado },
+    byYear
+  }
+}
+
 export async function listCargoNames() {
   const { data, error } = await supabase.from('cargos').select('name').order('name')
   if (error) throw error

@@ -8,6 +8,7 @@ import SetPassword from './SetPassword.jsx'
 import Home from './pages/Home.jsx'
 import Members from './pages/Members.jsx'
 import Credentials from './pages/Credentials.jsx'
+import MemberReports from './pages/MemberReports.jsx'
 import Transactions from './pages/Transactions.jsx'
 import Payables from './pages/Payables.jsx'
 import Recurring from './pages/Recurring.jsx'
@@ -52,7 +53,8 @@ const GROUPS = [
     roles: ['admin', 'presidencia', 'secretaria', 'tesoureiro', 'consulta'],
     tabs: [
       { id: 'members', label: '👤 Membros', Component: Members },
-      { id: 'credentials', label: '🪪 Credenciais', Component: Credentials }
+      { id: 'credentials', label: '🪪 Credenciais', Component: Credentials },
+      { id: 'member-reports', label: '📊 Relatórios de Membros', Component: MemberReports }
     ]
   },
   {

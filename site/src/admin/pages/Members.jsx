@@ -350,6 +350,15 @@ export default function Members() {
             </>
           )
         )}
+        {editingId && !form._userId && (
+          <>
+            <label>Tipo de acesso</label>
+            <small>
+              Este membro ainda não tem acesso (login). Clique em <b>criar acesso</b> na lista
+              de membros para definir o papel.
+            </small>
+          </>
+        )}
 
         <label style={{ marginTop: 14 }}>
           Foto <small>{existingPhoto ? '(há uma; envie outra para substituir)' : '(opcional)'}</small>
