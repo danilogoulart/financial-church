@@ -31,12 +31,22 @@ function crc16(payload) {
   return crc.toString(16).toUpperCase().padStart(4, '0')
 }
 
+// Normaliza a chave Pix. CPF (11) e CNPJ (14) devem ir só com dígitos — se o
+// usuário digitar com pontuação, removemos. E-mail/telefone/aleatória ficam iguais.
+export function normalizePixKey(key) {
+  const k = String(key || '').trim()
+  const digits = k.replace(/\D/g, '')
+  if (/^[\d./\- ]+$/.test(k) && (digits.length === 11 || digits.length === 14)) return digits
+  return k
+}
+
 // Monta o payload Pix estático. `key` é a chave Pix (CNPJ/e-mail/telefone/aleatória).
 export function buildPixPayload({ key, name, city, txid = '***', amount, description } = {}) {
-  if (!key) return ''
+  const cleanKey = normalizePixKey(key)
+  if (!cleanKey) return ''
 
   const gui = tlv('00', 'br.gov.bcb.pix')
-  const chave = tlv('01', String(key).trim())
+  const chave = tlv('01', cleanKey)
   const desc = description ? tlv('02', sanitize(description, 40)) : ''
   const merchantAccount = tlv('26', gui + chave + desc)
 
