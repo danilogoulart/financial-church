@@ -793,3 +793,8 @@ begin
 end; $$;
 revoke all on function public.set_member_role(uuid, text) from public;
 grant execute on function public.set_member_role(uuid, text) to authenticated;
+
+-- ================= Ativar/desativar usuário (acesso) =================
+-- Flag de acesso do usuário. Desativar = bane no Auth (Edge Function) e marca
+-- active=false aqui, para o app barrar imediatamente quem já está logado.
+alter table public.profiles add column if not exists active boolean not null default true;

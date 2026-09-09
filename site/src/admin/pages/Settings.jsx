@@ -15,10 +15,12 @@ import {
   listCults,
   listMinistries,
   listProfiles,
+  myUserId,
   renameCargo,
   setCargoWorker,
   setProfileRole,
   setSetting,
+  setUserActive,
   uploadAsset
 } from '../api'
 import { RoleContext } from '../role'
@@ -530,6 +532,7 @@ const ROLES = ['admin', 'presidencia', 'tesoureiro', 'secretaria', 'consulta', '
 function Users() {
   const [rows, setRows] = useState([])
   const [msg, setMsg] = useState(null)
+  const [uid, setUid] = useState(null)
 
   async function load() {
     try {
@@ -541,6 +544,7 @@ function Users() {
 
   useEffect(() => {
     load()
+    myUserId().then(setUid).catch(() => {})
   }, [])
 
   async function change(id, role) {
@@ -548,6 +552,19 @@ function Users() {
     try {
       await setProfileRole(id, role)
       setMsg({ type: 'ok', text: 'Papel atualizado.' })
+      load()
+    } catch (err) {
+      setMsg({ type: 'err', text: err.message })
+    }
+  }
+
+  async function toggleActive(u) {
+    const next = u.active === false
+    if (!next && !window.confirm(`Desativar o acesso de ${u.email}? Ele não conseguirá mais entrar.`)) return
+    setMsg(null)
+    try {
+      await setUserActive(u.id, next)
+      setMsg({ type: 'ok', text: next ? 'Acesso reativado.' : 'Acesso desativado.' })
       load()
     } catch (err) {
       setMsg({ type: 'err', text: err.message })
@@ -566,23 +583,36 @@ function Users() {
       <div className="table-wrap" style={{ marginTop: 12 }}>
         <table>
           <thead>
-            <tr><th>E-mail</th><th>Papel</th></tr>
+            <tr><th>E-mail</th><th>Papel</th><th>Acesso</th><th></th></tr>
           </thead>
           <tbody>
-            {rows.map((u) => (
-              <tr key={u.id}>
-                <td>{u.email}</td>
-                <td>
-                  <select value={u.role} onChange={(e) => change(u.id, e.target.value)}>
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
-            ))}
+            {rows.map((u) => {
+              const inactive = u.active === false
+              return (
+                <tr key={u.id} style={{ opacity: inactive ? 0.5 : 1 }}>
+                  <td>{u.email}</td>
+                  <td>
+                    <select value={u.role} onChange={(e) => change(u.id, e.target.value)}>
+                      {ROLES.map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>{inactive ? 'Desativado' : 'Ativo'}</td>
+                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {u.id === uid ? (
+                      <span style={{ color: '#888' }}>você</span>
+                    ) : (
+                      <button className="link-btn" onClick={() => toggleActive(u)}>
+                        {inactive ? 'reativar' : 'desativar'}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
             {rows.length === 0 && (
-              <tr><td colSpan="2" style={{ color: '#999' }}>Nenhum usuário.</td></tr>
+              <tr><td colSpan="4" style={{ color: '#999' }}>Nenhum usuário.</td></tr>
             )}
           </tbody>
         </table>

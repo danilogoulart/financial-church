@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getSession, onAuthChange, signOut } from './auth'
-import { getMyRole, getMyMember } from './api'
+import { getMyAccess, getMyMember } from './api'
 import { RoleContext } from './role'
 import { APP_NAME, LOGO_URL } from './brand'
 import Login from './Login.jsx'
@@ -87,6 +87,7 @@ export default function App() {
   const [recovery, setRecovery] = useState(false)
   const [memberBlocked, setMemberBlocked] = useState(false)
   const [memberIsCongregado, setMemberIsCongregado] = useState(false)
+  const [accessBlocked, setAccessBlocked] = useState(false)
 
   useEffect(() => {
     getSession().then((s) => {
@@ -100,8 +101,17 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (session) getMyRole().then(setRole).catch(() => setRole('consulta'))
-    else setRole('consulta')
+    if (session) {
+      getMyAccess()
+        .then(({ role, active }) => {
+          setRole(role)
+          setAccessBlocked(!active)
+        })
+        .catch(() => setRole('consulta'))
+    } else {
+      setRole('consulta')
+      setAccessBlocked(false)
+    }
   }, [session])
 
   // Membro desativado tem o acesso barrado (o login "cai" no próximo carregamento).
@@ -120,13 +130,13 @@ export default function App() {
   if (!ready) return <div className="center">Carregando...</div>
   if (recovery) return <SetPassword onDone={() => setRecovery(false)} />
   if (!session) return <Login />
-  if (memberBlocked) {
+  if (memberBlocked || accessBlocked) {
     return (
       <div className="center">
         <div className="card login">
           <h1>Acesso desativado</h1>
           <p style={{ color: 'var(--muted)' }}>
-            Seu cadastro está desativado. Fale com a secretaria da igreja.
+            Seu acesso está desativado. Fale com a secretaria da igreja.
           </p>
           <button className="primary" onClick={() => signOut()}>Sair</button>
         </div>

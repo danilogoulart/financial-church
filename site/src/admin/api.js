@@ -339,7 +339,7 @@ export async function getMyRole() {
 export async function listProfiles() {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, role')
+    .select('id, email, role, active')
     .order('email')
   if (error) throw error
   return data
@@ -348,6 +348,35 @@ export async function listProfiles() {
 export async function setProfileRole(id, role) {
   const { error } = await supabase.from('profiles').update({ role }).eq('id', id)
   if (error) throw error
+}
+
+// Ativa/desativa o acesso de um usuário (bane/desbane no Auth via Edge Function).
+export async function setUserActive(userId, active) {
+  const { data, error } = await supabase.functions.invoke('admin-set-user-active', {
+    body: { user_id: userId, active }
+  })
+  if (error) throw new Error(error.message || 'Falha ao alterar acesso.')
+  if (data?.error) throw new Error(data.error)
+  return data
+}
+
+// Id do usuário logado (para a UI evitar ações sobre a própria conta).
+export async function myUserId() {
+  const { data: { user } } = await supabase.auth.getUser()
+  return user?.id || null
+}
+
+// Acesso do próprio usuário logado (papel + ativo) — usado para barrar no app.
+export async function getMyAccess() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { role: 'consulta', active: true }
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('role, active')
+    .eq('id', user.id)
+    .single()
+  if (error) return { role: 'consulta', active: true }
+  return { role: data?.role || 'consulta', active: data?.active !== false }
 }
 
 // Papel de acesso de um usuário (para exibir no cadastro do membro).
