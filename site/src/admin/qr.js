@@ -19,6 +19,16 @@ export async function credentialQr(memberId) {
   }
 }
 
+// QR em alta definição a partir de um texto qualquer (ex.: BR Code Pix).
+export async function hiResQr(text, width = 1024) {
+  if (!text) return null
+  try {
+    return await QRCode.toDataURL(text, { margin: 2, width, errorCorrectionLevel: 'M' })
+  } catch {
+    return null
+  }
+}
+
 // URL de check-in de presença (abre o /admin já no registro da sessão).
 export function checkinUrl(sessionId) {
   return `${window.location.origin}/admin?checkin=${sessionId}`

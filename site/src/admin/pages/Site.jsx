@@ -27,6 +27,8 @@ import {
   uploadSiteImage
 } from '../api'
 import { buildPixPayload } from '../../lib/pix'
+import { composePixCard, downloadDataUrl, whatsappShareUrl } from '../../lib/pixImage'
+import { hiResQr } from '../qr'
 
 // ---------- helpers ----------
 
@@ -716,6 +718,26 @@ export function SiteContribute() {
     ? buildPixPayload({ key: form.pix_key, name: form.pix_name, city: form.pix_city, description: form.pix_description })
     : ''
 
+  const pageUrl = typeof window !== 'undefined' ? window.location.origin + '/contribuir' : '/contribuir'
+
+  async function downloadQr() {
+    const dataUrl = await hiResQr(preview)
+    if (dataUrl) downloadDataUrl(dataUrl, 'pix-alpha-qrcode.png')
+  }
+
+  async function downloadCard() {
+    const qr = await hiResQr(preview)
+    if (!qr) return
+    const card = await composePixCard({
+      qrDataUrl: qr,
+      logoUrl: '/logo.png',
+      subtitle: form.pix_name || 'Igreja AD Alpha',
+      keyLabel: form.pix_cnpj ? `CNPJ: ${form.pix_cnpj}` : (form.pix_key ? `Chave Pix: ${form.pix_key}` : ''),
+      footer: form.pix_name || 'Igreja AD Alpha'
+    })
+    downloadDataUrl(card, 'pix-alpha-contribuicao.png')
+  }
+
   if (!canEditSite) {
     return <div className="card"><small>Sem permissão para editar o site.</small></div>
   }
@@ -764,6 +786,23 @@ export function SiteContribute() {
       <button className="primary" disabled={saving} style={{ marginTop: 12 }}>
         {saving ? 'Salvando...' : 'Salvar'}
       </button>
+
+      {preview && (
+        <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <a
+            className="btn"
+            href={whatsappShareUrl({ url: pageUrl, name: form.pix_name || 'Igreja AD Alpha', key: form.pix_key })}
+            target="_blank"
+            rel="noopener"
+            style={{ background: '#25d366', color: '#062e12', border: '1px solid #25d366' }}
+          >
+            🟢 Compartilhar no WhatsApp
+          </a>
+          <button type="button" className="btn ghost" onClick={downloadQr}>⬇️ Baixar QR (alta definição)</button>
+          <button type="button" className="btn ghost" onClick={downloadCard}>🖼️ Baixar imagem com instruções</button>
+        </div>
+      )}
+
       <a className="link-btn" href="/contribuir" target="_blank" rel="noopener" style={{ marginTop: 10, display: 'inline-block' }}>
         Ver página pública ↗
       </a>

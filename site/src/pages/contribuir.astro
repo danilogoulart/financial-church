@@ -13,9 +13,10 @@ const cnpj = s.pix_cnpj || ''
 const intro = s.contribute_intro || 'Contribua com a obra de Deus através do Pix. Sua oferta e dízimo ajudam a manter e expandir o trabalho da igreja.'
 
 const payload = key ? buildPixPayload({ key, name, city, description }) : ''
+// QR em alta definição (1024px): serve para exibir (reduzido via CSS) e baixar.
 let qr = ''
 if (payload) {
-  qr = await QRCode.toDataURL(payload, { margin: 1, width: 320, errorCorrectionLevel: 'M' })
+  qr = await QRCode.toDataURL(payload, { margin: 2, width: 1024, errorCorrectionLevel: 'M' })
 }
 ---
 
@@ -25,9 +26,15 @@ if (payload) {
     <p class="lead">{intro}</p>
 
     {payload ? (
-      <div class="pix-card">
-        <img class="pix-qr" src={qr} alt="QR Code Pix" width="280" height="280" />
+      <div class="pix-card" id="pix" data-key={key} data-cnpj={cnpj} data-name={name}>
+        <img id="qrImg" class="pix-qr" src={qr} alt="QR Code Pix" width="280" height="280" />
         <p class="pix-hint">Abra o app do seu banco, escolha <b>Pix</b> → <b>Ler QR Code</b> e aponte a câmera.</p>
+
+        <div class="pix-actions">
+          <a id="waBtn" class="btn wa" href="#" target="_blank" rel="noopener">🟢 Compartilhar no WhatsApp</a>
+          <button id="dlQr" class="btn ghost" type="button">⬇️ Baixar QR (alta definição)</button>
+          <button id="dlCard" class="btn ghost" type="button">🖼️ Baixar imagem com instruções</button>
+        </div>
 
         <div class="pix-block">
           <label>Pix Copia e Cola</label>
@@ -55,7 +62,10 @@ if (payload) {
   </article>
 </Base>
 
-<script is:inline>
+<script>
+  import { composePixCard, downloadDataUrl, whatsappShareUrl } from '../lib/pixImage.js'
+
+  // Copiar (código Pix / chave)
   document.querySelectorAll('button[data-copy]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const el = document.getElementById(btn.getAttribute('data-copy'))
@@ -77,6 +87,41 @@ if (payload) {
       setTimeout(() => { btn.textContent = original }, 1800)
     })
   })
+
+  const root = document.getElementById('pix')
+  if (root) {
+    const qrEl = document.getElementById('qrImg')
+    const key = root.dataset.key || ''
+    const cnpj = root.dataset.cnpj || ''
+    const name = root.dataset.name || 'Igreja AD Alpha'
+
+    const wa = document.getElementById('waBtn')
+    if (wa) wa.href = whatsappShareUrl({ url: window.location.href, name, key })
+
+    document.getElementById('dlQr')?.addEventListener('click', () => {
+      downloadDataUrl(qrEl.src, 'pix-alpha-qrcode.png')
+    })
+
+    document.getElementById('dlCard')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget
+      const orig = btn.textContent
+      btn.textContent = 'Gerando...'
+      btn.disabled = true
+      try {
+        const card = await composePixCard({
+          qrDataUrl: qrEl.src,
+          logoUrl: '/logo.png',
+          subtitle: name,
+          keyLabel: cnpj ? 'CNPJ: ' + cnpj : (key ? 'Chave Pix: ' + key : ''),
+          footer: name
+        })
+        downloadDataUrl(card, 'pix-alpha-contribuicao.png')
+      } finally {
+        btn.textContent = orig
+        btn.disabled = false
+      }
+    })
+  }
 </script>
 
 <style>
@@ -94,6 +139,14 @@ if (payload) {
     border: 1px solid var(--line); border-radius: 12px; background: #fff; padding: 8px;
   }
   .pix-hint { color: var(--muted); font-size: 14px; margin: 12px 0 0; }
+  .pix-actions {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pix-actions .btn { width: 100%; text-align: center; }
+  .pix-actions .wa { background: #25d366; color: #062e12; border-color: #25d366; }
   .pix-block { margin-top: 22px; text-align: left; }
   .pix-block label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
   .pix-code {
