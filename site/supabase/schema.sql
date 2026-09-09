@@ -726,6 +726,11 @@ $$;
 revoke all on function public.validate_credential(uuid) from public;
 grant execute on function public.validate_credential(uuid) to anon, authenticated;
 
+-- E-mail de membro não pode repetir (case-insensitive), pois vira login.
+-- Obs.: se já houver e-mails repetidos hoje, limpe-os antes de criar o índice.
+create unique index if not exists members_email_unique
+  on public.members (lower(email)) where email is not null and email <> '';
+
 -- ================= Cadastro de membro: campos de histórico =================
 -- Observações livres, forma de entrada na igreja e origem anterior (pastor/igreja).
 alter table public.members add column if not exists note text;

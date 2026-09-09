@@ -407,8 +407,17 @@ export async function createMemberUser(memberId, email, password) {
     body: { member_id: memberId, email, password }
   })
   if (error) throw new Error(error.message || 'Falha ao criar acesso.')
-  if (data?.error) throw new Error(data.error)
+  if (data?.error) throw new Error(friendlyAuthError(data.error))
   return data
+}
+
+// Traduz erros comuns do Auth para mensagens claras em português.
+function friendlyAuthError(msg) {
+  const m = String(msg || '')
+  if (/already.*registered|already been registered|email.*exists|duplicate/i.test(m)) {
+    return 'Já existe um usuário com este e-mail. Use outro e-mail para este membro.'
+  }
+  return m
 }
 
 // Registro do próprio membro logado.
@@ -951,6 +960,9 @@ function mapError(error) {
     const msg = String(error.message)
     if (msg.includes('members_name_unique')) {
       return new Error('Já existe um membro com esse nome.')
+    }
+    if (msg.includes('members_email_unique')) {
+      return new Error('Já existe um membro com esse e-mail.')
     }
     if (msg.includes('categories_kind_name_unique')) {
       return new Error('Essa categoria já existe.')
