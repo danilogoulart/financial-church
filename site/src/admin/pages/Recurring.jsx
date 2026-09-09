@@ -5,7 +5,8 @@ import {
   formatMoney,
   listCategories,
   listRecurring,
-  setRecurringActive
+  setRecurringActive,
+  updateRecurring
 } from '../api'
 import { RoleContext } from '../role'
 
@@ -26,9 +27,31 @@ export default function Recurring() {
   const [banner, setBanner] = useState(null)
   const [saving, setSaving] = useState(false)
   const [rows, setRows] = useState([])
+  const [editingId, setEditingId] = useState(null)
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }))
+  }
+
+  function startEdit(r) {
+    setEditingId(r.id)
+    setForm({
+      description: r.description || '',
+      category: r.category || '',
+      amount: String(r.amount ?? ''),
+      due_day: r.due_day ?? 5,
+      kind: r.kind || 'fixa',
+      installments_total: r.installments_total ?? 12,
+      start_competency: r.start_competency || currentCompetency()
+    })
+    setBanner(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setForm({ ...EMPTY, start_competency: currentCompetency() })
+    setBanner(null)
   }
 
   async function load() {
@@ -51,17 +74,23 @@ export default function Recurring() {
     setBanner(null)
     try {
       const isParcelada = form.kind === 'parcelada'
-      const rec = await createRecurring({
+      const payload = {
         description: form.description.trim(),
         category: form.category || categories[0] || null,
         amount: Number(form.amount),
         due_day: Number(form.due_day),
         kind: form.kind,
         installments_total: isParcelada ? Number(form.installments_total) : null,
-        start_competency: form.start_competency,
-        active: true
-      })
-      setBanner({ type: 'ok', msg: `Despesa recorrente "${rec.description}" cadastrada.` })
+        start_competency: form.start_competency
+      }
+      if (editingId) {
+        const rec = await updateRecurring(editingId, payload)
+        setBanner({ type: 'ok', msg: `Despesa recorrente "${rec.description}" atualizada.` })
+        setEditingId(null)
+      } else {
+        const rec = await createRecurring({ ...payload, active: true })
+        setBanner({ type: 'ok', msg: `Despesa recorrente "${rec.description}" cadastrada.` })
+      }
       setForm({ ...EMPTY, start_competency: currentCompetency() })
       load()
     } catch (err) {
@@ -86,7 +115,7 @@ export default function Recurring() {
     <>
       {canWrite && (
       <form className="card" onSubmit={save}>
-        <h2>Nova Despesa Recorrente</h2>
+        <h2>{editingId ? 'Editar Despesa Recorrente' : 'Nova Despesa Recorrente'}</h2>
         {banner && <div className={`banner ${banner.type}`}>{banner.msg}</div>}
 
         <label>Tipo</label>
@@ -130,8 +159,13 @@ export default function Recurring() {
         </div>
 
         <button className="primary" disabled={saving}>
-          {saving ? 'Salvando...' : 'Salvar'}
+          {saving ? 'Salvando...' : editingId ? 'Atualizar' : 'Salvar'}
         </button>
+        {editingId && (
+          <button type="button" className="link-btn" style={{ marginTop: 10 }} onClick={cancelEdit}>
+            Cancelar edição
+          </button>
+        )}
       </form>
       )}
 
@@ -166,11 +200,15 @@ export default function Recurring() {
                       {r.active ? 'Ativa' : 'Inativa'}
                     </span>
                   </td>
-                  <td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     {canWrite ? (
-                      <button className="link-btn" onClick={() => toggle(r)}>
-                        {r.active ? 'Desativar' : 'Ativar'}
-                      </button>
+                      <>
+                        <button className="link-btn" onClick={() => startEdit(r)}>editar</button>
+                        {' · '}
+                        <button className="link-btn" onClick={() => toggle(r)}>
+                          {r.active ? 'desativar' : 'ativar'}
+                        </button>
+                      </>
                     ) : '—'}
                   </td>
                 </tr>

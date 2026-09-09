@@ -888,6 +888,17 @@ export async function setRecurringActive(id, active) {
   if (error) throw error
 }
 
+export async function updateRecurring(id, fields) {
+  const { data, error } = await supabase
+    .from('recurring_expenses')
+    .update(fields)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw mapError(error)
+  return data
+}
+
 // ---------- Geração das contas do mês ----------
 
 export async function monthGenerated(competency) {
