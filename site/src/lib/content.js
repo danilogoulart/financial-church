@@ -4,6 +4,18 @@ import { nextOccurrence, scheduleLabel } from './events'
 // Todas as consultas usam a chave anon; a RLS já garante que só o conteúdo
 // com published = true é retornado. Os filtros abaixo são redundância segura.
 
+// Configurações públicas do site (key/value). Usado, p.ex., pela página de Pix.
+export async function getSiteSettings() {
+  const { data, error } = await supabase.from('site_settings').select('key, value')
+  if (error) {
+    console.error(error)
+    return {}
+  }
+  const out = {}
+  ;(data || []).forEach((r) => { out[r.key] = r.value })
+  return out
+}
+
 export async function getPosts(limit) {
   let q = supabase
     .from('site_posts')

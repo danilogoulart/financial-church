@@ -258,6 +258,22 @@ export async function deleteCult(id) {
   if (error) throw error
 }
 
+// ---------- Configurações do site (key/value, leitura pública) ----------
+
+export async function getSiteSettings() {
+  const { data, error } = await supabase.from('site_settings').select('key, value')
+  if (error) throw error
+  const out = {}
+  ;(data || []).forEach((r) => { out[r.key] = r.value })
+  return out
+}
+
+export async function setSiteSettings(obj) {
+  const rows = Object.entries(obj).map(([key, value]) => ({ key, value: value ?? '' }))
+  const { error } = await supabase.from('site_settings').upsert(rows, { onConflict: 'key' })
+  if (error) throw error
+}
+
 // ---------- Presença nos cultos (QR) ----------
 
 export async function createAttendanceSession(cult, sessionDate) {

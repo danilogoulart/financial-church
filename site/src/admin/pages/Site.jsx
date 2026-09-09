@@ -11,11 +11,13 @@ import {
   deletePage,
   deletePost,
   deleteStudy,
+  getSiteSettings,
   listBanners,
   listEvents,
   listPages,
   listPosts,
   listStudies,
+  setSiteSettings,
   siteImageUrl,
   updateBanner,
   updateEvent,
@@ -24,6 +26,7 @@ import {
   updateStudy,
   uploadSiteImage
 } from '../api'
+import { buildPixPayload } from '../../lib/pix'
 
 // ---------- helpers ----------
 
@@ -670,5 +673,100 @@ export function SitePages() {
         </>
       )}
     />
+  )
+}
+
+// ---------- Contribuições (Pix) ----------
+
+const PIX_FIELDS = ['pix_key', 'pix_name', 'pix_city', 'pix_description', 'pix_cnpj', 'contribute_intro']
+
+export function SiteContribute() {
+  const { canEditSite } = useContext(RoleContext)
+  const [form, setForm] = useState({ pix_key: '', pix_name: '', pix_city: '', pix_description: '', pix_cnpj: '', contribute_intro: '' })
+  const [banner, setBanner] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    getSiteSettings()
+      .then((s) => setForm((f) => {
+        const next = { ...f }
+        PIX_FIELDS.forEach((k) => { next[k] = s[k] || '' })
+        return next
+      }))
+      .catch((e) => setBanner({ type: 'err', msg: e.message }))
+  }, [])
+
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+
+  async function save(e) {
+    e.preventDefault()
+    setSaving(true)
+    setBanner(null)
+    try {
+      await setSiteSettings(Object.fromEntries(PIX_FIELDS.map((k) => [k, form[k]])))
+      setBanner({ type: 'ok', msg: 'Configuração de contribuições salva.' })
+    } catch (err) {
+      setBanner({ type: 'err', msg: err.message })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const preview = form.pix_key
+    ? buildPixPayload({ key: form.pix_key, name: form.pix_name, city: form.pix_city, description: form.pix_description })
+    : ''
+
+  if (!canEditSite) {
+    return <div className="card"><small>Sem permissão para editar o site.</small></div>
+  }
+
+  return (
+    <form className="card" onSubmit={save}>
+      <h2>Contribuições (Pix)</h2>
+      <small>
+        Configura a página pública <b>/contribuir</b> com o QR Code Pix e o Copia e Cola.
+        Use uma chave Pix real (CNPJ, e-mail, telefone ou aleatória).
+      </small>
+      {banner && <div className={`banner ${banner.type}`} style={{ marginTop: 10 }}>{banner.msg}</div>}
+
+      <label style={{ marginTop: 12 }}>Chave Pix</label>
+      <input value={form.pix_key} onChange={(e) => set('pix_key', e.target.value)} placeholder="CNPJ / e-mail / telefone / chave aleatória" />
+
+      <div className="row">
+        <div>
+          <label>Nome do recebedor <small>(máx. 25)</small></label>
+          <input value={form.pix_name} onChange={(e) => set('pix_name', e.target.value)} maxLength={25} placeholder="Igreja AD Alpha" />
+        </div>
+        <div>
+          <label>Cidade <small>(máx. 15)</small></label>
+          <input value={form.pix_city} onChange={(e) => set('pix_city', e.target.value)} maxLength={15} placeholder="Sao Pedro" />
+        </div>
+      </div>
+
+      <label>Descrição no Pix <small>(opcional, máx. 40)</small></label>
+      <input value={form.pix_description} onChange={(e) => set('pix_description', e.target.value)} maxLength={40} placeholder="Ofertas e dizimos" />
+
+      <label>CNPJ exibido na página <small>(opcional)</small></label>
+      <input value={form.pix_cnpj} onChange={(e) => set('pix_cnpj', e.target.value)} placeholder="00.000.000/0001-00" />
+
+      <label>Texto de introdução <small>(opcional)</small></label>
+      <textarea rows={3} value={form.contribute_intro} onChange={(e) => set('contribute_intro', e.target.value)} />
+
+      {preview && (
+        <>
+          <label style={{ marginTop: 12 }}>Prévia do Pix Copia e Cola</label>
+          <code style={{ display: 'block', wordBreak: 'break-all', background: '#f6f6f6', border: '1px dashed var(--border)', borderRadius: 8, padding: 10, fontSize: 11 }}>
+            {preview}
+          </code>
+        </>
+      )}
+
+      <button className="primary" disabled={saving} style={{ marginTop: 12 }}>
+        {saving ? 'Salvando...' : 'Salvar'}
+      </button>
+      <a className="link-btn" href="/contribuir" target="_blank" rel="noopener" style={{ marginTop: 10, display: 'inline-block' }}>
+        Ver página pública ↗
+      </a>
+    </form>
   )
 }

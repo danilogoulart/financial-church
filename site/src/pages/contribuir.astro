@@ -1,0 +1,129 @@
+---
+import Base from '../layouts/Base.astro'
+import { getSiteSettings } from '../lib/content'
+import { buildPixPayload } from '../lib/pix'
+import QRCode from 'qrcode'
+
+const s = await getSiteSettings()
+const key = s.pix_key || ''
+const name = s.pix_name || 'Igreja AD Alpha'
+const city = s.pix_city || ''
+const description = s.pix_description || ''
+const cnpj = s.pix_cnpj || ''
+const intro = s.contribute_intro || 'Contribua com a obra de Deus através do Pix. Sua oferta e dízimo ajudam a manter e expandir o trabalho da igreja.'
+
+const payload = key ? buildPixPayload({ key, name, city, description }) : ''
+let qr = ''
+if (payload) {
+  qr = await QRCode.toDataURL(payload, { margin: 1, width: 320, errorCorrectionLevel: 'M' })
+}
+---
+
+<Base title="Contribua via Pix" description="Contribua com a Igreja AD Alpha via Pix — QR Code e Pix Copia e Cola.">
+  <article class="article contribute">
+    <h1>Contribua via Pix</h1>
+    <p class="lead">{intro}</p>
+
+    {payload ? (
+      <div class="pix-card">
+        <img class="pix-qr" src={qr} alt="QR Code Pix" width="280" height="280" />
+        <p class="pix-hint">Abra o app do seu banco, escolha <b>Pix</b> → <b>Ler QR Code</b> e aponte a câmera.</p>
+
+        <div class="pix-block">
+          <label>Pix Copia e Cola</label>
+          <code id="pixCode" class="pix-code">{payload}</code>
+          <button class="btn" type="button" data-copy="pixCode" data-label="Copiar código Pix">📋 Copiar código Pix</button>
+        </div>
+
+        <div class="pix-info">
+          {name && <div><span>Recebedor</span><b>{name}</b></div>}
+          {cnpj && <div><span>CNPJ</span><b>{cnpj}</b></div>}
+          <div>
+            <span>Chave Pix</span>
+            <b id="pixKey">{key}</b>
+          </div>
+          <button class="btn ghost" type="button" data-copy="pixKey" data-label="Copiar chave Pix">Copiar chave Pix</button>
+        </div>
+
+        <p class="pix-share">Compartilhe esta página no WhatsApp e nas redes para facilitar as ofertas.</p>
+      </div>
+    ) : (
+      <div class="empty">
+        As informações de Pix ainda não foram configuradas. Volte em breve.
+      </div>
+    )}
+  </article>
+</Base>
+
+<script is:inline>
+  document.querySelectorAll('button[data-copy]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const el = document.getElementById(btn.getAttribute('data-copy'))
+      const text = (el?.textContent || '').trim()
+      if (!text) return
+      try {
+        await navigator.clipboard.writeText(text)
+      } catch {
+        const r = document.createRange()
+        r.selectNodeContents(el)
+        const sel = window.getSelection()
+        sel.removeAllRanges()
+        sel.addRange(r)
+        try { document.execCommand('copy') } catch {}
+        sel.removeAllRanges()
+      }
+      const original = btn.getAttribute('data-label')
+      btn.textContent = '✓ Copiado!'
+      setTimeout(() => { btn.textContent = original }, 1800)
+    })
+  })
+</script>
+
+<style>
+  .contribute { max-width: 560px; margin: 0 auto; }
+  .pix-card {
+    margin-top: 20px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--surface);
+    padding: 24px;
+    text-align: center;
+  }
+  .pix-qr {
+    width: 280px; max-width: 100%; height: auto;
+    border: 1px solid var(--line); border-radius: 12px; background: #fff; padding: 8px;
+  }
+  .pix-hint { color: var(--muted); font-size: 14px; margin: 12px 0 0; }
+  .pix-block { margin-top: 22px; text-align: left; }
+  .pix-block label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .pix-code {
+    display: block;
+    word-break: break-all;
+    background: var(--bg, #f6f6f6);
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 12px;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .btn { cursor: pointer; }
+  .pix-info {
+    margin-top: 22px;
+    text-align: left;
+    display: grid;
+    gap: 8px;
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+  }
+  .pix-info > div { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; }
+  .pix-info span { color: var(--muted); }
+  .pix-info b { word-break: break-all; text-align: right; }
+  .pix-info .btn { margin-top: 6px; }
+  .pix-share { color: var(--muted); font-size: 13px; margin: 20px 0 0; }
+  .empty {
+    margin-top: 20px; padding: 28px; text-align: center;
+    border: 1px dashed var(--line); border-radius: 14px; color: var(--muted);
+  }
+</style>
