@@ -3,10 +3,12 @@ import {
   createMember,
   createMemberUser,
   deleteMemberFull,
+  getProfileRole,
   listCargoNames,
   listMembersPage,
   listMinistryNames,
   setMemberActive,
+  setMemberRole,
   updateMember,
   uploadAsset
 } from '../api'
@@ -15,9 +17,28 @@ import { RoleContext } from '../role'
 
 const EMPTY = {
   name: '', phone: '', email: '', family: '', cargo: '', ministries: [], tither: true, active: true,
-  matricula: '', rg: '', cpf: '', birth_date: '', joined_date: ''
+  matricula: '', rg: '', cpf: '', birth_date: '', joined_date: '',
+  note: '', entry_type: '', previous_pastor: '', previous_church: '',
+  role: '', _userId: null, _role0: ''
 }
 const SIZE = 20
+
+// Formas de entrada na igreja.
+const ENTRY_TYPES = [
+  { value: 'batismo', label: 'Por batismo (admissão)' },
+  { value: 'carta', label: 'Por carta' },
+  { value: 'aclamacao', label: 'Por aclamação' }
+]
+
+// Papéis que a secretaria pode atribuir no cadastro (sem admin/presidencia).
+const ACCESS_ROLES = [
+  { value: 'membro', label: 'Membro (portal)' },
+  { value: 'secretaria', label: 'Secretaria' },
+  { value: 'tesoureiro', label: 'Tesoureiro' },
+  { value: 'consulta', label: 'Consulta' },
+  { value: 'editor', label: 'Editor (site/mídia)' }
+]
+const ROLE_LABELS = { admin: 'Administrador', presidencia: 'Presidência' }
 
 export default function Members() {
   const { canWriteMembers: canWrite, isAdmin } = useContext(RoleContext)
@@ -91,8 +112,21 @@ export default function Members() {
       rg: m.rg || '',
       cpf: m.cpf || '',
       birth_date: m.birth_date || '',
-      joined_date: m.joined_date || ''
+      joined_date: m.joined_date || '',
+      note: m.note || '',
+      entry_type: m.entry_type || '',
+      previous_pastor: m.previous_pastor || '',
+      previous_church: m.previous_church || '',
+      role: '',
+      _userId: m.user_id || null,
+      _role0: ''
     })
+    // Carrega o papel de acesso atual (se o membro tiver login).
+    if (m.user_id) {
+      getProfileRole(m.user_id)
+        .then((r) => setForm((f) => (f._userId === m.user_id ? { ...f, role: r || '', _role0: r || '' } : f)))
+        .catch(() => {})
+    }
     if (photoRef.current) photoRef.current.value = ''
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -126,10 +160,18 @@ export default function Members() {
         cpf: form.cpf || null,
         birth_date: form.birth_date || null,
         joined_date: form.joined_date || null,
+        note: form.note || null,
+        entry_type: form.entry_type || null,
+        previous_pastor: form.previous_pastor || null,
+        previous_church: form.previous_church || null,
         photo_path
       }
       if (editingId) {
         await updateMember(editingId, { ...payload, active: form.active })
+        // Papel de acesso (só se o membro tem login e o papel mudou).
+        if (form._userId && form.role && form.role !== form._role0) {
+          await setMemberRole(editingId, form.role)
+        }
         setBanner({ type: 'ok', msg: 'Membro atualizado.' })
         setEditingId(null)
       } else {
@@ -259,6 +301,46 @@ export default function Members() {
         </div>
         <label>Data de nascimento</label>
         <input type="date" value={form.birth_date} onChange={(e) => set('birth_date', e.target.value)} />
+
+        <label>Forma de entrada na igreja</label>
+        <select value={form.entry_type} onChange={(e) => set('entry_type', e.target.value)}>
+          <option value="">—</option>
+          {ENTRY_TYPES.map((t) => (
+            <option key={t.value} value={t.value}>{t.label}</option>
+          ))}
+        </select>
+
+        <div className="row">
+          <div>
+            <label>Último pastor <small>(igreja anterior)</small></label>
+            <input value={form.previous_pastor} onChange={(e) => set('previous_pastor', e.target.value)} />
+          </div>
+          <div>
+            <label>Última igreja</label>
+            <input value={form.previous_church} onChange={(e) => set('previous_church', e.target.value)} />
+          </div>
+        </div>
+
+        <label>Observações <small>(histórico do membro)</small></label>
+        <textarea rows={3} value={form.note} onChange={(e) => set('note', e.target.value)} />
+
+        {editingId && form._userId && (
+          ROLE_LABELS[form._role0] ? (
+            <>
+              <label>Tipo de acesso</label>
+              <small>{ROLE_LABELS[form._role0]} — altere pela tela de Perfis.</small>
+            </>
+          ) : (
+            <>
+              <label>Tipo de acesso <small>(papel de login do membro)</small></label>
+              <select value={form.role} onChange={(e) => set('role', e.target.value)}>
+                {ACCESS_ROLES.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </>
+          )
+        )}
 
         <label style={{ marginTop: 14 }}>
           Foto <small>{existingPhoto ? '(há uma; envie outra para substituir)' : '(opcional)'}</small>

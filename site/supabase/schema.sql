@@ -725,3 +725,66 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke all on function public.validate_credential(uuid) from public;
 grant execute on function public.validate_credential(uuid) to anon, authenticated;
+
+-- ================= Cadastro de membro: campos de histórico =================
+-- Observações livres, forma de entrada na igreja e origem anterior (pastor/igreja).
+alter table public.members add column if not exists note text;
+alter table public.members add column if not exists entry_type text
+  check (entry_type in ('carta','batismo','aclamacao'));
+alter table public.members add column if not exists previous_pastor text;
+alter table public.members add column if not exists previous_church text;
+
+-- O membro (portal) não pode alterar esses campos; trava no guard.
+create or replace function public.members_membro_guard()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if public.current_user_role() = 'membro' then
+    new.cargo := old.cargo;
+    new.tither := old.tither;
+    new.active := old.active;
+    new.ministries := old.ministries;
+    new.user_id := old.user_id;
+    new.matricula := old.matricula;
+    new.rg := old.rg;
+    new.cpf := old.cpf;
+    new.birth_date := old.birth_date;
+    new.joined_date := old.joined_date;
+    new.note := old.note;
+    new.entry_type := old.entry_type;
+    new.previous_pastor := old.previous_pastor;
+    new.previous_church := old.previous_church;
+    new.email := old.email;
+  end if;
+  return new;
+end; $$;
+
+-- ================= Atribuição de papel pela secretaria =================
+-- A secretaria (can_write_members) atribui o papel de acesso pelo cadastro do
+-- membro, SEM poder conceder/alterar admin ou presidencia. Admin mantém o
+-- controle total pela tela de Perfis. RLS de profiles só deixa admin escrever,
+-- então este RPC (security definer) é o caminho seguro da secretaria.
+create or replace function public.set_member_role(p_member_id uuid, p_role text)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  v_uid uuid;
+  v_current text;
+begin
+  if not public.can_write_members() then
+    raise exception 'sem permissao';
+  end if;
+  if p_role not in ('secretaria','tesoureiro','consulta','editor','membro') then
+    raise exception 'papel invalido';
+  end if;
+  select user_id into v_uid from public.members where id = p_member_id;
+  if v_uid is null then
+    raise exception 'membro sem acesso (login)';
+  end if;
+  select role into v_current from public.profiles where id = v_uid;
+  -- Só admin/presidencia pode rebaixar quem hoje é admin/presidencia.
+  if v_current in ('admin','presidencia') and not public.is_admin() then
+    raise exception 'sem permissao para alterar este papel';
+  end if;
+  update public.profiles set role = p_role where id = v_uid;
+end; $$;
+revoke all on function public.set_member_role(uuid, text) from public;
+grant execute on function public.set_member_role(uuid, text) to authenticated;

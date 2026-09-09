@@ -284,6 +284,25 @@ export async function setProfileRole(id, role) {
   if (error) throw error
 }
 
+// Papel de acesso de um usuário (para exibir no cadastro do membro).
+export async function getProfileRole(userId) {
+  if (!userId) return null
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle()
+  if (error) throw error
+  return data?.role || null
+}
+
+// Secretaria atribui o papel pelo cadastro do membro (sem admin/presidencia).
+// Usa RPC com guarda-corpos (set_member_role).
+export async function setMemberRole(memberId, role) {
+  const { error } = await supabase.rpc('set_member_role', { p_member_id: memberId, p_role: role })
+  if (error) throw error
+}
+
 // ---------- Imagens (fotos / assinaturas) + configurações ----------
 
 export async function uploadAsset(file, prefix = '') {
