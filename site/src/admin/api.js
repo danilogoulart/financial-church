@@ -80,6 +80,9 @@ export async function setMemberActive(id, active) {
 
 // ---------- Categorias ----------
 
+// Prioridade de exibição das categorias de receita (Dízimos, depois Ofertas).
+const INCOME_PRIORITY = { 'Dízimos': 0, 'Ofertas': 1 }
+
 export async function listCategories() {
   const { data, error } = await supabase
     .from('categories')
@@ -90,6 +93,12 @@ export async function listCategories() {
   const income = []
   const expense = []
   data.forEach((c) => (c.kind === 'expense' ? expense : income).push(c.name))
+  // Dízimos e Ofertas primeiro; o resto em ordem alfabética.
+  income.sort((a, b) => {
+    const pa = INCOME_PRIORITY[a] ?? 99
+    const pb = INCOME_PRIORITY[b] ?? 99
+    return pa - pb || a.localeCompare(b)
+  })
   return { income, expense }
 }
 

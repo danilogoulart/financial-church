@@ -26,7 +26,7 @@ const EMPTY = {
   type: 'Receita',
   category: '',
   cult: '',
-  payment_method: 'Dinheiro',
+  payment_method: 'PIX',
   amount: '',
   observation: '',
   off_cash: false,
@@ -92,6 +92,16 @@ export default function Transactions() {
 
   const categoryOptions = form.type === 'Despesa' ? categories.expense : categories.income
 
+  // Ao carregar as categorias (novo lançamento), seleciona a primeira por padrão.
+  useEffect(() => {
+    if (editingId) return
+    setForm((f) => {
+      const opts = f.type === 'Despesa' ? categories.expense : categories.income
+      return f.category ? f : { ...f, category: opts[0] || '' }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories])
+
   function startEdit(t) {
     setEditingId(t.id)
     setExistingReceipt(t.receipt_path || null)
@@ -142,7 +152,7 @@ export default function Transactions() {
         type: form.type,
         category: form.category || categoryOptions[0] || null,
         cult: form.type === 'Receita' ? form.cult : null,
-        payment_method: form.type === 'Receita' ? form.payment_method : null,
+        payment_method: form.payment_method || null,
         amount: Number(form.amount),
         observation: form.observation,
         off_cash: form.type === 'Receita' ? form.off_cash : false,
@@ -193,7 +203,14 @@ export default function Transactions() {
         <input type="date" value={form.date} onChange={(e) => set('date', e.target.value)} required />
 
         <label>Tipo</label>
-        <select value={form.type} onChange={(e) => set('type', e.target.value)}>
+        <select
+          value={form.type}
+          onChange={(e) => {
+            const type = e.target.value
+            const opts = type === 'Despesa' ? categories.expense : categories.income
+            setForm((f) => ({ ...f, type, category: opts[0] || '' }))
+          }}
+        >
           <option value="Receita">Receita</option>
           <option value="Despesa">Despesa</option>
         </select>
@@ -220,8 +237,8 @@ export default function Transactions() {
           </>
         )}
 
-        {form.type === 'Receita' && (
-          <div className="row">
+        <div className="row">
+          {form.type === 'Receita' && (
             <div>
               <label>Culto</label>
               <select value={form.cult} onChange={(e) => set('cult', e.target.value)}>
@@ -231,16 +248,16 @@ export default function Transactions() {
                 ))}
               </select>
             </div>
-            <div>
-              <label>Forma de pagamento</label>
-              <select value={form.payment_method} onChange={(e) => set('payment_method', e.target.value)}>
-                {PAYMENT_METHODS.map((p) => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </div>
+          )}
+          <div>
+            <label>Forma de pagamento</label>
+            <select value={form.payment_method} onChange={(e) => set('payment_method', e.target.value)}>
+              {PAYMENT_METHODS.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
           </div>
-        )}
+        </div>
 
         {form.type === 'Receita' && (
           <>
