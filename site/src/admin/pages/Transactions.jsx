@@ -47,7 +47,7 @@ export default function Transactions() {
   const [page, setPage] = useState(0)
   const [total, setTotal] = useState(0)
   const [reload, setReload] = useState(0)
-  const [filters, setFilters] = useState({ type: '', category: '', from: '', to: '' })
+  const [filters, setFilters] = useState({ type: '', category: '', payment_method: '', from: '', to: '' })
   const [cults, setCults] = useState([])
   const [ministries, setMinistries] = useState([])
   const fileRef = useRef(null)
@@ -338,6 +338,15 @@ export default function Transactions() {
               ))}
             </select>
           </div>
+          <div>
+            <label>Forma de pagamento</label>
+            <select value={filters.payment_method} onChange={(e) => setFilter('payment_method', e.target.value)}>
+              <option value="">Todas</option>
+              {PAYMENT_METHODS.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="row">
           <div>
@@ -357,6 +366,7 @@ export default function Transactions() {
                 <th>Data</th>
                 <th>Tipo</th>
                 <th>Categoria</th>
+                <th>Forma</th>
                 <th>Membro</th>
                 <th style={{ textAlign: 'right' }}>Valor</th>
                 <th>Comprovante</th>
@@ -372,6 +382,7 @@ export default function Transactions() {
                     {t.off_cash && <span className="pill warn" style={{ marginLeft: 6 }}>extra-caixa</span>}
                   </td>
                   <td>{t.category || '—'}</td>
+                  <td>{t.payment_method || '—'}</td>
                   <td>{t.member?.name || '—'}</td>
                   <td style={{ textAlign: 'right' }}>{formatMoney(t.amount)}</td>
                   <td><ReceiptLink path={t.receipt_path} /></td>
@@ -388,7 +399,7 @@ export default function Transactions() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan="7" style={{ color: '#999' }}>Nenhuma movimentação ainda.</td>
+                  <td colSpan="8" style={{ color: '#999' }}>Nenhuma movimentação ainda.</td>
                 </tr>
               )}
             </tbody>

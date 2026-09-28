@@ -16,6 +16,7 @@ import Payables from './pages/Payables.jsx'
 import Recurring from './pages/Recurring.jsx'
 import CashBook from './pages/CashBook.jsx'
 import Reports from './pages/Reports.jsx'
+import FinancialReport from './pages/FinancialReport.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Settings from './pages/Settings.jsx'
 import { SitePosts, SiteEvents, SiteStudies, SitePages, SiteCarousel, SiteContribute } from './pages/Site.jsx'
@@ -46,6 +47,7 @@ const GROUPS = [
       { id: 'recurring', label: '🔁 Recorrentes', Component: Recurring },
       { id: 'cashbook', label: '📗 Livro Caixa', Component: CashBook },
       { id: 'reports', label: '📑 Relatórios', Component: Reports },
+      { id: 'financial-report', label: '🧾 Relatório Financeiro', Component: FinancialReport },
       { id: 'dashboard', label: '📊 Dashboard', Component: Dashboard }
     ]
   },

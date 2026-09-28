@@ -15,6 +15,7 @@ import {
 } from '../api'
 import ReceiptLink from '../components/ReceiptLink.jsx'
 import Pagination from '../components/Pagination.jsx'
+import { PAYMENT_METHODS } from '../constants'
 import { RoleContext } from '../role'
 
 const EMPTY = {
@@ -22,7 +23,8 @@ const EMPTY = {
   category: '',
   amount: '',
   due_date: '',
-  payment_date: ''
+  payment_date: '',
+  payment_method: 'PIX'
 }
 const SIZE = 20
 
@@ -113,7 +115,8 @@ export default function Payables() {
       category: p.category || '',
       amount: p.amount,
       due_date: p.due_date || '',
-      payment_date: p.payment_date || ''
+      payment_date: p.payment_date || '',
+      payment_method: p.payment_method || 'PIX'
     })
     if (fileRef.current) fileRef.current.value = ''
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -154,6 +157,7 @@ export default function Payables() {
         amount: Number(form.amount),
         due_date: form.due_date,
         payment_date: form.payment_date || null,
+        payment_method: hasPayment ? (form.payment_method || 'PIX') : null,
         status: hasPayment ? 'Pago' : 'Em aberto',
         receipt_path
       }
@@ -239,8 +243,22 @@ export default function Payables() {
           </div>
         </div>
 
-        <label>Pagamento <small>(opcional)</small></label>
-        <input type="date" value={form.payment_date} onChange={(e) => set('payment_date', e.target.value)} />
+        <div className="row">
+          <div>
+            <label>Pagamento <small>(opcional)</small></label>
+            <input type="date" value={form.payment_date} onChange={(e) => set('payment_date', e.target.value)} />
+          </div>
+          {form.payment_date && (
+            <div>
+              <label>Forma de pagamento</label>
+              <select value={form.payment_method} onChange={(e) => set('payment_method', e.target.value)}>
+                {PAYMENT_METHODS.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
 
         <label style={{ marginTop: 14 }}>
           Comprovante{' '}

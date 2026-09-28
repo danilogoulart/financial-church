@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  balanceByAccount,
   currentCompetency,
   dashboardTotals,
   forecast,
@@ -21,12 +22,14 @@ export default function Home() {
   const [chart, setChart] = useState(null)
   const [counts, setCounts] = useState(null)
   const [mrep, setMrep] = useState(null)
+  const [acct, setAcct] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     dashboardTotals(firstOfMonth(), today()).then(setMonth).catch((e) => setError(e.message))
     memberCounts().then(setCounts).catch((e) => setError(e.message))
     memberReport().then(setMrep).catch((e) => setError(e.message))
+    balanceByAccount().then(setAcct).catch((e) => setError(e.message))
     Promise.all([monthlySeries(6), forecast(3)])
       .then(([s, f]) => {
         setFc(f)
@@ -50,7 +53,7 @@ export default function Home() {
         <h2>Visão geral</h2>
         <div className="kpis">
           <div className="kpi balance">
-            Saldo em caixa
+            Saldo total
             <div className="value">{fc ? formatMoney(fc.currentBalance) : '—'}</div>
           </div>
           <div className="kpi income">
@@ -64,6 +67,14 @@ export default function Home() {
           <div className="kpi balance">
             Resultado do mês
             <div className="value">{month ? formatMoney(month.balance) : '—'}</div>
+          </div>
+          <div className="kpi">
+            Saldo em dinheiro
+            <div className="value">{acct ? formatMoney(acct.cash) : '—'}</div>
+          </div>
+          <div className="kpi">
+            Saldo em conta
+            <div className="value">{acct ? formatMoney(acct.bank) : '—'}</div>
           </div>
         </div>
       </div>

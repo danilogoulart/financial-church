@@ -86,6 +86,9 @@ alter table public.payables
   add column if not exists recurring_id uuid references public.recurring_expenses(id) on delete set null;
 alter table public.payables
   add column if not exists competency text;
+-- Forma de pagamento (para separar saldo em dinheiro vs conta bancária).
+alter table public.payables
+  add column if not exists payment_method text;
 
 create index if not exists payables_recurring_competency
   on public.payables (recurring_id, competency);

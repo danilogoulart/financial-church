@@ -794,6 +794,7 @@ export async function listTransactionsPage(page = 0, size = 20, filters = {}) {
   let q = supabase.from('transactions').select('*, member:members(name)', { count: 'exact' })
   if (filters.type) q = q.eq('type', filters.type)
   if (filters.category) q = q.eq('category', filters.category)
+  if (filters.payment_method) q = q.eq('payment_method', filters.payment_method)
   if (filters.from) q = q.gte('date', filters.from)
   if (filters.to) q = q.lte('date', filters.to)
   const { data, count, error } = await q
@@ -900,6 +901,108 @@ export async function receiptDownloadUrl(path) {
     .createSignedUrl(path, 3600, { download: true })
   if (error) throw error
   return data.signedUrl
+}
+
+// ---------- Saldo por conta (dinheiro x banco) e relatório financeiro ----------
+
+const isCash = (m) => m === 'Dinheiro'
+
+// Saldo ATUAL separando dinheiro (espécie) de conta bancária (PIX/cartão/etc.).
+// Movimentações extra-caixa (off_cash) não entram. Método vazio conta como banco.
+export async function balanceByAccount() {
+  const [{ data: txs, error: e1 }, { data: pays, error: e2 }] = await Promise.all([
+    supabase.from('transactions').select('type, amount, payment_method').eq('off_cash', false),
+    supabase.from('payables').select('amount, payment_method').eq('status', 'Pago')
+  ])
+  if (e1) throw e1
+  if (e2) throw e2
+  let cash = 0
+  let bank = 0
+  const add = (m, delta) => { if (isCash(m)) cash += delta; else bank += delta }
+  txs.forEach((t) => add(t.payment_method, t.type === 'Receita' ? Number(t.amount) : -Number(t.amount)))
+  pays.forEach((p) => add(p.payment_method, -Number(p.amount)))
+  return { cash, bank, total: cash + bank }
+}
+
+// Agrupa somando `amount` por uma chave; retorna lista ordenada por total desc.
+function sumBy(rows, keyFn) {
+  const map = {}
+  rows.forEach((r) => {
+    const k = keyFn(r) || '(sem)'
+    map[k] = (map[k] || 0) + Number(r.amount || 0)
+  })
+  return Object.entries(map).map(([name, total]) => ({ name, total })).sort((a, b) => b.total - a.total)
+}
+
+// Relatório financeiro completo de um período [from, to] (datas ISO).
+export async function financialReport(from, to) {
+  const [{ data: txs, error: e1 }, { data: paysPaid, error: e2 }, { data: paysDue, error: e3 }, balances] =
+    await Promise.all([
+      supabase
+        .from('transactions')
+        .select('date, type, category, cult, payment_method, amount, off_cash, observation, member:members(name)')
+        .gte('date', from)
+        .lte('date', to)
+        .order('date'),
+      supabase
+        .from('payables')
+        .select('description, category, amount, payment_date, payment_method')
+        .eq('status', 'Pago')
+        .gte('payment_date', from)
+        .lte('payment_date', to),
+      supabase
+        .from('payables')
+        .select('description, category, amount, due_date, status')
+        .gte('due_date', from)
+        .lte('due_date', to)
+        .order('due_date'),
+      balanceByAccount()
+    ])
+  if (e1) throw e1
+  if (e2) throw e2
+  if (e3) throw e3
+
+  const inCash = (txs || []).filter((t) => !t.off_cash)
+  const offCash = (txs || []).filter((t) => t.off_cash)
+  const incomeRows = inCash.filter((t) => t.type === 'Receita')
+  const expTxRows = inCash.filter((t) => t.type === 'Despesa')
+
+  const sum = (rows) => rows.reduce((s, r) => s + Number(r.amount || 0), 0)
+  const paidPayTotal = sum(paysPaid || [])
+  const expenseTotal = sum(expTxRows) + paidPayTotal
+  const incomeTotal = sum(incomeRows)
+
+  // Linhas de despesa unificadas (transações + contas pagas) para agrupar.
+  const expenseAll = [
+    ...expTxRows.map((t) => ({ ...t, source: 'Movimentação' })),
+    ...(paysPaid || []).map((p) => ({
+      date: p.payment_date, category: p.category, payment_method: p.payment_method,
+      amount: p.amount, description: p.description, source: 'Conta a pagar'
+    }))
+  ]
+
+  return {
+    from,
+    to,
+    balances,
+    income: {
+      total: incomeTotal,
+      byCategory: sumBy(incomeRows, (r) => r.category),
+      byMethod: sumBy(incomeRows, (r) => r.payment_method),
+      byCult: sumBy(incomeRows.filter((r) => r.cult), (r) => r.cult),
+      rows: incomeRows
+    },
+    expense: {
+      total: expenseTotal,
+      byCategory: sumBy(expenseAll, (r) => r.category),
+      byMethod: sumBy(expenseAll, (r) => r.payment_method),
+      rows: expenseAll
+    },
+    result: incomeTotal - expenseTotal,
+    offCash: { total: sum(offCash), rows: offCash },
+    payablesDue: paysDue || [],
+    transactions: inCash
+  }
 }
 
 // Link compartilhável válido por 7 dias (para enviar a contador/auditor).
@@ -1017,11 +1120,11 @@ export function formatMoney(value) {
 
 // ---------- Marcar conta como paga ----------
 
-export async function markPayablePaid(id) {
+export async function markPayablePaid(id, paymentMethod = 'PIX') {
   const today = new Date().toISOString().slice(0, 10)
   const { data, error } = await supabase
     .from('payables')
-    .update({ status: 'Pago', payment_date: today })
+    .update({ status: 'Pago', payment_date: today, payment_method: paymentMethod })
     .eq('id', id)
     .select()
     .single()
