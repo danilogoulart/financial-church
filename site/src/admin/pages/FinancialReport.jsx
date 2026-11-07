@@ -59,15 +59,6 @@ export default function FinancialReport() {
           ['Extra-caixa (não entra no caixa)', rep.offCash.total.toFixed(2)]
         ]
       },
-      {
-        title: 'Saldos atuais',
-        headers: ['Conta', 'Saldo'],
-        rows: [
-          ['Dinheiro (espécie)', rep.balances.cash.toFixed(2)],
-          ['Conta bancária', rep.balances.bank.toFixed(2)],
-          ['Total', rep.balances.total.toFixed(2)]
-        ]
-      },
       { title: 'Receitas por categoria', headers: ['Categoria', 'Total'], rows: catRows(rep.income.byCategory) },
       { title: 'Receitas por forma de pagamento', headers: ['Forma', 'Total'], rows: catRows(rep.income.byMethod) },
       { title: 'Receitas por culto', headers: ['Culto', 'Total'], rows: catRows(rep.income.byCult) },
@@ -112,9 +103,6 @@ export default function FinancialReport() {
         <div class="kpi">Receitas<b>${money(rep.income.total)}</b></div>
         <div class="kpi">Despesas<b>${money(rep.expense.total)}</b></div>
         <div class="kpi">Resultado<b>${money(rep.result)}</b></div>
-        <div class="kpi">Saldo em dinheiro<b>${money(rep.balances.cash)}</b></div>
-        <div class="kpi">Saldo em conta<b>${money(rep.balances.bank)}</b></div>
-        <div class="kpi">Saldo total<b>${money(rep.balances.total)}</b></div>
       </div>
       ${tbl('Receitas por categoria', ['Categoria', 'Total'], catT(rep.income.byCategory), ['Total', money(rep.income.total)])}
       ${tbl('Receitas por forma de pagamento', ['Forma', 'Total'], catT(rep.income.byMethod))}
@@ -199,12 +187,6 @@ export default function FinancialReport() {
               <div className="kpi income">Receitas<div className="value">{money(rep.income.total)}</div></div>
               <div className="kpi expense">Despesas<div className="value">{money(rep.expense.total)}</div></div>
               <div className="kpi balance">Resultado<div className="value">{money(rep.result)}</div></div>
-            </div>
-            <h3 style={{ margin: '10px 0 0' }}>Saldos atuais</h3>
-            <div className="kpis">
-              <div className="kpi">Dinheiro<div className="value">{money(rep.balances.cash)}</div></div>
-              <div className="kpi">Conta bancária<div className="value">{money(rep.balances.bank)}</div></div>
-              <div className="kpi balance">Total<div className="value">{money(rep.balances.total)}</div></div>
             </div>
             {rep.offCash.total > 0 && (
               <small className="muted">Extra-caixa no período (não entra no saldo): {money(rep.offCash.total)}</small>
