@@ -1049,6 +1049,59 @@ export async function financialPeople(from, to) {
   }
 }
 
+// Dízimos x Ofertas por mês (últimos n meses) — para o gráfico de evolução.
+export async function tithesOfferingsMonthly(n = 6) {
+  const months = lastNMonths(n)
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('date, category, amount')
+    .eq('type', 'Receita')
+    .eq('off_cash', false)
+    .in('category', ['Dízimos', 'Ofertas'])
+    .gte('date', months[0] + '-01')
+  if (error) throw error
+  const base = {}
+  months.forEach((m) => { base[m] = { month: m, dizimos: 0, ofertas: 0 } })
+  ;(data || []).forEach((t) => {
+    const m = (t.date || '').slice(0, 7)
+    if (!base[m]) return
+    if (t.category === 'Dízimos') base[m].dizimos += Number(t.amount)
+    else if (t.category === 'Ofertas') base[m].ofertas += Number(t.amount)
+  })
+  return months.map((m) => base[m])
+}
+
+// Faixas de contribuição (anônimo): nº de membros por total de dízimo no período.
+export async function contributionBuckets(from, to) {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('member_id, amount')
+    .eq('type', 'Receita')
+    .eq('category', 'Dízimos')
+    .eq('off_cash', false)
+    .gte('date', from)
+    .lte('date', to)
+  if (error) throw error
+  const byMember = {}
+  ;(data || []).forEach((t) => {
+    if (!t.member_id) return
+    byMember[t.member_id] = (byMember[t.member_id] || 0) + Number(t.amount)
+  })
+  const defs = [
+    { label: 'Até R$ 50', test: (v) => v <= 50 },
+    { label: 'R$ 50–100', test: (v) => v > 50 && v <= 100 },
+    { label: 'R$ 100–200', test: (v) => v > 100 && v <= 200 },
+    { label: 'R$ 200–500', test: (v) => v > 200 && v <= 500 },
+    { label: 'Acima de R$ 500', test: (v) => v > 500 }
+  ]
+  const counts = defs.map((d) => ({ label: d.label, value: 0 }))
+  Object.values(byMember).forEach((v) => {
+    const i = defs.findIndex((d) => d.test(v))
+    if (i >= 0) counts[i].value++
+  })
+  return counts
+}
+
 // Link compartilhável válido por 7 dias (para enviar a contador/auditor).
 export async function receiptShareUrl(path) {
   const { data, error } = await supabase.storage

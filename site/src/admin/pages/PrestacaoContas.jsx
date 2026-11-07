@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { financialPeople, financialReport, formatMoney, monthlySeries } from '../api'
+import { contributionBuckets, financialPeople, financialReport, formatMoney, monthlySeries, tithesOfferingsMonthly } from '../api'
 import { APP_NAME } from '../brand'
 import { exportXlsSections } from '../exportXls'
 import { printHtml } from '../printDoc'
-import { Donut, MonthBars, Gauge } from '../components/Charts.jsx'
+import { Donut, MonthBars, SeriesBars, BarsH, Gauge, PALETTE } from '../components/Charts.jsx'
 
 // financialReport devolve {name,total}; os gráficos usam {label,value}.
 const asLV = (list) => (list || []).map((r) => ({ label: r.name, value: r.total }))
@@ -19,14 +19,29 @@ const fmtDate = (d) => (d ? d.split('-').reverse().join('/') : '')
 const money = (v) => formatMoney(v)
 const pct = (part, whole) => (whole ? (part / whole) * 100 : 0).toFixed(1).replace('.', ',') + '%'
 
+function DeltaBadge({ cur, prev, goodUp = true }) {
+  if (prev == null || prev === 0) return <span style={{ color: '#898781' }}>—</span>
+  const d = ((cur - prev) / Math.abs(prev)) * 100
+  const up = d >= 0
+  const good = goodUp ? up : !up
+  return (
+    <span style={{ color: good ? '#1e7e45' : '#c0392b', fontWeight: 'bold' }}>
+      {up ? '▲' : '▼'} {Math.abs(d).toFixed(1).replace('.', ',')}%
+    </span>
+  )
+}
+
 export default function PrestacaoContas() {
   const [scope, setScope] = useState('mes') // mes | ano
   const [month, setMonth] = useState(thisMonth())
   const [year, setYear] = useState(thisYear())
   const [view, setView] = useState('valores') // valores | percentuais
   const [rep, setRep] = useState(null)
+  const [prev, setPrev] = useState(null)
   const [people, setPeople] = useState(null)
   const [series, setSeries] = useState(null)
+  const [dzof, setDzof] = useState(null)
+  const [buckets, setBuckets] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -34,16 +49,28 @@ export default function PrestacaoContas() {
   const periodLabel = scope === 'ano' ? `Ano de ${year}` : `${fmtDate(period.from)} a ${fmtDate(period.to)}`
   const isPct = view === 'percentuais'
 
+  function prevPeriod() {
+    if (scope === 'ano') return { range: yearRange(year - 1), label: `${year - 1}` }
+    const [y, m] = month.split('-').map(Number)
+    const d = new Date(y, m - 2, 1)
+    const pym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    return { range: monthRange(pym), label: pym.split('-').reverse().join('/') }
+  }
+
   async function load() {
     setLoading(true)
     setError('')
     try {
-      const [r, p, s] = await Promise.all([
+      const pp = prevPeriod()
+      const [r, p, s, prevR, dz, bk] = await Promise.all([
         financialReport(period.from, period.to),
         financialPeople(period.from, period.to),
-        monthlySeries(3)
+        monthlySeries(3),
+        financialReport(pp.range.from, pp.range.to),
+        tithesOfferingsMonthly(6),
+        contributionBuckets(period.from, period.to)
       ])
-      setRep(r); setPeople(p); setSeries(s)
+      setRep(r); setPeople(p); setSeries(s); setPrev({ ...prevR, label: pp.label }); setDzof(dz); setBuckets(bk)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -179,6 +206,39 @@ export default function PrestacaoContas() {
             </div>
           </div>
 
+          {prev && (
+            <div className="card">
+              <h2>Comparativo com período anterior ({prev.label})</h2>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>Indicador</th><th style={{ textAlign: 'right' }}>Atual</th><th style={{ textAlign: 'right' }}>Anterior</th><th style={{ textAlign: 'right' }}>Variação</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Receitas</td>
+                      <td style={{ textAlign: 'right' }}>{money(rep.income.total)}</td>
+                      <td style={{ textAlign: 'right' }}>{money(prev.income.total)}</td>
+                      <td style={{ textAlign: 'right' }}><DeltaBadge cur={rep.income.total} prev={prev.income.total} goodUp /></td>
+                    </tr>
+                    <tr>
+                      <td>Despesas</td>
+                      <td style={{ textAlign: 'right' }}>{money(rep.expense.total)}</td>
+                      <td style={{ textAlign: 'right' }}>{money(prev.expense.total)}</td>
+                      <td style={{ textAlign: 'right' }}><DeltaBadge cur={rep.expense.total} prev={prev.expense.total} goodUp={false} /></td>
+                    </tr>
+                    <tr>
+                      <td>Resultado</td>
+                      <td style={{ textAlign: 'right' }}>{money(rep.result)}</td>
+                      <td style={{ textAlign: 'right' }}>{money(prev.result)}</td>
+                      <td style={{ textAlign: 'right' }}><DeltaBadge cur={rep.result} prev={prev.result} goodUp /></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           <div className="card">
             <h2>Receitas por categoria</h2>
             <Donut data={asLV(rep.income.byCategory)} mode={view} />
@@ -197,6 +257,19 @@ export default function PrestacaoContas() {
           <div className="card">
             <h2>Receitas × Despesas — últimos 3 meses</h2>
             <MonthBars data={series} />
+          </div>
+
+          <div className="card">
+            <h2>Dízimos × Ofertas — últimos 6 meses</h2>
+            <SeriesBars data={dzof} series={[{ key: 'dizimos', label: 'Dízimos', color: PALETTE[0] }, { key: 'ofertas', label: 'Ofertas', color: PALETTE[1] }]} />
+          </div>
+
+          <div className="card">
+            <h2>Faixas de contribuição</h2>
+            <small>Nº de membros por total de dízimo no período (sem nomes).</small>
+            <div style={{ marginTop: 8 }}>
+              <BarsH data={buckets} format="count" keepOrder color={PALETTE[2]} />
+            </div>
           </div>
 
           {people && (

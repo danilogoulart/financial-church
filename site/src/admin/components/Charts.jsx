@@ -60,21 +60,24 @@ export function Donut({ data, mode = 'valores' }) {
   )
 }
 
-// Barras horizontais (ex.: receitas por culto).
-export function BarsH({ data, mode = 'valores', color = PALETTE[0] }) {
-  const items = (data || []).filter((d) => d.value > 0).sort((a, b) => b.value - a.value)
+// Barras horizontais. format: 'money' | 'pct' | 'count'. Mantém ordem recebida se keepOrder.
+export function BarsH({ data, mode = 'valores', color = PALETTE[0], format, keepOrder = false }) {
+  let items = (data || []).filter((d) => d.value > 0)
+  if (!keepOrder) items = items.sort((a, b) => b.value - a.value)
   const total = items.reduce((s, d) => s + d.value, 0)
   const max = Math.max(1, ...items.map((d) => d.value))
   if (!items.length) return <div style={{ color: MUTED, fontSize: 13 }}>Sem dados no período.</div>
+  const fmt = format || (mode === 'percentuais' ? 'pct' : 'money')
+  const show = (v) => (fmt === 'count' ? v : fmt === 'pct' ? fmtPct(total ? v / total : 0) : fmtMoney(v))
   return (
     <div>
       {items.map((d, i) => (
-        <div key={i} style={{ display: 'grid', gridTemplateColumns: '120px 1fr auto', gap: 8, alignItems: 'center', fontSize: 13, padding: '3px 0' }}>
+        <div key={i} style={{ display: 'grid', gridTemplateColumns: '130px 1fr auto', gap: 8, alignItems: 'center', fontSize: 13, padding: '3px 0' }}>
           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.label}</span>
           <div style={{ background: '#eee', borderRadius: 4, height: 14 }}>
             <div style={{ width: `${(d.value / max) * 100}%`, background: color, height: 14, borderRadius: 4, minWidth: 2 }} />
           </div>
-          <b style={{ fontVariantNumeric: 'tabular-nums' }}>{mode === 'percentuais' ? fmtPct(total ? d.value / total : 0) : fmtMoney(d.value)}</b>
+          <b style={{ fontVariantNumeric: 'tabular-nums' }}>{show(d.value)}</b>
         </div>
       ))}
     </div>
@@ -104,6 +107,41 @@ export function MonthBars({ data }) {
           <g key={i}>
             <rect x={x(i) - bw - 1} y={y(r.income)} width={bw} height={H - pad - y(r.income)} fill={green} rx="2" />
             <rect x={x(i) + 1} y={y(r.expense)} width={bw} height={H - pad - y(r.expense)} fill={red} rx="2" />
+            <text x={x(i)} y={H - pad + 12} textAnchor="middle" fontSize="10" fill={MUTED}>{mLabel(r.month)}</text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  )
+}
+
+// Barras agrupadas genéricas por mês. series=[{key,label,color}].
+export function SeriesBars({ data, series }) {
+  const rows = data || []
+  if (!rows.length) return <div style={{ color: MUTED, fontSize: 13 }}>Sem dados.</div>
+  const max = Math.max(1, ...rows.flatMap((r) => series.map((s) => Number(r[s.key]) || 0)))
+  const W = Math.max(320, rows.length * (series.length * 10 + 28))
+  const H = 160, pad = 24, bw = 8
+  const slot = (W - pad * 2) / rows.length
+  const x = (i) => pad + i * slot + slot / 2
+  const y = (v) => H - pad - (v / max) * (H - pad * 2)
+  const mLabel = (m) => { const [, mm] = String(m).split('-'); return ['', 'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][Number(mm)] }
+  const groupW = series.length * (bw + 2)
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <div style={{ display: 'flex', gap: 14, fontSize: 12, marginBottom: 6 }}>
+        {series.map((s) => (
+          <span key={s.key}><span style={{ display: 'inline-block', width: 10, height: 10, background: s.color, borderRadius: 2, marginRight: 4 }} />{s.label}</span>
+        ))}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img">
+        <line x1={pad} y1={H - pad} x2={W - pad} y2={H - pad} stroke="#c3c2b7" strokeWidth="1" />
+        {rows.map((r, i) => (
+          <g key={i}>
+            {series.map((s, j) => {
+              const v = Number(r[s.key]) || 0
+              return <rect key={s.key} x={x(i) - groupW / 2 + j * (bw + 2)} y={y(v)} width={bw} height={H - pad - y(v)} fill={s.color} rx="2" />
+            })}
             <text x={x(i)} y={H - pad + 12} textAnchor="middle" fontSize="10" fill={MUTED}>{mLabel(r.month)}</text>
           </g>
         ))}
