@@ -3,7 +3,10 @@ import { financialPeople, financialReport, formatMoney, monthlySeries } from '..
 import { APP_NAME } from '../brand'
 import { exportXlsSections } from '../exportXls'
 import { printHtml } from '../printDoc'
-import { Donut, BarsH, MonthBars, Gauge, PALETTE } from '../components/Charts.jsx'
+import { Donut, MonthBars, Gauge } from '../components/Charts.jsx'
+
+// financialReport devolve {name,total}; os gráficos usam {label,value}.
+const asLV = (list) => (list || []).map((r) => ({ label: r.name, value: r.total }))
 
 const thisMonth = () => new Date().toISOString().slice(0, 7)
 const thisYear = () => new Date().getFullYear()
@@ -38,7 +41,7 @@ export default function PrestacaoContas() {
       const [r, p, s] = await Promise.all([
         financialReport(period.from, period.to),
         financialPeople(period.from, period.to),
-        monthlySeries(12)
+        monthlySeries(3)
       ])
       setRep(r); setPeople(p); setSeries(s)
     } catch (e) {
@@ -72,7 +75,7 @@ export default function PrestacaoContas() {
       },
       { title: 'Receitas por categoria', headers: ['Categoria', isPct ? '%' : 'Valor'], rows: catRows(rep.income.byCategory, rep.income.total) },
       { title: 'Despesas por categoria', headers: ['Categoria', isPct ? '%' : 'Valor'], rows: catRows(rep.expense.byCategory, rep.expense.total) },
-      { title: 'Receitas por culto', headers: ['Culto', isPct ? '%' : 'Valor'], rows: catRows(rep.income.byCult, rep.income.total) }
+      { title: 'Receitas por forma de pagamento', headers: ['Forma', isPct ? '%' : 'Valor'], rows: catRows(rep.income.byMethod, rep.income.total) }
     ]
     if (people) {
       secs.push({
@@ -122,7 +125,7 @@ export default function PrestacaoContas() {
       </div>
       ${tbl('Receitas por categoria', catRows(rep.income.byCategory, rep.income.total), ['Total', isPct ? '100%' : money(rep.income.total)])}
       ${tbl('Despesas por categoria', catRows(rep.expense.byCategory, rep.expense.total), ['Total', isPct ? '100%' : money(rep.expense.total)])}
-      ${tbl('Receitas por culto', catRows(rep.income.byCult, rep.income.total))}
+      ${tbl('Receitas por forma de pagamento', catRows(rep.income.byMethod, rep.income.total))}
       ${pb}
     `
     printHtml('Prestação de contas', body)
@@ -178,21 +181,21 @@ export default function PrestacaoContas() {
 
           <div className="card">
             <h2>Receitas por categoria</h2>
-            <Donut data={rep.income.byCategory} mode={view} />
+            <Donut data={asLV(rep.income.byCategory)} mode={view} />
           </div>
 
           <div className="card">
             <h2>Despesas por categoria</h2>
-            <Donut data={rep.expense.byCategory} mode={view} />
+            <Donut data={asLV(rep.expense.byCategory)} mode={view} />
           </div>
 
           <div className="card">
-            <h2>Receitas por culto</h2>
-            <BarsH data={rep.income.byCult} mode={view} color={PALETTE[0]} />
+            <h2>Receitas por forma de pagamento</h2>
+            <Donut data={asLV(rep.income.byMethod)} mode={view} />
           </div>
 
           <div className="card">
-            <h2>Receitas × Despesas — 12 meses</h2>
+            <h2>Receitas × Despesas — últimos 3 meses</h2>
             <MonthBars data={series} />
           </div>
 
