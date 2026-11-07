@@ -1005,6 +1005,50 @@ export async function financialReport(from, to) {
   }
 }
 
+// Métricas de pessoas para a prestação de contas (sem nomes). Dizimistas = quem
+// deu dízimo no período; obreiros = cargos is_worker. Congregado = cargo "Congregado".
+export async function financialPeople(from, to) {
+  const [{ data: members, error: e1 }, cargos, { data: tithes, error: e2 }] = await Promise.all([
+    supabase.from('members').select('id, cargo, active'),
+    listCargos(),
+    supabase
+      .from('transactions')
+      .select('member_id')
+      .eq('type', 'Receita')
+      .eq('category', 'Dízimos')
+      .eq('off_cash', false)
+      .gte('date', from)
+      .lte('date', to)
+  ])
+  if (e1) throw e1
+  if (e2) throw e2
+
+  const workerSet = new Set(cargos.filter((c) => c.is_worker).map((c) => c.name))
+  const byId = {}
+  ;(members || []).forEach((m) => { byId[m.id] = m })
+  const actives = (members || []).filter((m) => m.active)
+  const isWorker = (m) => m && workerSet.has(m.cargo)
+  const isCong = (m) => m && m.cargo === 'Congregado'
+
+  let obreiros = 0, membros = 0, congregados = 0
+  actives.forEach((m) => { if (isWorker(m)) obreiros++; else if (isCong(m)) congregados++; else membros++ })
+
+  const titherIds = new Set((tithes || []).filter((t) => t.member_id).map((t) => t.member_id))
+  let obreirosDiz = 0
+  titherIds.forEach((id) => { if (isWorker(byId[id])) obreirosDiz++ })
+
+  return {
+    ativos: actives.length,
+    obreiros,
+    membros,
+    congregados,
+    dizimistas: titherIds.size,
+    obreirosDizimistas: obreirosDiz,
+    pctDizima: actives.length ? titherIds.size / actives.length : 0,
+    pctObreirosDizimam: obreiros ? obreirosDiz / obreiros : 0
+  }
+}
+
 // Link compartilhável válido por 7 dias (para enviar a contador/auditor).
 export async function receiptShareUrl(path) {
   const { data, error } = await supabase.storage
